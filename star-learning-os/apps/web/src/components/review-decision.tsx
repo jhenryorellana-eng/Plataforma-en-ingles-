@@ -31,13 +31,13 @@ export function ReviewDecisionButtons({ reviewId }: { reviewId: string }) {
   }
 
   return (
-    <div className="mt-3">
-      <div className="flex gap-2">
+    <div className="mt-2.5">
+      <div className="flex gap-5">
         <button
           type="button"
           disabled={busy}
           onClick={() => decide('confirmed')}
-          className="rounded-lg border border-ok/40 bg-ok-soft px-3.5 py-1.5 text-xs font-medium text-ok transition-colors hover:bg-ok hover:text-white disabled:opacity-50"
+          className="text-[15px] font-semibold text-ok-deep transition-opacity hover:opacity-70 disabled:opacity-40"
         >
           Confirmar
         </button>
@@ -45,12 +45,12 @@ export function ReviewDecisionButtons({ reviewId }: { reviewId: string }) {
           type="button"
           disabled={busy}
           onClick={() => decide('invalidated')}
-          className="rounded-lg border border-risk/40 bg-risk-soft px-3.5 py-1.5 text-xs font-medium text-risk transition-colors hover:bg-risk hover:text-white disabled:opacity-50"
+          className="text-[15px] font-semibold text-risk transition-opacity hover:opacity-70 disabled:opacity-40"
         >
           Invalidar
         </button>
       </div>
-      {error && <p className="mt-1 text-xs text-risk">{error}</p>}
+      {error && <p className="mt-1 text-[12px] text-risk">{error}</p>}
     </div>
   );
 }

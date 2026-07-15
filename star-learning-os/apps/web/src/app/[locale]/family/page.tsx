@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { apiFetchOrNull } from '@/lib/api';
-import { Card, Chip, InitialsAvatar, Meter, SectionTitle, Wordmark } from '@/components/ui';
+import { Chip, Group, IconTile, InitialsAvatar, Ring, Row, SectionHeader, Wordmark } from '@/components/ui';
 
 interface GuardianSummary {
   learners: Array<{
@@ -44,84 +44,105 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
   if (!summary) redirect(`/${locale}/login`);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <header className="rise mb-8">
-        <div className="mb-6 h-1 w-16 rounded-full bg-gradient-to-r from-primary to-cyan" />
-        <Wordmark />
-        <h1 className="mt-4 font-display text-[1.75rem] font-semibold leading-tight text-ink">
-          Portal familiar
-        </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-dim">
-          Progreso, carga, permisos y alertas — sin vigilancia secreta: aquí no hay transcripciones
-          de las conversaciones de tus hijos, por diseño.
-        </p>
+    <div className="min-h-dvh">
+      <header className="material-bar sticky top-0 z-40 border-b border-line">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
+          <Wordmark />
+        </div>
       </header>
 
-      <div className="flex flex-col gap-6">
-        {summary.learners.map((learner, index) => (
-          <Card key={learner.learnerId} accent className={`rise rise-${index + 1} px-5 py-5`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+      <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
+        <div className="rise mb-7">
+          <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Familia</h1>
+          <p className="mt-1 text-[15px] leading-relaxed text-dim">
+            Progreso, permisos y alertas — sin transcripciones de las conversaciones de tus hijos,
+            por diseño.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-8">
+          {summary.learners.map((learner, index) => (
+            <section key={learner.learnerId} className={`rise rise-${index + 1}`}>
+              <div className="mb-3 flex items-center gap-3 px-1">
                 <InitialsAvatar name={learner.displayName} />
-                <div>
-                  <p className="font-display text-lg font-semibold text-ink">{learner.displayName}</p>
-                  <p className="text-xs text-dim">{AGE_LABELS[learner.ageBand ?? ''] ?? '—'}</p>
+                <div className="flex-1">
+                  <p className="text-[18px] font-bold tracking-tight text-ink">{learner.displayName}</p>
+                  <p className="text-[13px] text-dim">{AGE_LABELS[learner.ageBand ?? ''] ?? '—'}</p>
                 </div>
-              </div>
-              <div className="flex flex-col items-end gap-1.5">
-                {learner.pendingReviews > 0 && (
-                  <Chip tone="primary">{learner.pendingReviews} en revisión académica</Chip>
-                )}
                 {learner.openSafetyCases > 0 ? (
                   <Chip tone="warn">{learner.openSafetyCases} alerta(s)</Chip>
                 ) : (
                   <Chip tone="ok">Sin alertas</Chip>
                 )}
               </div>
-            </div>
 
-            {learner.enrollments.map((enrollment) => (
-              <div key={enrollment.enrollmentId} className="mb-4 rounded-lg border border-line bg-paper px-4 py-4">
-                <div className="mb-3 flex items-center justify-between text-sm">
-                  <span className="font-display font-semibold text-ink">{enrollment.program}</span>
-                  <Chip tone="primary">{enrollment.paceCode}</Chip>
-                </div>
-                <Meter
-                  label="Competencias dominadas"
-                  value={enrollment.totalCount === 0 ? 0 : enrollment.masteredCount / enrollment.totalCount}
-                  hint={`${enrollment.masteredCount} de ${enrollment.totalCount}`}
-                  tone="gold"
-                />
-                <div className="mt-4">
-                  <Meter
-                    label="Voz de la semana"
-                    value={
-                      enrollment.voice.includedMinutes === 0
-                        ? 0
-                        : enrollment.voice.usedMinutes / enrollment.voice.includedMinutes
-                    }
-                    hint={`${enrollment.voice.usedMinutes} / ${enrollment.voice.includedMinutes} min · recibirás avisos al 70, 90 y 100%`}
-                    tone="primary"
-                  />
-                </div>
+              {learner.enrollments.map((enrollment) => {
+                const masteryRatio =
+                  enrollment.totalCount === 0 ? 0 : enrollment.masteredCount / enrollment.totalCount;
+                const voiceRatio =
+                  enrollment.voice.includedMinutes === 0
+                    ? 0
+                    : enrollment.voice.usedMinutes / enrollment.voice.includedMinutes;
+                return (
+                  <Group key={enrollment.enrollmentId} className="mb-3">
+                    <div className="flex items-center gap-3.5 px-4 py-3">
+                      <Ring value={masteryRatio} size={40} strokeWidth={5} color="#5e5ce6" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[16px] text-ink">{enrollment.program}</p>
+                        <p className="text-[13px] text-dim">Plan {enrollment.paceCode}</p>
+                      </div>
+                      <span className="text-[15px] font-semibold tabular-nums text-ink">
+                        {enrollment.masteredCount} / {enrollment.totalCount}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3.5 px-4 py-3">
+                      <IconTile name="mic" color="bg-teal" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between">
+                          <p className="text-[16px] text-ink">Voz de la semana</p>
+                          <p className="text-[15px] font-semibold tabular-nums text-ink">
+                            {enrollment.voice.usedMinutes}
+                            <span className="font-normal text-dim"> / {enrollment.voice.includedMinutes} min</span>
+                          </p>
+                        </div>
+                        <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-fill">
+                          <div
+                            className={`h-full rounded-full ${voiceRatio >= 0.9 ? 'bg-risk' : voiceRatio >= 0.7 ? 'bg-warn' : 'bg-teal'}`}
+                            style={{ width: `${Math.min(100, voiceRatio * 100)}%` }}
+                          />
+                        </div>
+                        <p className="mt-1.5 text-[12px] text-dim">Recibirás avisos al 70, 90 y 100%.</p>
+                      </div>
+                    </div>
+                    {learner.pendingReviews > 0 && (
+                      <Row
+                        icon="shield"
+                        iconColor="bg-primary"
+                        title="En revisión académica humana"
+                        subtitle="Decisiones significativas pendientes de una persona del equipo"
+                        trailing={<span className="font-semibold text-ink">{learner.pendingReviews}</span>}
+                      />
+                    )}
+                  </Group>
+                );
+              })}
+              {learner.enrollments.length === 0 && (
+                <p className="mb-3 px-1 text-[14px] text-dim">Aún sin inscripciones activas.</p>
+              )}
+
+              <SectionHeader className="mt-4">Permisos otorgados</SectionHeader>
+              <div className="flex flex-wrap gap-1.5 px-1">
+                {learner.consents.map((consent) => (
+                  <Chip key={consent} tone="ok">
+                    {CONSENT_LABELS[consent] ?? consent}
+                  </Chip>
+                ))}
+                {learner.consents.length === 0 && <Chip tone="warn">Sin permisos activos</Chip>}
               </div>
-            ))}
-            {learner.enrollments.length === 0 && (
-              <p className="mb-4 text-sm text-dim">Aún sin inscripciones activas.</p>
-            )}
-
-            <SectionTitle className="mb-2">Permisos otorgados</SectionTitle>
-            <div className="flex flex-wrap gap-1.5">
-              {learner.consents.map((consent) => (
-                <Chip key={consent} tone="ok">
-                  {CONSENT_LABELS[consent] ?? consent}
-                </Chip>
-              ))}
-              {learner.consents.length === 0 && <Chip tone="warn">Sin permisos activos</Chip>}
-            </div>
-          </Card>
-        ))}
-      </div>
+            </section>
+          ))}
+        </div>
+      </main>
     </div>
   );
 }

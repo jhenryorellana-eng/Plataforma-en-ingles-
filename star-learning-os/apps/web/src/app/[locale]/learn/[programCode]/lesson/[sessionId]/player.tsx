@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ActivityDto, SessionResponse, SubmissionResult } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Card, Chip } from '@/components/ui';
+import { Card, Chip, Group, Icon } from '@/components/ui';
 
 const STATE_LABELS: Record<string, string> = {
   developing: 'En desarrollo',
@@ -48,10 +48,14 @@ export function LessonPlayer({
   }, [session, focusActivityId]);
 
   if (error) {
-    return <Card className="mt-10 border-risk/40 bg-risk-soft px-4 py-4 text-sm text-risk">{error}</Card>;
+    return (
+      <div className="mt-10 rounded-2xl bg-risk-soft px-4 py-4 text-center text-[14px] text-risk">
+        {error}
+      </div>
+    );
   }
   if (!session || activities.length === 0) {
-    return <p className="mt-16 text-center text-sm text-dim">Cargando tu lección…</p>;
+    return <p className="mt-16 text-center text-[15px] text-dim">Cargando tu lección…</p>;
   }
 
   const activity = activities[index];
@@ -91,46 +95,56 @@ export function LessonPlayer({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="rise">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">
-          {reviewItemId ? 'Repaso · recuperación espaciada' : 'Sesión de práctica'}
+    <div className="flex flex-col gap-6">
+      <header className="rise">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-dim">
+          {reviewItemId ? 'Repaso' : 'Sesión de práctica'}
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-ink">{session.lessonContract.objective}</p>
-        <div className="mt-3 flex items-center gap-1.5">
+        <h1 className="mt-0.5 text-[24px] font-extrabold leading-tight tracking-tight text-ink">
+          {session.lessonContract.objective}
+        </h1>
+        <div className="mt-4 flex items-center gap-1.5">
           {activities.map((item, itemIndex) => (
             <span
               key={item.id}
-              className={`h-1 flex-1 rounded-full ${
-                itemIndex < index ? 'bg-gold' : itemIndex === index ? 'bg-primary' : 'bg-mist'
+              className={`h-[5px] flex-1 rounded-full transition-colors ${
+                itemIndex < index ? 'bg-ok' : itemIndex === index ? 'bg-primary' : 'bg-fill'
               }`}
             />
           ))}
         </div>
-      </section>
+      </header>
 
       {!result && (
         <ActivityForm key={activity.id} activity={activity} busy={busy} onSubmit={submit} />
       )}
 
       {result && (
-        <Card accent className="rise flex flex-col gap-4 px-5 py-5">
-          <div className="flex items-center justify-between">
-            <span className="font-display text-xl font-semibold text-ink">
-              {result.correct === true ? 'Correcto.' : result.correct === false ? 'Aún no.' : 'Recibido.'}
+        <Card className="rise flex flex-col gap-4 px-5 py-6">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span
+              className={`flex size-14 items-center justify-center rounded-full ${
+                result.correct === false ? 'bg-warn-soft' : 'bg-ok-soft'
+              }`}
+            >
+              <Icon
+                name={result.correct === false ? 'review' : 'check'}
+                className={`size-7 ${result.correct === false ? 'text-gold-deep' : 'text-ok'}`}
+              />
             </span>
-            <Chip tone={result.correct === false ? 'warn' : 'gold'}>
-              {Math.round(result.score * 100)}%
-            </Chip>
+            <p className="text-[24px] font-extrabold tracking-tight text-ink">
+              {result.correct === true ? 'Correcto' : result.correct === false ? 'Aún no' : 'Recibido'}
+            </p>
+            <p className="max-w-[38ch] text-[15px] leading-relaxed text-dim">{result.feedback}</p>
           </div>
-          <p className="text-sm leading-relaxed text-dim">{result.feedback}</p>
-          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-xs">
-            <Chip tone={result.competencyState === 'mastered' ? 'gold' : 'primary'}>
-              Competencia: {STATE_LABELS[result.competencyState] ?? result.competencyState}
+          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-line pt-4">
+            <Chip tone={result.competencyState === 'mastered' ? 'ok' : 'primary'}>
+              {STATE_LABELS[result.competencyState] ?? result.competencyState}
             </Chip>
+            <Chip>{Math.round(result.score * 100)}%</Chip>
             {result.nextReviewAt && (
               <Chip>
-                Próximo repaso:{' '}
+                Repaso:{' '}
                 {new Date(result.nextReviewAt).toLocaleDateString('es-PE', {
                   day: 'numeric',
                   month: 'short',
@@ -142,14 +156,18 @@ export function LessonPlayer({
           <button
             type="button"
             onClick={next}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep"
+            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90"
           >
             {isLast ? 'Terminar sesión' : 'Continuar'}
           </button>
         </Card>
       )}
 
-      {error && <Card className="border-risk/40 bg-risk-soft px-4 py-3 text-sm text-risk">{error}</Card>}
+      {error && (
+        <div className="rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
+          {error}
+        </div>
+      )}
     </div>
   );
 }
@@ -181,26 +199,31 @@ function ActivityForm({
   const wordCount = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
 
   return (
-    <Card className="rise rise-1 flex flex-col gap-4 px-5 py-5">
-      <div className="flex flex-wrap gap-2">
+    <div className="rise rise-1 flex flex-col gap-4">
+      <div className="flex flex-wrap gap-2 px-1">
         <Chip tone="primary">
           {activity.skill === 'language_use' ? 'Uso del idioma' : activity.skill}
         </Chip>
         {activity.isTransferVariant && <Chip tone="gold">Transferencia · contexto nuevo</Chip>}
       </div>
 
-      {prompt.instructions && <p className="text-sm leading-relaxed text-dim">{prompt.instructions}</p>}
-
-      {prompt.transcript && (
-        <blockquote className="rounded-lg border-l-2 border-l-primary bg-mist/60 px-4 py-3 font-display text-[15px] leading-relaxed text-ink">
-          {prompt.transcript}
-        </blockquote>
+      {(prompt.instructions || prompt.transcript) && (
+        <Card className="px-5 py-4">
+          {prompt.instructions && (
+            <p className="text-[14px] leading-relaxed text-dim">{prompt.instructions}</p>
+          )}
+          {prompt.transcript && (
+            <p className="mt-3 rounded-xl bg-mist px-4 py-3 text-[15px] leading-relaxed text-ink">
+              {prompt.transcript}
+            </p>
+          )}
+        </Card>
       )}
 
       {activity.kind === 'mcq' && (
         <>
-          <p className="text-base font-medium text-ink">{prompt.stem}</p>
-          <div className="flex flex-col gap-2" role="radiogroup" aria-label="Opciones">
+          <p className="px-1 text-[17px] font-semibold leading-snug text-ink">{prompt.stem}</p>
+          <Group>
             {(prompt.options ?? []).map((option, optionIndex) => (
               <button
                 key={option}
@@ -208,21 +231,18 @@ function ActivityForm({
                 role="radio"
                 aria-checked={selected === optionIndex}
                 onClick={() => setSelected(optionIndex)}
-                className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
-                  selected === optionIndex
-                    ? 'border-primary bg-primary-soft font-medium text-ink'
-                    : 'border-line bg-surface text-dim hover:border-primary/40 hover:text-ink'
-                }`}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-mist/60"
               >
-                {option}
+                <span className="flex-1 text-[16px] text-ink">{option}</span>
+                {selected === optionIndex && <Icon name="check" className="size-5 text-primary" />}
               </button>
             ))}
-          </div>
+          </Group>
           <button
             type="button"
             disabled={selected === null || busy}
             onClick={() => onSubmit({ kind: 'mcq', selectedIndex: selected })}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep disabled:opacity-40"
+            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
           >
             {busy ? 'Enviando…' : 'Responder'}
           </button>
@@ -231,31 +251,35 @@ function ActivityForm({
 
       {activity.kind === 'gap_fill' && (
         <>
-          <p className="text-base leading-loose text-ink">
-            {(prompt.text ?? '').split('____').map((part, partIndex, parts) => (
-              <span key={partIndex}>
-                {part}
-                {partIndex < parts.length - 1 && (
-                  <input
-                    aria-label={`Espacio ${partIndex + 1}`}
-                    className="mx-1 inline-block w-32 rounded-md border border-line bg-surface px-2 py-1 text-center text-sm font-medium text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={answers[partIndex] ?? ''}
-                    onChange={(event) => {
-                      const next = [...answers];
-                      next[partIndex] = event.target.value;
-                      setAnswers(next);
-                    }}
-                  />
-                )}
-              </span>
-            ))}
-          </p>
-          {prompt.hints && <p className="text-xs text-dim">Pistas: {prompt.hints.join(' · ')}</p>}
+          <Card className="px-5 py-5">
+            <p className="text-[17px] leading-loose text-ink">
+              {(prompt.text ?? '').split('____').map((part, partIndex, parts) => (
+                <span key={partIndex}>
+                  {part}
+                  {partIndex < parts.length - 1 && (
+                    <input
+                      aria-label={`Espacio ${partIndex + 1}`}
+                      className="mx-1 inline-block w-32 rounded-lg bg-mist px-2 py-1 text-center text-[15px] font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      value={answers[partIndex] ?? ''}
+                      onChange={(event) => {
+                        const next = [...answers];
+                        next[partIndex] = event.target.value;
+                        setAnswers(next);
+                      }}
+                    />
+                  )}
+                </span>
+              ))}
+            </p>
+            {prompt.hints && (
+              <p className="mt-3 text-[13px] text-dim">Pistas: {prompt.hints.join(' · ')}</p>
+            )}
+          </Card>
           <button
             type="button"
             disabled={busy || answers.filter((a) => a?.trim()).length < (prompt.gaps ?? 1)}
             onClick={() => onSubmit({ kind: 'gap_fill', answers })}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep disabled:opacity-40"
+            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
           >
             {busy ? 'Enviando…' : 'Responder'}
           </button>
@@ -264,31 +288,35 @@ function ActivityForm({
 
       {activity.kind === 'writing_prompt' && (
         <>
-          {prompt.scenario && <p className="text-sm leading-relaxed text-ink">{prompt.scenario}</p>}
-          <textarea
-            aria-label="Tu texto"
-            rows={8}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="Escribe tu correo aquí…"
-            className="rounded-lg border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <div className="flex items-center justify-between text-xs text-dim">
+          {prompt.scenario && (
+            <p className="px-1 text-[15px] leading-relaxed text-ink">{prompt.scenario}</p>
+          )}
+          <Card className="p-2">
+            <textarea
+              aria-label="Tu texto"
+              rows={9}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Escribe tu correo aquí…"
+              className="w-full resize-none rounded-xl px-3 py-2.5 text-[16px] leading-relaxed text-ink placeholder:text-dim/60 focus:outline-none"
+            />
+          </Card>
+          <div className="flex items-center justify-between px-1 text-[12px] text-dim">
             <span className="tabular-nums">
               {wordCount} palabras{prompt.minWords ? ` · mínimo ${prompt.minWords}` : ''}
             </span>
-            <span>Evaluación provisional + revisión humana si es crítica</span>
+            <span>Con revisión humana si es crítica</span>
           </div>
           <button
             type="button"
             disabled={busy || wordCount < 10}
             onClick={() => onSubmit({ kind: 'writing_prompt', text })}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep disabled:opacity-40"
+            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
           >
             {busy ? 'Enviando…' : 'Entregar'}
           </button>
         </>
       )}
-    </Card>
+    </div>
   );
 }

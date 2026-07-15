@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { ProgressResponse } from '@star/contracts';
 import { apiFetch } from '@/lib/api';
 import { resolveEnrollment } from '@/lib/enrollment';
-import { Card, Chip, Meter, SectionTitle } from '@/components/ui';
+import { Card, Chip, Group, Meter, RingCluster, Row, SectionHeader } from '@/components/ui';
 
 const SKILL_LABELS: Record<string, string> = {
   reading: 'Lectura',
@@ -11,6 +11,13 @@ const SKILL_LABELS: Record<string, string> = {
   writing: 'Escritura',
   language_use: 'Uso del idioma',
 };
+
+const RING_COLORS = {
+  coverage: '#0a84ff',
+  mastery: '#5e5ce6',
+  retention: '#30b0c7',
+  readiness: '#34c759',
+} as const;
 
 export default async function ProgressPage({
   params,
@@ -24,89 +31,111 @@ export default async function ProgressPage({
 
   const progress = await apiFetch<ProgressResponse>(`/enrollments/${enrollment.id}/progress`);
 
+  const legend = [
+    { key: 'Cobertura', value: progress.coverage, color: RING_COLORS.coverage, hint: 'del mapa recorrido' },
+    { key: 'Dominio', value: progress.mastery, color: RING_COLORS.mastery, hint: 'demostrado con evidencia' },
+    { key: 'Retención', value: progress.retention, color: RING_COLORS.retention, hint: 'sigue fresco en memoria' },
+    { key: 'Readiness', value: progress.readiness, color: RING_COLORS.readiness, hint: 'simulacros S4 · aún no aplica' },
+  ];
+
   return (
     <div className="flex flex-col gap-7">
-      <section className="rise">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Reporte de avance</p>
-        <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
-          Progreso honesto
-        </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-dim">
-          Recorrer contenido no es dominarlo. Por eso cobertura, dominio, retención y readiness se
-          miden por separado.
+      <header className="rise">
+        <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Progreso</h1>
+        <p className="mt-1 text-[15px] leading-relaxed text-dim">
+          Cuatro medidas separadas — recorrer contenido no es dominarlo.
         </p>
-      </section>
+      </header>
 
-      {progress.placement && (
-        <Card accent className="rise rise-1 flex items-center justify-between px-5 py-4">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Nivel estimado</p>
-            <p className="text-gradient font-display text-3xl font-semibold">
-              {progress.placement.overall}
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-1.5">
-            <Chip tone={progress.placement.provisional ? 'warn' : 'ok'}>
-              {progress.placement.provisional ? 'Provisional · en revisión humana' : 'Confirmado por el equipo académico'}
-            </Chip>
-            <span className="text-xs tabular-nums text-dim">
-              Confianza {Math.round(progress.placement.confidence * 100)}%
-            </span>
-          </div>
-        </Card>
-      )}
-
-      <Card className="rise rise-2 flex flex-col gap-6 px-5 py-5">
-        <Meter label="Cobertura" value={progress.coverage} tone="ink" hint="Cuánto del mapa has recorrido" />
-        <Meter
-          label="Dominio"
-          value={progress.mastery}
-          tone="gold"
-          hint="Lo que demostraste saber hacer, con evidencia"
-        />
-        <Meter
-          label="Retención"
-          value={progress.retention}
-          tone="primary"
-          hint="Lo dominado que sigue fresco en tu memoria"
-        />
-        <Meter
-          label="Readiness TOEFL"
-          value={progress.readiness}
-          tone="ok"
-          hint="Se activa con los simulacros de la etapa S4 — aún no aplica"
-        />
+      <Card className="rise rise-1 px-5 py-6">
+        <div className="flex items-center gap-6">
+          <RingCluster
+            size={172}
+            rings={legend.map((entry) => ({ value: entry.value, color: entry.color }))}
+          />
+          <ul className="flex min-w-0 flex-1 flex-col gap-3">
+            {legend.map((entry) => (
+              <li key={entry.key} className="flex items-baseline gap-2.5">
+                <span className="size-2.5 shrink-0 translate-y-[-1px] rounded-full" style={{ backgroundColor: entry.color }} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[15px] font-semibold text-ink">{entry.key}</span>
+                    <span className="text-[15px] font-semibold tabular-nums" style={{ color: entry.color }}>
+                      {entry.value === null ? '—' : `${Math.round(entry.value * 100)}%`}
+                    </span>
+                  </div>
+                  <p className="text-[12px] leading-snug text-dim">{entry.hint}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </Card>
 
-      <section className="rise rise-3 flex flex-col gap-3">
-        <SectionTitle>Competencias</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="px-4 py-4">
-            <p className="text-xs text-dim">Críticas dominadas</p>
-            <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-ink">
-              {progress.criticalMastered}
-              <span className="text-base font-medium text-dim"> / {progress.criticalTotal}</span>
+      {progress.placement && (
+        <section className="rise rise-2">
+          <SectionHeader>Nivel</SectionHeader>
+          <Group>
+            <Row
+              icon="progress"
+              iconColor="bg-primary"
+              title="Nivel estimado"
+              subtitle={`Confianza ${Math.round(progress.placement.confidence * 100)}%`}
+              trailing={
+                <span className="flex items-center gap-2">
+                  <span className="text-[22px] font-extrabold text-primary">{progress.placement.overall}</span>
+                  <Chip tone={progress.placement.provisional ? 'warn' : 'ok'}>
+                    {progress.placement.provisional ? 'En revisión' : 'Confirmado'}
+                  </Chip>
+                </span>
+              }
+            />
+          </Group>
+          {progress.placement.provisional && (
+            <p className="mt-2 px-5 text-[12px] leading-relaxed text-dim">
+              Una persona del equipo académico confirma tu nivel antes de que sea definitivo.
             </p>
-          </Card>
-          <Card className="px-4 py-4">
-            <p className="text-xs text-dim">Complementarias</p>
-            <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-ink">
-              {progress.complementaryMastered}
-              <span className="text-base font-medium text-dim"> / {progress.complementaryTotal}</span>
-            </p>
-          </Card>
-        </div>
+          )}
+        </section>
+      )}
+
+      <section className="rise rise-3">
+        <SectionHeader>Competencias</SectionHeader>
+        <Group>
+          <Row
+            icon="check"
+            iconColor="bg-primary"
+            title="Críticas dominadas"
+            subtitle="La puerta de etapa exige el 100%"
+            trailing={
+              <span className="font-semibold tabular-nums text-ink">
+                {progress.criticalMastered} / {progress.criticalTotal}
+              </span>
+            }
+          />
+          <Row
+            icon="check"
+            iconColor="bg-teal"
+            title="Complementarias dominadas"
+            subtitle="La puerta de etapa exige el 85%"
+            trailing={
+              <span className="font-semibold tabular-nums text-ink">
+                {progress.complementaryMastered} / {progress.complementaryTotal}
+              </span>
+            }
+          />
+        </Group>
       </section>
 
-      <section className="rise rise-4 flex flex-col gap-3">
-        <SectionTitle>Por habilidad</SectionTitle>
+      <section className="rise rise-4">
+        <SectionHeader>Por habilidad</SectionHeader>
         <Card className="flex flex-col gap-5 px-5 py-5">
           {progress.perSkill.map((entry) => (
             <Meter
               key={entry.skill}
               label={SKILL_LABELS[entry.skill] ?? entry.skill}
               value={entry.total === 0 ? 0 : entry.mastered / entry.total}
-              tone="primary"
+              tone="blue"
               hint={`${entry.mastered} de ${entry.total} dominadas`}
             />
           ))}

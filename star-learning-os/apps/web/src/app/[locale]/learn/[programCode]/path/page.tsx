@@ -2,24 +2,15 @@ import { redirect } from 'next/navigation';
 import type { PathResponse } from '@star/contracts';
 import { apiFetch } from '@/lib/api';
 import { resolveEnrollment } from '@/lib/enrollment';
-import { Card, Chip, SectionTitle } from '@/components/ui';
+import { Chip, Group, Ring, SectionHeader } from '@/components/ui';
 
-const STATE_LABELS: Record<string, string> = {
-  not_seen: 'Pendiente',
-  exposed: 'Vista',
-  developing: 'En desarrollo',
-  provisional: 'Casi dominada',
-  mastered: 'Dominada',
-  review_required: 'Necesita repaso',
-};
-
-const STATE_TONES: Record<string, 'default' | 'gold' | 'primary' | 'warn'> = {
-  not_seen: 'default',
-  exposed: 'default',
-  developing: 'primary',
-  provisional: 'gold',
-  mastered: 'gold',
-  review_required: 'warn',
+const STATE_META: Record<string, { label: string; value: number; color: string }> = {
+  not_seen: { label: 'Pendiente', value: 0.03, color: '#c7c7cc' },
+  exposed: { label: 'Vista', value: 0.15, color: '#c7c7cc' },
+  developing: { label: 'En desarrollo', value: 0.45, color: '#0a84ff' },
+  provisional: { label: 'Casi dominada', value: 0.8, color: '#30b0c7' },
+  mastered: { label: 'Dominada', value: 1, color: '#34c759' },
+  review_required: { label: 'Necesita repaso', value: 0.8, color: '#ff9f0a' },
 };
 
 const SKILL_LABELS: Record<string, string> = {
@@ -44,48 +35,57 @@ export default async function PathPage({
 
   return (
     <div className="flex flex-col gap-7">
-      <section className="rise">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Tu ruta medible</p>
-        <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
-          Hacia Starbiz Global B2
-        </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-dim">
-          Cada punto es una competencia verificable. Se marca como dominada solo con producción
-          propia, transferencia a contextos nuevos y memoria a largo plazo.
+      <header className="rise">
+        <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Ruta</h1>
+        <p className="mt-1 text-[15px] leading-relaxed text-dim">
+          Hacia Starbiz Global B2. Cada competencia se domina con producción propia, transferencia
+          y memoria a largo plazo.
         </p>
-      </section>
+      </header>
 
       {path.stages.map((stage) => (
-        <section key={stage.code} className="rise rise-1 flex flex-col gap-3">
-          <SectionTitle>{stage.name}</SectionTitle>
+        <section key={stage.code} className="rise rise-1 flex flex-col gap-5">
           {stage.units.map((unit) => (
-            <Card key={unit.code} className="px-5 py-4">
-              <p className="mb-4 font-display text-base font-semibold text-ink">{unit.name}</p>
-              <ol className="relative ml-[7px] flex flex-col gap-5 border-l border-line pl-5">
-                {unit.competencies.map((competency) => (
-                  <li key={competency.code} className="relative">
-                    <span
-                      className="route-node absolute -left-[27px] top-0.5 inline-block size-3.5 rounded-full"
-                      data-state={competency.state}
-                      aria-hidden
-                    />
-                    <p className="text-sm leading-snug text-ink">{competency.descriptor}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                      <Chip tone={STATE_TONES[competency.state]}>
-                        {STATE_LABELS[competency.state]}
+            <div key={unit.code}>
+              <SectionHeader>
+                {stage.name} · {unit.name}
+              </SectionHeader>
+              <Group>
+                {unit.competencies.map((competency) => {
+                  const meta = STATE_META[competency.state] ?? STATE_META.not_seen;
+                  return (
+                    <div key={competency.code} className="flex items-center gap-3.5 px-4 py-3">
+                      <Ring value={meta.value} size={34} strokeWidth={4.5} color={meta.color} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] leading-snug text-ink">{competency.descriptor}</p>
+                        <p className="mt-0.5 text-[13px] text-dim">
+                          {SKILL_LABELS[competency.skill]}
+                          {competency.criticality === 'critical' ? ' · Crítica' : ''}
+                        </p>
+                      </div>
+                      <Chip
+                        tone={
+                          competency.state === 'mastered'
+                            ? 'ok'
+                            : competency.state === 'review_required'
+                              ? 'warn'
+                              : competency.state === 'developing' || competency.state === 'provisional'
+                                ? 'primary'
+                                : 'default'
+                        }
+                      >
+                        {meta.label}
                       </Chip>
-                      <Chip>{SKILL_LABELS[competency.skill]}</Chip>
-                      {competency.criticality === 'critical' && <Chip tone="primary">Crítica</Chip>}
                     </div>
-                  </li>
-                ))}
-              </ol>
-            </Card>
+                  );
+                })}
+              </Group>
+            </div>
           ))}
         </section>
       ))}
 
-      <p className="rise rise-2 border-t border-line pt-4 text-center text-xs leading-relaxed text-dim">
+      <p className="rise rise-2 px-5 text-center text-[12px] leading-relaxed text-dim">
         La puerta de etapa exige el 100% de competencias críticas y el 85% de complementarias — sin
         promedios que escondan debilidades.
       </p>

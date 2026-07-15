@@ -1,35 +1,76 @@
 import type { ReactNode } from 'react';
 
+/** Tarjeta iOS: blanca, sin borde, esquinas continuas. */
 export function Card({
   children,
   className = '',
-  accent = false,
 }: {
   children: ReactNode;
   className?: string;
   accent?: boolean;
 }) {
   return (
-    <div
-      className={`relative rounded-2xl border border-line bg-surface/90 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_8px_24px_rgba(0,0,0,0.25)] ${className}`}
-    >
-      {accent && (
-        <span
-          aria-hidden
-          className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-primary via-cyan to-transparent"
-        />
-      )}
+    <div className={`rounded-2xl bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${className}`}>
       {children}
     </div>
   );
 }
 
-/** Etiqueta de sección estilo consola: monoespaciada, mínima. */
-export function SectionTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
+/** Grupo de filas estilo Ajustes: tarjeta con separadores hairline. */
+export function Group({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className={`font-mono text-[10px] uppercase tracking-[0.22em] text-dim ${className}`}>
+    <div
+      className={`overflow-hidden rounded-2xl bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04)] [&>*+*]:border-t [&>*+*]:border-line ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Encabezado de sección de lista agrupada (footnote gris, como iOS). */
+export function SectionHeader({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <h2 className={`px-5 pb-2 text-[13px] font-medium uppercase tracking-wide text-dim ${className}`}>
       {children}
     </h2>
+  );
+}
+
+/** Fila de lista iOS: icono en tesela, título/subtítulo, valor y chevron opcionales. */
+export function Row({
+  icon,
+  iconColor = 'bg-primary',
+  title,
+  subtitle,
+  trailing,
+  chevron = false,
+}: {
+  icon?: IconName;
+  iconColor?: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  trailing?: ReactNode;
+  chevron?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3.5 px-4 py-3">
+      {icon && <IconTile name={icon} color={iconColor} />}
+      <div className="min-w-0 flex-1">
+        <p className="text-[16px] leading-snug text-ink">{title}</p>
+        {subtitle && <p className="mt-0.5 text-[13px] leading-snug text-dim">{subtitle}</p>}
+      </div>
+      {trailing && <div className="shrink-0 text-[15px] text-dim">{trailing}</div>}
+      {chevron && <Icon name="chevron" className="size-4 shrink-0 text-[#c7c7cc]" />}
+    </div>
+  );
+}
+
+/** Tesela de icono con color, como en Ajustes de iOS. */
+export function IconTile({ name, color = 'bg-primary' }: { name: IconName; color?: string }) {
+  return (
+    <span className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] ${color}`}>
+      <Icon name={name} className="size-4.5 text-white" />
+    </span>
   );
 }
 
@@ -41,26 +82,21 @@ export function Chip({
   tone?: 'default' | 'gold' | 'ok' | 'warn' | 'risk' | 'primary';
 }) {
   const tones: Record<string, string> = {
-    default: 'border-line bg-mist/70 text-dim',
-    gold: 'border-gold/40 bg-gold-soft text-gold-deep',
-    ok: 'border-ok/40 bg-ok-soft text-ok',
-    warn: 'border-warn/40 bg-warn-soft text-warn',
-    risk: 'border-risk/40 bg-risk-soft text-risk',
-    primary: 'border-primary/40 bg-primary-soft text-[#b6abff]',
+    default: 'bg-fill text-dim',
+    gold: 'bg-gold-soft text-gold-deep',
+    ok: 'bg-ok-soft text-ok-deep',
+    warn: 'bg-warn-soft text-gold-deep',
+    risk: 'bg-risk-soft text-risk',
+    primary: 'bg-primary-soft text-primary',
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10.5px] font-medium tracking-wide ${tones[tone]}`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold ${tones[tone]}`}>
       {children}
     </span>
   );
 }
 
-/**
- * Medidor de telemetría. Las cuatro métricas (cobertura, dominio, retención,
- * readiness) SIEMPRE separadas (Especificación §6.4).
- */
+/** Barra fina iOS (usada en filas de consumo). */
 export function Meter({
   label,
   value,
@@ -70,23 +106,25 @@ export function Meter({
   label: string;
   value: number | null;
   hint?: string;
-  tone?: 'primary' | 'gold' | 'ok' | 'ink';
+  tone?: 'primary' | 'gold' | 'ok' | 'ink' | 'blue' | 'teal';
 }) {
   const tones: Record<string, string> = {
-    primary: 'bg-gradient-to-r from-primary to-cyan',
-    gold: 'bg-gradient-to-r from-gold to-gold-deep',
+    primary: 'bg-primary',
+    gold: 'bg-gold',
     ok: 'bg-ok',
-    ink: 'bg-dim',
+    ink: 'bg-ink',
+    blue: 'bg-blue',
+    teal: 'bg-teal',
   };
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-4">
-        <span className="text-sm text-ink">{label}</span>
-        <span className="font-mono text-sm font-medium tabular-nums text-ink">
+        <span className="text-[15px] text-ink">{label}</span>
+        <span className="text-[15px] font-semibold tabular-nums text-ink">
           {value === null ? '—' : `${Math.round(value * 100)}%`}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-mist">
+      <div className="h-[5px] overflow-hidden rounded-full bg-fill">
         {value !== null && (
           <div
             className={`h-full rounded-full ${tones[tone]} transition-[width] duration-700`}
@@ -94,8 +132,74 @@ export function Meter({
           />
         )}
       </div>
-      {hint && <p className="mt-1.5 text-xs leading-relaxed text-dim">{hint}</p>}
+      {hint && <p className="mt-1.5 text-[13px] leading-relaxed text-dim">{hint}</p>}
     </div>
+  );
+}
+
+/** Anillo de progreso estilo Actividad de Apple. */
+export function Ring({
+  value,
+  size = 56,
+  strokeWidth = 7,
+  color = '#5e5ce6',
+  track = '#e9e9ee',
+  children,
+}: {
+  value: number | null;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  track?: string;
+  children?: ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(1, Math.max(0, value ?? 0));
+  const offset = circumference * (1 - clamped);
+  return (
+    <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={track} strokeWidth={strokeWidth} />
+        <circle
+          className="ring-progress"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      {children && <span className="absolute inset-0 flex items-center justify-center">{children}</span>}
+    </span>
+  );
+}
+
+/** Cuatro anillos concéntricos: cobertura, dominio, retención, readiness. */
+export function RingCluster({
+  rings,
+  size = 168,
+}: {
+  rings: Array<{ value: number | null; color: string }>;
+  size?: number;
+}) {
+  const strokeWidth = 13;
+  const gap = 3;
+  return (
+    <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      {rings.map((ring, index) => {
+        const ringSize = size - index * 2 * (strokeWidth + gap);
+        return (
+          <span key={index} className="absolute inset-0 flex items-center justify-center">
+            <Ring value={ring.value} size={ringSize} strokeWidth={strokeWidth} color={ring.color} />
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -108,31 +212,50 @@ export function StarMark({ className = 'size-4 text-primary' }: { className?: st
   );
 }
 
-export function Wordmark({ className = '' }: { className?: string }) {
+/** Icono de app (squircle degradado), como en un onboarding de Apple. */
+export function AppIcon({ className = 'size-16' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-cyan shadow-[0_0_16px_rgba(124,108,255,0.45)]">
-        <StarMark className="size-4 text-white" />
-      </span>
-      <span className="font-display text-lg font-semibold tracking-tight text-ink">
-        Starbiz<span className="text-gradient">Academy</span>
-      </span>
+    <span
+      className={`inline-flex items-center justify-center rounded-[22%] bg-gradient-to-br from-[#7d7aff] to-[#4b49d6] shadow-[0_8px_24px_rgba(94,92,230,0.35)] ${className}`}
+    >
+      <StarMark className="size-1/2 text-white" />
     </span>
   );
 }
 
-/** Iconografía propia en SVG (trazo 1.75, sin librerías). */
-export function Icon({
-  name,
-  className = 'size-5',
-}: {
-  name: 'today' | 'route' | 'mic' | 'review' | 'progress' | 'shield' | 'flag' | 'pause' | 'play' | 'exit' | 'mute' | 'check' | 'arrow';
-  className?: string;
-}) {
-  const paths: Record<string, ReactNode> = {
+export function Wordmark({ className = '' }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <AppIcon className="size-6" />
+      <span className="text-[17px] font-bold tracking-tight text-ink">StarbizAcademy</span>
+    </span>
+  );
+}
+
+export type IconName =
+  | 'today'
+  | 'route'
+  | 'mic'
+  | 'review'
+  | 'progress'
+  | 'shield'
+  | 'flag'
+  | 'pause'
+  | 'play'
+  | 'exit'
+  | 'mute'
+  | 'check'
+  | 'arrow'
+  | 'chevron'
+  | 'book'
+  | 'pencil';
+
+/** Iconografía propia en SVG (trazo 1.8, sin librerías). */
+export function Icon({ name, className = 'size-5' }: { name: IconName; className?: string }) {
+  const paths: Record<IconName, ReactNode> = {
     today: (
       <>
-        <rect x="4" y="5" width="16" height="16" rx="2" />
+        <rect x="4" y="5" width="16" height="16" rx="3" />
         <path d="M4 10h16M9 3v4M15 3v4" />
       </>
     ),
@@ -191,13 +314,26 @@ export function Icon({
     ),
     check: <path d="M4 12l5 5L20 6" />,
     arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+    chevron: <path d="M9 5l7 7-7 7" />,
+    book: (
+      <>
+        <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z" />
+        <path d="M4 19a2 2 0 0 1 2-2h13" />
+      </>
+    ),
+    pencil: (
+      <>
+        <path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z" />
+        <path d="M13.5 6.5l3 3" />
+      </>
+    ),
   };
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -208,7 +344,7 @@ export function Icon({
   );
 }
 
-/** Avatar con iniciales y anillo de degradado firma. */
+/** Avatar con iniciales, plano y limpio. */
 export function InitialsAvatar({ name, className = '' }: { name: string; className?: string }) {
   const initials = name
     .split(/\s+/)
@@ -217,12 +353,10 @@ export function InitialsAvatar({ name, className = '' }: { name: string; classNa
     .join('');
   return (
     <span
-      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-cyan p-px ${className}`}
+      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[15px] font-semibold text-primary ${className}`}
       aria-hidden
     >
-      <span className="flex size-full items-center justify-center rounded-full bg-surface font-mono text-xs font-medium text-ink">
-        {initials}
-      </span>
+      {initials}
     </span>
   );
 }

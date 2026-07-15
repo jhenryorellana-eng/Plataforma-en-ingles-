@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { DiagnosticAttemptResponse, EnrollmentResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Card, Chip } from '@/components/ui';
+import { Card, Group, Icon } from '@/components/ui';
 
 const SKILL_LABELS: Record<string, string> = {
   reading: 'Lectura',
@@ -56,10 +56,14 @@ export default function DiagnosticPage({
   }, [locale, programCode, router]);
 
   if (error) {
-    return <Card className="mt-10 border-risk/40 bg-risk-soft px-4 py-4 text-sm text-risk">{error}</Card>;
+    return (
+      <div className="mt-10 rounded-2xl bg-risk-soft px-4 py-4 text-center text-[14px] text-risk">
+        {error}
+      </div>
+    );
   }
   if (!attempt) {
-    return <p className="mt-16 text-center text-sm text-dim">Preparando tu StarMap…</p>;
+    return <p className="mt-16 text-center text-[15px] text-dim">Preparando tu StarMap…</p>;
   }
 
   const item = attempt.items[index];
@@ -90,58 +94,55 @@ export default function DiagnosticPage({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="rise">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">StarMap 360 · diagnóstico inicial</p>
-        <div className="mt-1 flex items-baseline justify-between">
-          <h1 className="font-display text-xl font-semibold text-ink">
-            Pregunta {index + 1} <span className="font-medium text-dim">de {attempt.items.length}</span>
-          </h1>
-          <span className="font-display text-sm tabular-nums text-dim">{Math.round(progress)}%</span>
-        </div>
-        <div className="mt-3 h-1 overflow-hidden rounded-full bg-mist">
+    <div className="flex flex-col gap-6">
+      <header className="rise">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-dim">
+          StarMap 360 · {SKILL_LABELS[item.skill] ?? item.skill}
+        </p>
+        <h1 className="mt-0.5 text-[30px] font-extrabold leading-tight tracking-tight text-ink">
+          Pregunta {index + 1} <span className="font-semibold text-dim">de {attempt.items.length}</span>
+        </h1>
+        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-fill">
           <div
             className="h-full rounded-full bg-primary transition-[width] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-dim">
-          Tu resultado será provisional: una persona del equipo académico lo confirma antes de
-          volverse definitivo.
-        </p>
-      </section>
+      </header>
 
-      <Card accent className="rise rise-1 flex flex-col gap-4 px-5 py-5">
-        <Chip tone="primary">{SKILL_LABELS[item.skill] ?? item.skill}</Chip>
-        <p className="text-base leading-relaxed text-ink">{item.prompt}</p>
-        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Opciones">
-          {item.options.map((option, optionIndex) => (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={selected === optionIndex}
-              onClick={() => setSelected(optionIndex)}
-              className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
-                selected === optionIndex
-                  ? 'border-primary bg-primary-soft font-medium text-ink'
-                  : 'border-line bg-surface text-dim hover:border-primary/40 hover:text-ink'
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
+      <Card className="rise rise-1 px-5 py-5">
+        <p className="text-[17px] leading-relaxed text-ink">{item.prompt}</p>
       </Card>
+
+      <Group className="rise rise-2">
+        {item.options.map((option, optionIndex) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={selected === optionIndex}
+            onClick={() => setSelected(optionIndex)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-mist/60"
+          >
+            <span className="flex-1 text-[16px] text-ink">{option}</span>
+            {selected === optionIndex && <Icon name="check" className="size-5 text-primary" />}
+          </button>
+        ))}
+      </Group>
 
       <button
         type="button"
         disabled={selected === null || busy || enrollmentId === null}
         onClick={submitAnswer}
-        className="btn-gradient rise rise-2 rounded-xl px-6 py-4 font-display text-base font-semibold text-white disabled:opacity-40"
+        className="rise rise-3 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
       >
         {busy ? 'Guardando…' : index + 1 === attempt.items.length ? 'Terminar diagnóstico' : 'Siguiente'}
       </button>
+
+      <p className="px-5 text-center text-[12px] leading-relaxed text-dim">
+        Tu resultado será provisional: una persona del equipo académico lo confirma antes de
+        volverse definitivo.
+      </p>
     </div>
   );
 }

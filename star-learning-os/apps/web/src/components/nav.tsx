@@ -13,15 +13,15 @@ const TABS = [
   { slug: 'progress', label: 'Progreso', icon: 'progress' },
 ] as const;
 
-/** Dock flotante de cristal: navegación firma de la app. */
+/** Tab bar iOS: traslúcida, hairline superior, tinte de acento en la activa. */
 export function BottomNav({ locale, programCode }: { locale: string; programCode: string }) {
   const pathname = usePathname();
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-md"
+      className="material-bar fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[max(env(safe-area-inset-bottom),8px)]"
     >
-      <div className="glass flex items-stretch justify-between rounded-2xl px-1.5 py-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+      <div className="mx-auto flex max-w-2xl items-stretch justify-between px-2 pt-1.5">
         {TABS.map((tab) => {
           const href = `/${locale}/learn/${programCode}/${tab.slug}`;
           const active = pathname.startsWith(href);
@@ -29,13 +29,11 @@ export function BottomNav({ locale, programCode }: { locale: string; programCode
             <Link
               key={tab.slug}
               href={href}
-              className={`flex min-w-14 flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-medium transition-all ${
-                active
-                  ? 'bg-primary-soft text-ink shadow-[0_0_18px_rgba(124,108,255,0.25)]'
-                  : 'text-dim hover:text-ink'
+              className={`flex min-w-14 flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium transition-colors ${
+                active ? 'text-primary' : 'text-[#98989f] hover:text-dim'
               }`}
             >
-              <Icon name={tab.icon} className={`size-5 ${active ? 'text-primary' : ''}`} />
+              <Icon name={tab.icon} className="size-6" />
               {tab.label}
             </Link>
           );
@@ -45,22 +43,16 @@ export function BottomNav({ locale, programCode }: { locale: string; programCode
   );
 }
 
-export function TopBar({ locale, subtitle }: { locale: string; subtitle?: string }) {
+/** Barra superior traslúcida mínima: marca a la izquierda, acción de texto a la derecha. */
+export function TopBar({ locale }: { locale: string; subtitle?: string }) {
   const router = useRouter();
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-paper/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-        <div className="flex flex-col">
-          <Wordmark />
-          {subtitle && (
-            <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-dim">
-              {subtitle}
-            </span>
-          )}
-        </div>
+    <header className="material-bar sticky top-0 z-40 border-b border-line">
+      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
+        <Wordmark />
         <button
           type="button"
-          className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-dim transition-colors hover:border-risk/40 hover:text-risk"
+          className="text-[15px] font-medium text-primary transition-opacity hover:opacity-70"
           onClick={async () => {
             await clientApi('/auth/logout', { method: 'POST' });
             router.push(`/${locale}/login`);

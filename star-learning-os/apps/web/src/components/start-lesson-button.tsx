@@ -52,35 +52,43 @@ export function StartLessonButton({
 
   if (compact) {
     return (
-      <div>
+      <div className="text-right">
         <button
           type="button"
           onClick={start}
           disabled={loading}
-          className="rounded-lg border border-primary/40 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-white disabled:opacity-50"
+          className="text-[15px] font-semibold text-primary transition-opacity hover:opacity-70 disabled:opacity-40"
         >
           {loading ? 'Abriendo…' : label}
         </button>
-        {error && <p className="mt-1 text-xs text-risk">{error}</p>}
+        {error && <p className="mt-1 text-[12px] text-risk">{error}</p>}
       </div>
     );
   }
 
+  // Tarjeta héroe estilo App Store "Today": llenado degradado, sin borde.
   return (
     <div>
       <button
         type="button"
         onClick={start}
         disabled={loading}
-        className="group flex w-full items-center justify-between rounded-xl bg-primary px-6 py-5 text-left text-white  transition-all hover:bg-primary-deep active:translate-y-px disabled:opacity-60"
+        className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#7d7aff] via-[#5e5ce6] to-[#4b49d6] px-6 pb-6 pt-14 text-left text-white shadow-[0_12px_30px_rgba(94,92,230,0.35)] transition-transform active:scale-[0.99] disabled:opacity-70"
       >
-        <span>
-          <span className="block font-display text-lg font-semibold">
-            {loading ? 'Preparando tu sesión…' : label}
-          </span>
-          {sublabel && <span className="mt-0.5 block text-sm text-white/75">{sublabel}</span>}
+        <span className="absolute left-6 top-5 text-[12px] font-bold uppercase tracking-[0.08em] text-white/70">
+          {loading ? 'Preparando…' : 'Continúa donde ibas'}
         </span>
-        <Icon name="arrow" className="size-5 transition-transform group-hover:translate-x-1" />
+        <span className="block max-w-[26rem] pr-12 text-[26px] font-extrabold leading-[1.15] tracking-tight">
+          {label}
+        </span>
+        {sublabel && (
+          <span className="mt-1 block pr-14 text-[15px] font-medium leading-snug text-white/75">
+            {sublabel}
+          </span>
+        )}
+        <span className="absolute bottom-5 right-5 flex size-9 items-center justify-center rounded-full bg-white/20 backdrop-blur transition-transform group-hover:translate-x-0.5">
+          <Icon name="arrow" className="size-4.5 text-white" />
+        </span>
       </button>
       {error && <p className="mt-2 text-sm text-risk">{error}</p>}
     </div>

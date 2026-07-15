@@ -4,29 +4,13 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MeResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Card, Icon, InitialsAvatar, StarMark, Wordmark } from '@/components/ui';
+import { AppIcon, Group, Icon, InitialsAvatar, SectionHeader } from '@/components/ui';
 
 const PROFILES = [
-  {
-    profile: 'learner_teen',
-    name: 'Diego Torres',
-    detail: 'Alumno 14–17 · English Path B1 · autorizaciones completas',
-  },
-  {
-    profile: 'learner_young',
-    name: 'Lucía Torres',
-    detail: 'Alumna 12–13 · las sesiones de voz exigen ZDR verificado (D17)',
-  },
-  {
-    profile: 'guardian',
-    name: 'Ana Torres',
-    detail: 'Apoderada · progreso, permisos y consumo de sus hijos',
-  },
-  {
-    profile: 'staff',
-    name: 'Prof. Rivas',
-    detail: 'Equipo académico · revisión humana y casos de protección',
-  },
+  { profile: 'learner_teen', name: 'Diego Torres', detail: 'Alumno 14–17 · todo autorizado' },
+  { profile: 'learner_young', name: 'Lucía Torres', detail: 'Alumna 12–13 · voz sujeta a ZDR' },
+  { profile: 'guardian', name: 'Ana Torres', detail: 'Apoderada' },
+  { profile: 'staff', name: 'Prof. Rivas', detail: 'Equipo académico' },
 ] as const;
 
 export default function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -53,59 +37,51 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 px-6 py-12">
-      <div className="rise">
-        <div className="mb-6 h-1 w-16 rounded-full bg-gradient-to-r from-primary to-cyan" />
-        <Wordmark />
-        <h1 className="mt-5 font-display text-[2.15rem] font-semibold leading-[1.15] text-ink">
-          Tu sistema operativo
-          <br />
-          <span className="text-gradient">de aprendizaje.</span>
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+      <div className="rise flex flex-col items-center text-center">
+        <AppIcon className="size-20" />
+        <h1 className="mt-6 text-[32px] font-extrabold leading-tight tracking-tight text-ink">
+          StarbizAcademy
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-dim">
-          Diagnóstico real, dominio verificable y preparación TOEFL con supervisión académica
-          humana. Entorno de demostración: elige un perfil — en producción, esta pantalla es
-          Identity Platform.
+        <p className="mt-2 max-w-[30ch] text-[16px] leading-relaxed text-dim">
+          Tu ruta medible desde tu nivel real hasta tu meta en inglés.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3" role="list">
-        {PROFILES.map((item, index) => (
-          <button
-            key={item.profile}
-            type="button"
-            role="listitem"
-            disabled={loading !== null}
-            onClick={() => login(item.profile)}
-            className={`rise rise-${index + 1} text-left`}
-          >
-            <Card className="flex items-center gap-4 px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_4px_14px_rgba(28,36,52,0.08)]">
-              <InitialsAvatar name={item.name} />
+      <div className="rise rise-2 mt-10">
+        <SectionHeader>Continuar como</SectionHeader>
+        <Group>
+          {PROFILES.map((item) => (
+            <button
+              key={item.profile}
+              type="button"
+              disabled={loading !== null}
+              onClick={() => login(item.profile)}
+              className="flex w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-mist/60 active:bg-mist disabled:opacity-60"
+            >
+              <InitialsAvatar name={item.name} className="size-10" />
               <span className="min-w-0 flex-1">
-                <span className="block font-display font-semibold text-ink">{item.name}</span>
-                <span className="block text-xs leading-relaxed text-dim">{item.detail}</span>
+                <span className="block text-[16px] font-semibold text-ink">{item.name}</span>
+                <span className="block text-[13px] text-dim">{item.detail}</span>
               </span>
-              <span className="text-primary">
-                {loading === item.profile ? (
-                  <span className="text-xs text-dim">Entrando…</span>
-                ) : (
-                  <Icon name="arrow" className="size-4" />
-                )}
-              </span>
-            </Card>
-          </button>
-        ))}
+              {loading === item.profile ? (
+                <span className="text-[13px] text-dim">Entrando…</span>
+              ) : (
+                <Icon name="chevron" className="size-4 text-[#c7c7cc]" />
+              )}
+            </button>
+          ))}
+        </Group>
+        <p className="mt-3 px-5 text-center text-[12px] leading-relaxed text-dim">
+          Entorno de demostración. En producción, el acceso es con Identity Platform y verificación
+          del apoderado.
+        </p>
       </div>
 
-      <p className="rise rise-4 flex items-center gap-2 font-mono text-[11px] text-dim">
-        <StarMark className="size-3 text-primary" />
-        La IA personaliza el apoyo y el tiempo; el estándar de salida no cambia.
-      </p>
-
       {error && (
-        <Card className="border-risk/40 bg-risk-soft px-4 py-3 text-sm text-risk">
-          {error} — ¿levantaste la API y el seed? (`pnpm db:up && pnpm db:migrate && pnpm db:seed`)
-        </Card>
+        <div className="rise mt-4 rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
+          {error}
+        </div>
       )}
     </main>
   );

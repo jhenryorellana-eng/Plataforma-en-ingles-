@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse, TodayResponse, VoiceSessionResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { Card, Icon, StarMark } from '@/components/ui';
+import { Card, Group, Icon, Row, SectionHeader, StarMark, type IconName } from '@/components/ui';
 
 type Phase = 'loading' | 'preview' | 'live' | 'ended' | 'blocked';
 
@@ -209,42 +209,48 @@ export default function VoicePage({
   const seconds = elapsed % 60;
 
   if (phase === 'loading') {
-    return <p className="mt-16 text-center text-sm text-dim">Buscando tu misión de voz…</p>;
+    return <p className="mt-16 text-center text-[15px] text-dim">Buscando tu misión de voz…</p>;
   }
 
   if (phase === 'blocked') {
     return (
-      <Card className="rise mt-8 flex flex-col gap-3 border-l-2 border-l-warn px-5 py-6">
-        <span className="flex size-10 items-center justify-center rounded-lg bg-warn-soft text-warn">
-          <Icon name="shield" className="size-5" />
-        </span>
-        <h1 className="font-display text-xl font-semibold text-ink">Sesión de voz no disponible</h1>
-        <p className="text-sm leading-relaxed text-dim">{blockedMessage}</p>
-        <p className="border-t border-line pt-3 text-xs leading-relaxed text-dim">
+      <div className="rise mt-4 flex flex-col gap-3">
+        <SectionHeader>Protección activa</SectionHeader>
+        <Group>
+          <Row
+            icon="shield"
+            iconColor="bg-gold"
+            title="Sesión de voz no disponible"
+            subtitle={blockedMessage}
+          />
+        </Group>
+        <p className="px-5 text-[12px] leading-relaxed text-dim">
           Esta protección es un bloqueo técnico del sistema, no un mensaje decorativo: así lo exige
           la política juvenil de StarbizAcademy.
         </p>
-      </Card>
+      </div>
     );
   }
 
   if (phase === 'ended') {
     return (
-      <Card accent className="rise mt-8 flex flex-col gap-4 px-6 py-7 text-center">
-        <StarMark className="mx-auto size-6 text-gold" />
-        <h1 className="font-display text-2xl font-semibold text-ink">Misión terminada</h1>
-        <p className="text-sm text-dim">
+      <Card className="rise mt-10 flex flex-col items-center gap-3 px-6 py-10 text-center">
+        <span className="flex size-14 items-center justify-center rounded-full bg-ok-soft">
+          <Icon name="check" className="size-7 text-ok" />
+        </span>
+        <h1 className="text-[26px] font-extrabold tracking-tight text-ink">Misión terminada</h1>
+        <p className="text-[15px] text-dim">
           Practicaste {minutes} min {seconds} s de conversación activa.
         </p>
         {endSummary?.includedMinutes !== undefined && (
-          <p className="text-xs tabular-nums text-dim">
+          <p className="text-[13px] tabular-nums text-dim">
             Voz de la semana: {endSummary.usedMinutes} / {endSummary.includedMinutes} min
           </p>
         )}
         <button
           type="button"
           onClick={() => router.push(`/${locale}/learn/${programCode}/today`)}
-          className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep"
+          className="mt-3 w-full max-w-xs rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90"
         >
           Volver a Inicio
         </button>
@@ -254,179 +260,187 @@ export default function VoicePage({
 
   if (phase === 'preview') {
     return (
-      <div className="flex flex-col gap-5">
-        <section className="rise text-center">
-          <div className="session-ring mx-auto flex size-24 items-center justify-center rounded-full border border-primary/30 bg-primary-soft">
-            <Icon name="mic" className="size-8 text-primary" />
-          </div>
-          <h1 className="mt-5 font-display text-2xl font-semibold text-ink">Misión de voz</h1>
-          <p className="mt-1 text-sm leading-relaxed text-dim">
+      <div className="flex flex-col gap-7">
+        <header className="rise flex flex-col items-center pt-4 text-center">
+          <span className="mentor-avatar mentor-avatar-paused flex size-24 items-center justify-center rounded-full">
+            <StarMark className="size-10 text-white" />
+          </span>
+          <h1 className="mt-5 text-[28px] font-extrabold tracking-tight text-ink">Mentor STAR</h1>
+          <p className="mt-1 max-w-[34ch] text-[15px] leading-relaxed text-dim">
             {missionTitle || 'Sin misiones de voz pendientes por ahora.'}
           </p>
-        </section>
+        </header>
+
         {lessonContractId && (
-          <Card className="rise rise-1 flex flex-col gap-3 px-5 py-5 text-sm leading-relaxed text-dim">
-            <p>
-              Hablarás con tu <strong className="font-semibold text-ink">Mentor STAR</strong> — una
-              IA educativa, y siempre se presenta como tal. Puedes pausar, silenciar tu micrófono,
-              reportar o salir en cualquier momento.
-            </p>
-            <p className="border-t border-line pt-3 text-xs">
-              Tu audio de práctica no se guarda. Solo queda la evidencia pedagógica mínima.
-            </p>
+          <div className="rise rise-1">
+            <SectionHeader>Antes de empezar</SectionHeader>
+            <Group>
+              <Row
+                icon="shield"
+                iconColor="bg-ok"
+                title="Es una IA educativa"
+                subtitle="Siempre se presenta como tal; puedes pausar, reportar o salir cuando quieras"
+              />
+              <Row
+                icon="mic"
+                iconColor="bg-teal"
+                title="Tu audio no se guarda"
+                subtitle="Solo queda la evidencia pedagógica mínima de tu práctica"
+              />
+            </Group>
             <button
               type="button"
               onClick={startMission}
-              className="mt-1 btn-gradient rounded-xl px-6 py-4 font-display text-base font-semibold text-white"
+              className="mt-5 w-full rounded-2xl bg-ok py-3.5 text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(52,199,89,0.3)] transition-opacity hover:opacity-90"
             >
               Comenzar misión
             </button>
-            {error && <p className="text-sm text-risk">{error}</p>}
-          </Card>
+            {error && <p className="mt-2 text-center text-[14px] text-risk">{error}</p>}
+          </div>
         )}
       </div>
     );
   }
 
+  // Sesión en vivo: escenario de llamada estilo FaceTime.
   return (
-    <div className="flex flex-col gap-4">
+    <div className="rise call-stage -mx-4 -mt-6 flex min-h-[calc(100dvh-140px)] flex-col rounded-b-[28px] px-5 pb-7 pt-8 text-white">
       <audio ref={audioRef} className="hidden" />
-      <section className="rise">
-        <Card accent className="flex items-center gap-4 px-4 py-4">
-          <div
-            className={`flex size-14 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary-soft ${
-              paused ? 'session-ring-paused opacity-60' : 'session-ring'
-            }`}
-          >
-            <Icon name="mic" className="size-6 text-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-base font-semibold text-ink">Mentor STAR</p>
-            <p className="text-xs text-dim">
-              {voice?.mode === 'mock'
-                ? 'Modo demo (sin OPENAI_API_KEY): interlocutor guiado'
-                : 'Conversación en vivo · WebRTC'}
-            </p>
-          </div>
-          <span className="font-mono text-base font-medium tabular-nums text-ink">
-            {minutes}:{String(seconds).padStart(2, '0')}
-          </span>
-        </Card>
-        <p className="mt-2 px-1 text-xs leading-relaxed text-dim">
-          Objetivo: {voice?.mission.objective}
+
+      <header className="flex flex-col items-center text-center">
+        <span className={`mentor-avatar flex size-20 items-center justify-center rounded-full ${paused ? 'mentor-avatar-paused' : ''}`}>
+          <StarMark className="size-8 text-white" />
+        </span>
+        <h1 className="mt-3 text-[22px] font-bold tracking-tight">Mentor STAR</h1>
+        <p className="text-[13px] text-white/60">
+          {voice?.mode === 'mock' ? 'Modo demo · interlocutor guiado' : 'En vivo · WebRTC'}
         </p>
-      </section>
+        <p className="mt-1 text-[28px] font-semibold tabular-nums tracking-tight text-white/90">
+          {minutes}:{String(seconds).padStart(2, '0')}
+        </p>
+      </header>
 
       {voice?.mode === 'mock' && (
-        <Card className="rise rise-1 flex max-h-80 flex-col gap-2.5 overflow-y-auto px-4 py-4">
+        <div className="mt-5 flex max-h-72 flex-1 flex-col gap-2 overflow-y-auto">
           {turns.map((turn, turnIndex) => (
             <p
               key={turnIndex}
-              className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm leading-relaxed ${
+              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed ${
                 turn.from === 'mentor'
-                  ? 'self-start bg-mist text-ink'
-                  : 'self-end bg-primary-soft text-primary-deep'
+                  ? 'self-start bg-white/12 text-white'
+                  : 'self-end bg-primary text-white'
               }`}
             >
               {turn.text}
             </p>
           ))}
-        </Card>
+        </div>
       )}
 
       {voice?.mode === 'mock' && !paused && (
-        <div className="rise rise-2 flex gap-2">
+        <div className="mt-3 flex gap-2">
           <input
             aria-label="Tu respuesta en inglés"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && sendMockTurn()}
             placeholder="Responde en inglés…"
-            className="flex-1 rounded-lg border border-line bg-surface px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="flex-1 rounded-full bg-white/12 px-4 py-2.5 text-[15px] text-white placeholder:text-white/40 focus:bg-white/16 focus:outline-none"
           />
           <button
             type="button"
             onClick={sendMockTurn}
             aria-label="Enviar"
-            className="flex items-center justify-center rounded-lg bg-primary px-4 text-white transition-colors hover:bg-primary-deep"
+            className="flex size-10 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-90"
           >
-            <Icon name="arrow" className="size-4" />
+            <Icon name="arrow" className="size-4.5 text-white" />
           </button>
         </div>
       )}
 
-      {/* Controles SIEMPRE visibles (TLK-09): Pausar, Silenciar, Reportar, Salir. */}
-      <div className="rise rise-3 grid grid-cols-4 gap-2">
-        <button
-          type="button"
-          onClick={() => setPaused((value) => !value)}
-          className={`flex flex-col items-center gap-1 rounded-lg border bg-surface px-2 py-3 text-[11px] font-medium transition-colors ${
-            paused ? 'border-primary text-primary' : 'border-line text-dim hover:text-ink'
-          }`}
-        >
-          <Icon name={paused ? 'play' : 'pause'} className="size-4" />
-          {paused ? 'Reanudar' : 'Pausar'}
-        </button>
-        <button
-          type="button"
-          onClick={toggleMute}
-          className={`flex flex-col items-center gap-1 rounded-lg border bg-surface px-2 py-3 text-[11px] font-medium transition-colors ${
-            muted ? 'border-warn text-warn' : 'border-line text-dim hover:text-ink'
-          }`}
-        >
-          <Icon name={muted ? 'mic' : 'mute'} className="size-4" />
-          {muted ? 'Activar mic' : 'Silenciar'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setReportOpen(true)}
-          className="flex flex-col items-center gap-1 rounded-lg border border-line bg-surface px-2 py-3 text-[11px] font-medium text-dim transition-colors hover:border-warn hover:text-warn"
-        >
-          <Icon name="flag" className="size-4" />
-          Reportar
-        </button>
-        <button
-          type="button"
-          onClick={() => endSession('user_exit')}
-          className="flex flex-col items-center gap-1 rounded-lg border border-line bg-surface px-2 py-3 text-[11px] font-medium text-dim transition-colors hover:border-risk hover:text-risk"
-        >
-          <Icon name="exit" className="size-4" />
-          Salir
-        </button>
-      </div>
-
       {reportSent && (
-        <Card className="border-ok/40 bg-ok-soft px-4 py-3 text-sm text-ok">
-          Gracias por avisar. Una persona del equipo lo revisará y recibirás seguimiento.
-        </Card>
+        <p className="mt-3 rounded-2xl bg-ok/20 px-4 py-2.5 text-center text-[13px] text-[#8af0ae]">
+          Gracias por avisar. Una persona del equipo lo revisará.
+        </p>
       )}
 
       {reportOpen && (
-        <Card className="rise flex flex-col gap-2 border-l-2 border-l-warn px-4 py-4">
-          <p className="text-sm font-semibold text-ink">¿Qué quieres reportar?</p>
-          {[
-            { category: 'inappropriate_content', label: 'Algo que me incomodó' },
-            { category: 'technical', label: 'Un problema técnico' },
-            { category: 'other', label: 'Otra cosa' },
-          ].map((option) => (
+        <div className="mt-3 rounded-2xl bg-white/10 p-3 backdrop-blur">
+          <p className="px-1 pb-2 text-[14px] font-semibold">¿Qué quieres reportar?</p>
+          <div className="flex flex-col gap-1.5">
+            {[
+              { category: 'inappropriate_content', label: 'Algo que me incomodó' },
+              { category: 'technical', label: 'Un problema técnico' },
+              { category: 'other', label: 'Otra cosa' },
+            ].map((option) => (
+              <button
+                key={option.category}
+                type="button"
+                onClick={() => sendReport(option.category)}
+                className="rounded-xl bg-white/10 px-3.5 py-2.5 text-left text-[14px] transition-colors hover:bg-white/16"
+              >
+                {option.label}
+              </button>
+            ))}
             <button
-              key={option.category}
               type="button"
-              onClick={() => sendReport(option.category)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-left text-sm text-dim transition-colors hover:border-warn hover:text-ink"
+              onClick={() => setReportOpen(false)}
+              className="py-1.5 text-center text-[13px] text-white/60"
             >
-              {option.label}
+              Cancelar
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setReportOpen(false)}
-            className="mt-1 text-xs text-dim underline underline-offset-2"
-          >
-            Cancelar
-          </button>
-        </Card>
+          </div>
+        </div>
       )}
+
+      {/* Controles de llamada SIEMPRE visibles (TLK-09). */}
+      <div className="mt-auto flex items-start justify-center gap-6 pt-6">
+        <CallButton
+          icon={muted ? 'mic' : 'mute'}
+          label={muted ? 'Activar' : 'Silenciar'}
+          active={muted}
+          onClick={toggleMute}
+        />
+        <CallButton
+          icon={paused ? 'play' : 'pause'}
+          label={paused ? 'Reanudar' : 'Pausar'}
+          active={paused}
+          onClick={() => setPaused((value) => !value)}
+        />
+        <CallButton icon="flag" label="Reportar" onClick={() => setReportOpen(true)} />
+        <CallButton icon="exit" label="Salir" tone="risk" onClick={() => endSession('user_exit')} />
+      </div>
     </div>
+  );
+}
+
+function CallButton({
+  icon,
+  label,
+  onClick,
+  active = false,
+  tone = 'default',
+}: {
+  icon: IconName;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  tone?: 'default' | 'risk';
+}) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-16 flex-col items-center gap-1.5">
+      <span
+        className={`flex size-14 items-center justify-center rounded-full transition-colors ${
+          tone === 'risk'
+            ? 'bg-risk hover:opacity-90'
+            : active
+              ? 'bg-white text-ink'
+              : 'bg-white/15 hover:bg-white/25'
+        }`}
+      >
+        <Icon name={icon} className={`size-6 ${tone === 'risk' || !active ? 'text-white' : 'text-ink'}`} />
+      </span>
+      <span className="text-[11px] text-white/70">{label}</span>
+    </button>
   );
 }
