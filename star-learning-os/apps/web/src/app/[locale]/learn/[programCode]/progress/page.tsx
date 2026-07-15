@@ -25,50 +25,49 @@ export default async function ProgressPage({
   const progress = await apiFetch<ProgressResponse>(`/enrollments/${enrollment.id}/progress`);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <section className="rise">
-        <p className="text-sm text-dim">Progreso honesto</p>
-        <h1 className="font-display text-2xl font-semibold">Cuatro medidas, nunca una sola</h1>
-        <p className="mt-1 text-sm text-dim">
+        <p className="text-xs uppercase tracking-[0.14em] text-dim">Reporte de avance</p>
+        <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
+          Progreso honesto
+        </h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-dim">
           Recorrer contenido no es dominarlo. Por eso cobertura, dominio, retención y readiness se
           miden por separado.
         </p>
       </section>
 
       {progress.placement && (
-        <Card className="rise rise-1 flex items-center justify-between px-4 py-3">
+        <Card accent className="rise rise-1 flex items-center justify-between px-5 py-4">
           <div>
-            <p className="text-sm text-dim">Nivel estimado</p>
-            <p className="font-display text-xl font-semibold text-star">{progress.placement.overall}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-dim">Nivel estimado</p>
+            <p className="font-display text-3xl font-semibold text-primary">
+              {progress.placement.overall}
+            </p>
           </div>
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-end gap-1.5">
             <Chip tone={progress.placement.provisional ? 'warn' : 'ok'}>
-              {progress.placement.provisional ? 'Provisional · en revisión humana' : 'Confirmado'}
+              {progress.placement.provisional ? 'Provisional · en revisión humana' : 'Confirmado por el equipo académico'}
             </Chip>
-            <span className="text-xs text-dim">
+            <span className="text-xs tabular-nums text-dim">
               Confianza {Math.round(progress.placement.confidence * 100)}%
             </span>
           </div>
         </Card>
       )}
 
-      <Card className="rise rise-2 flex flex-col gap-5 px-4 py-5">
-        <Meter
-          label="Cobertura"
-          value={progress.coverage}
-          tone="nova"
-          hint="Cuánto del mapa has recorrido"
-        />
+      <Card className="rise rise-2 flex flex-col gap-6 px-5 py-5">
+        <Meter label="Cobertura" value={progress.coverage} tone="ink" hint="Cuánto del mapa has recorrido" />
         <Meter
           label="Dominio"
           value={progress.mastery}
-          tone="star"
+          tone="gold"
           hint="Lo que demostraste saber hacer, con evidencia"
         />
         <Meter
           label="Retención"
           value={progress.retention}
-          tone="sky"
+          tone="primary"
           hint="Lo dominado que sigue fresco en tu memoria"
         />
         <Meter
@@ -81,29 +80,33 @@ export default async function ProgressPage({
 
       <section className="rise rise-3 flex flex-col gap-3">
         <SectionTitle>Competencias</SectionTitle>
-        <Card className="flex items-center justify-between px-4 py-3 text-sm">
-          <span className="text-dim">Críticas dominadas</span>
-          <span className="font-display">
-            {progress.criticalMastered} / {progress.criticalTotal}
-          </span>
-        </Card>
-        <Card className="flex items-center justify-between px-4 py-3 text-sm">
-          <span className="text-dim">Complementarias dominadas</span>
-          <span className="font-display">
-            {progress.complementaryMastered} / {progress.complementaryTotal}
-          </span>
-        </Card>
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="px-4 py-4">
+            <p className="text-xs text-dim">Críticas dominadas</p>
+            <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-ink">
+              {progress.criticalMastered}
+              <span className="text-base font-medium text-dim"> / {progress.criticalTotal}</span>
+            </p>
+          </Card>
+          <Card className="px-4 py-4">
+            <p className="text-xs text-dim">Complementarias</p>
+            <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-ink">
+              {progress.complementaryMastered}
+              <span className="text-base font-medium text-dim"> / {progress.complementaryTotal}</span>
+            </p>
+          </Card>
+        </div>
       </section>
 
       <section className="rise rise-4 flex flex-col gap-3">
         <SectionTitle>Por habilidad</SectionTitle>
-        <Card className="flex flex-col gap-4 px-4 py-4">
+        <Card className="flex flex-col gap-5 px-5 py-5">
           {progress.perSkill.map((entry) => (
             <Meter
               key={entry.skill}
               label={SKILL_LABELS[entry.skill] ?? entry.skill}
               value={entry.total === 0 ? 0 : entry.mastered / entry.total}
-              tone="star"
+              tone="primary"
               hint={`${entry.mastered} de ${entry.total} dominadas`}
             />
           ))}

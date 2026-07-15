@@ -37,7 +37,7 @@ export function ReviewDecisionButtons({ reviewId }: { reviewId: string }) {
           type="button"
           disabled={busy}
           onClick={() => decide('confirmed')}
-          className="rounded-lg border border-ok/50 px-3 py-1.5 text-xs text-ok transition-colors hover:bg-ok/10 disabled:opacity-50"
+          className="rounded-lg border border-ok/40 bg-ok-soft px-3.5 py-1.5 text-xs font-medium text-ok transition-colors hover:bg-ok hover:text-surface disabled:opacity-50"
         >
           Confirmar
         </button>
@@ -45,7 +45,7 @@ export function ReviewDecisionButtons({ reviewId }: { reviewId: string }) {
           type="button"
           disabled={busy}
           onClick={() => decide('invalidated')}
-          className="rounded-lg border border-risk/50 px-3 py-1.5 text-xs text-risk transition-colors hover:bg-risk/10 disabled:opacity-50"
+          className="rounded-lg border border-risk/40 bg-risk-soft px-3.5 py-1.5 text-xs font-medium text-risk transition-colors hover:bg-risk hover:text-surface disabled:opacity-50"
         >
           Invalidar
         </button>

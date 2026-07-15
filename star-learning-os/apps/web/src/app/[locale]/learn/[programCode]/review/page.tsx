@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { ReviewQueueResponse } from '@star/contracts';
 import { apiFetch } from '@/lib/api';
 import { resolveEnrollment } from '@/lib/enrollment';
-import { Card, Chip, SectionTitle } from '@/components/ui';
+import { Card, Chip, Icon, SectionTitle } from '@/components/ui';
 import { StartLessonButton } from '@/components/start-lesson-button';
 
 export default async function ReviewPage({
@@ -18,13 +18,15 @@ export default async function ReviewPage({
   const queue = await apiFetch<ReviewQueueResponse>(`/enrollments/${enrollment.id}/review-queue`);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <section className="rise">
-        <p className="text-sm text-dim">Recuperación espaciada</p>
-        <h1 className="font-display text-2xl font-semibold">Repasar</h1>
-        <p className="mt-1 text-sm text-dim">
-          Volver a demostrar lo aprendido en el momento justo (1, 3, 7, 14 y 30 días) es lo que
-          convierte práctica en dominio.
+        <p className="text-xs uppercase tracking-[0.14em] text-dim">Recuperación espaciada</p>
+        <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
+          Repasar
+        </h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-dim">
+          Volver a demostrar lo aprendido en el momento justo — a 1, 3, 7, 14 y 30 días — es lo que
+          convierte la práctica en dominio.
         </p>
       </section>
 
@@ -36,14 +38,14 @@ export default async function ReviewPage({
           </Card>
         )}
         {queue.dueItems.map((item) => (
-          <Card key={item.reviewItemId} className="flex items-center gap-3 px-4 py-3">
-            <span className="text-warn" aria-hidden>
-              ↻
+          <Card key={item.reviewItemId} className="flex items-center gap-4 px-4 py-3.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warn-soft text-warn">
+              <Icon name="review" className="size-4.5" />
             </span>
-            <div className="flex-1">
-              <p className="text-sm">{item.competencyDescriptor}</p>
-              <div className="mt-1 flex gap-2">
-                <Chip tone="warn">Intervalo: {item.intervalDays} d</Chip>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm leading-snug text-ink">{item.competencyDescriptor}</p>
+              <div className="mt-1.5 flex gap-1.5">
+                <Chip tone="warn">Intervalo: {item.intervalDays} días</Chip>
               </div>
             </div>
             {item.lessonContractId && item.activityId && (

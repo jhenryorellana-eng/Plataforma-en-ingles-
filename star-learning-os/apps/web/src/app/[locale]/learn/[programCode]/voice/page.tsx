@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse, TodayResponse, VoiceSessionResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { Card, Chip } from '@/components/ui';
+import { Card, Icon, StarMark } from '@/components/ui';
 
 type Phase = 'loading' | 'preview' | 'live' | 'ended' | 'blocked';
 
@@ -214,13 +214,13 @@ export default function VoicePage({
 
   if (phase === 'blocked') {
     return (
-      <Card className="rise mt-8 flex flex-col gap-3 border-warn/40 px-5 py-6">
-        <span className="text-2xl" aria-hidden>
-          🛡️
+      <Card className="rise mt-8 flex flex-col gap-3 border-l-2 border-l-warn px-5 py-6">
+        <span className="flex size-10 items-center justify-center rounded-lg bg-warn-soft text-warn">
+          <Icon name="shield" className="size-5" />
         </span>
-        <h1 className="font-display text-lg font-semibold">Sesión de voz no disponible</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Sesión de voz no disponible</h1>
         <p className="text-sm leading-relaxed text-dim">{blockedMessage}</p>
-        <p className="text-xs text-dim">
+        <p className="border-t border-line pt-3 text-xs leading-relaxed text-dim">
           Esta protección es un bloqueo técnico del sistema, no un mensaje decorativo: así lo exige
           la política juvenil de StarbizAcademy.
         </p>
@@ -230,25 +230,23 @@ export default function VoicePage({
 
   if (phase === 'ended') {
     return (
-      <Card glow className="rise mt-8 flex flex-col gap-4 px-5 py-6 text-center">
-        <span className="text-3xl" aria-hidden>
-          ✦
-        </span>
-        <h1 className="font-display text-xl font-semibold">Misión terminada</h1>
+      <Card accent className="rise mt-8 flex flex-col gap-4 px-6 py-7 text-center">
+        <StarMark className="mx-auto size-6 text-gold" />
+        <h1 className="font-display text-2xl font-semibold text-ink">Misión terminada</h1>
         <p className="text-sm text-dim">
           Practicaste {minutes} min {seconds} s de conversación activa.
         </p>
         {endSummary?.includedMinutes !== undefined && (
-          <p className="text-xs text-dim">
+          <p className="text-xs tabular-nums text-dim">
             Voz de la semana: {endSummary.usedMinutes} / {endSummary.includedMinutes} min
           </p>
         )}
         <button
           type="button"
           onClick={() => router.push(`/${locale}/learn/${programCode}/today`)}
-          className="rounded-xl bg-star px-5 py-3 font-display font-semibold text-night"
+          className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep"
         >
-          Volver a Hoy
+          Volver a Inicio
         </button>
       </Card>
     );
@@ -258,28 +256,30 @@ export default function VoicePage({
     return (
       <div className="flex flex-col gap-5">
         <section className="rise text-center">
-          <div className="mentor-orb mentor-orb-quiet mx-auto size-28 rounded-full" aria-hidden />
-          <h1 className="mt-5 font-display text-2xl font-semibold">Misión de voz</h1>
-          <p className="mt-1 text-sm text-dim">
+          <div className="session-ring mx-auto flex size-24 items-center justify-center rounded-full border border-primary/30 bg-primary-soft">
+            <Icon name="mic" className="size-8 text-primary" />
+          </div>
+          <h1 className="mt-5 font-display text-2xl font-semibold text-ink">Misión de voz</h1>
+          <p className="mt-1 text-sm leading-relaxed text-dim">
             {missionTitle || 'Sin misiones de voz pendientes por ahora.'}
           </p>
         </section>
         {lessonContractId && (
-          <Card className="rise rise-1 flex flex-col gap-3 px-5 py-5 text-sm text-dim">
+          <Card className="rise rise-1 flex flex-col gap-3 px-5 py-5 text-sm leading-relaxed text-dim">
             <p>
-              Hablarás con tu <strong className="text-ink">Mentor STAR</strong> — una IA educativa,
-              y siempre se presenta como tal. Puedes pausar, silenciar tu micrófono, reportar o
-              salir en cualquier momento.
+              Hablarás con tu <strong className="font-semibold text-ink">Mentor STAR</strong> — una
+              IA educativa, y siempre se presenta como tal. Puedes pausar, silenciar tu micrófono,
+              reportar o salir en cualquier momento.
             </p>
-            <p className="text-xs">
+            <p className="border-t border-line pt-3 text-xs">
               Tu audio de práctica no se guarda. Solo queda la evidencia pedagógica mínima.
             </p>
             <button
               type="button"
               onClick={startMission}
-              className="mt-2 rounded-2xl bg-gradient-to-r from-star-deep via-star to-star-deep px-6 py-4 font-display text-lg font-semibold text-night shadow-[0_0_40px_rgba(255,201,77,0.25)]"
+              className="mt-1 rounded-xl bg-primary px-6 py-4 font-display text-base font-semibold text-surface shadow-[0_6px_18px_rgba(36,64,142,0.25)] transition-colors hover:bg-primary-deep"
             >
-              Comenzar misión ◉
+              Comenzar misión
             </button>
             {error && <p className="text-sm text-risk">{error}</p>}
           </Card>
@@ -291,33 +291,41 @@ export default function VoicePage({
   return (
     <div className="flex flex-col gap-4">
       <audio ref={audioRef} className="hidden" />
-      <section className="rise flex flex-col items-center gap-3 text-center">
-        <div
-          className={`mentor-orb size-24 rounded-full ${paused ? 'mentor-orb-quiet opacity-60' : ''}`}
-          aria-hidden
-        />
-        <div>
-          <p className="font-display text-lg font-semibold">Mentor STAR</p>
-          <p className="text-xs text-dim">
-            {voice?.mode === 'mock'
-              ? 'Modo demo (sin OPENAI_API_KEY): interlocutor guiado'
-              : 'Conversación en vivo · WebRTC'}
-            {' · '}
+      <section className="rise">
+        <Card accent className="flex items-center gap-4 px-4 py-4">
+          <div
+            className={`flex size-14 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary-soft ${
+              paused ? 'session-ring-paused opacity-60' : 'session-ring'
+            }`}
+          >
+            <Icon name="mic" className="size-6 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-base font-semibold text-ink">Mentor STAR</p>
+            <p className="text-xs text-dim">
+              {voice?.mode === 'mock'
+                ? 'Modo demo (sin OPENAI_API_KEY): interlocutor guiado'
+                : 'Conversación en vivo · WebRTC'}
+            </p>
+          </div>
+          <span className="font-display text-lg font-semibold tabular-nums text-ink">
             {minutes}:{String(seconds).padStart(2, '0')}
-          </p>
-        </div>
-        <Chip tone="nova">{voice?.mission.objective}</Chip>
+          </span>
+        </Card>
+        <p className="mt-2 px-1 text-xs leading-relaxed text-dim">
+          Objetivo: {voice?.mission.objective}
+        </p>
       </section>
 
       {voice?.mode === 'mock' && (
-        <Card className="rise rise-1 flex max-h-80 flex-col gap-3 overflow-y-auto px-4 py-4">
+        <Card className="rise rise-1 flex max-h-80 flex-col gap-2.5 overflow-y-auto px-4 py-4">
           {turns.map((turn, turnIndex) => (
             <p
               key={turnIndex}
-              className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+              className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm leading-relaxed ${
                 turn.from === 'mentor'
-                  ? 'self-start bg-raised text-ink'
-                  : 'self-end bg-star/15 text-star'
+                  ? 'self-start bg-mist text-ink'
+                  : 'self-end bg-primary-soft text-primary-deep'
               }`}
             >
               {turn.text}
@@ -334,14 +342,15 @@ export default function VoicePage({
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && sendMockTurn()}
             placeholder="Responde en inglés…"
-            className="flex-1 rounded-xl border border-line bg-night/60 px-4 py-3 text-sm focus:border-star focus:outline-none"
+            className="flex-1 rounded-lg border border-line bg-surface px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button
             type="button"
             onClick={sendMockTurn}
-            className="rounded-xl bg-star px-4 font-display font-semibold text-night"
+            aria-label="Enviar"
+            className="flex items-center justify-center rounded-lg bg-primary px-4 text-surface transition-colors hover:bg-primary-deep"
           >
-            →
+            <Icon name="arrow" className="size-4" />
           </button>
         </div>
       )}
@@ -351,46 +360,50 @@ export default function VoicePage({
         <button
           type="button"
           onClick={() => setPaused((value) => !value)}
-          className={`rounded-xl border px-2 py-3 text-xs transition-colors ${
-            paused ? 'border-star text-star' : 'border-line text-dim hover:text-ink'
+          className={`flex flex-col items-center gap-1 rounded-lg border bg-surface px-2 py-3 text-[11px] font-medium transition-colors ${
+            paused ? 'border-primary text-primary' : 'border-line text-dim hover:text-ink'
           }`}
         >
-          {paused ? '▶ Reanudar' : '⏸ Pausar'}
+          <Icon name={paused ? 'play' : 'pause'} className="size-4" />
+          {paused ? 'Reanudar' : 'Pausar'}
         </button>
         <button
           type="button"
           onClick={toggleMute}
-          className={`rounded-xl border px-2 py-3 text-xs transition-colors ${
+          className={`flex flex-col items-center gap-1 rounded-lg border bg-surface px-2 py-3 text-[11px] font-medium transition-colors ${
             muted ? 'border-warn text-warn' : 'border-line text-dim hover:text-ink'
           }`}
         >
-          {muted ? '🎙 Activar' : '🔇 Silenciar'}
+          <Icon name={muted ? 'mic' : 'mute'} className="size-4" />
+          {muted ? 'Activar mic' : 'Silenciar'}
         </button>
         <button
           type="button"
           onClick={() => setReportOpen(true)}
-          className="rounded-xl border border-line px-2 py-3 text-xs text-dim transition-colors hover:border-warn hover:text-warn"
+          className="flex flex-col items-center gap-1 rounded-lg border border-line bg-surface px-2 py-3 text-[11px] font-medium text-dim transition-colors hover:border-warn hover:text-warn"
         >
-          ⚑ Reportar
+          <Icon name="flag" className="size-4" />
+          Reportar
         </button>
         <button
           type="button"
           onClick={() => endSession('user_exit')}
-          className="rounded-xl border border-line px-2 py-3 text-xs text-dim transition-colors hover:border-risk hover:text-risk"
+          className="flex flex-col items-center gap-1 rounded-lg border border-line bg-surface px-2 py-3 text-[11px] font-medium text-dim transition-colors hover:border-risk hover:text-risk"
         >
-          ✕ Salir
+          <Icon name="exit" className="size-4" />
+          Salir
         </button>
       </div>
 
       {reportSent && (
-        <Card className="border-ok/40 px-4 py-3 text-sm text-ok">
+        <Card className="border-ok/40 bg-ok-soft px-4 py-3 text-sm text-ok">
           Gracias por avisar. Una persona del equipo lo revisará y recibirás seguimiento.
         </Card>
       )}
 
       {reportOpen && (
-        <Card className="rise flex flex-col gap-2 border-warn/40 px-4 py-4">
-          <p className="text-sm font-medium">¿Qué quieres reportar?</p>
+        <Card className="rise flex flex-col gap-2 border-l-2 border-l-warn px-4 py-4">
+          <p className="text-sm font-semibold text-ink">¿Qué quieres reportar?</p>
           {[
             { category: 'inappropriate_content', label: 'Algo que me incomodó' },
             { category: 'technical', label: 'Un problema técnico' },
@@ -400,7 +413,7 @@ export default function VoicePage({
               key={option.category}
               type="button"
               onClick={() => sendReport(option.category)}
-              className="rounded-lg border border-line px-3 py-2 text-left text-sm text-dim hover:border-warn hover:text-ink"
+              className="rounded-lg border border-line bg-surface px-3 py-2 text-left text-sm text-dim transition-colors hover:border-warn hover:text-ink"
             >
               {option.label}
             </button>
@@ -408,7 +421,7 @@ export default function VoicePage({
           <button
             type="button"
             onClick={() => setReportOpen(false)}
-            className="mt-1 text-xs text-dim underline"
+            className="mt-1 text-xs text-dim underline underline-offset-2"
           >
             Cancelar
           </button>

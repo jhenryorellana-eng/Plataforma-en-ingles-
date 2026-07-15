@@ -1,46 +1,52 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-night: #0b0e1a;
-  --color-surface: #151a33;
-  --color-raised: #1d2344;
-  --color-line: #2a3158;
-  --color-ink: #eef0ff;
-  --color-dim: #9aa1c4;
-  --color-star: #ffc94d;
-  --color-star-deep: #e8a317;
-  --color-nova: #8b70ff;
-  --color-sky: #55d9e6;
-  --color-ok: #4ade80;
-  --color-warn: #fbbf24;
-  --color-risk: #f87171;
-  --font-display: var(--font-unbounded), sans-serif;
-  --font-body: var(--font-schibsted), sans-serif;
+  /* Academia editorial: papel cálido, tinta profunda, azul academia y dorado sobrio. */
+  --color-paper: #f7f5ef;
+  --color-surface: #ffffff;
+  --color-mist: #efece3;
+  --color-line: #e3dfd3;
+  --color-ink: #1c2434;
+  --color-dim: #5c6577;
+  --color-primary: #24408e;
+  --color-primary-deep: #182e6b;
+  --color-primary-soft: #e9edf8;
+  --color-gold: #b08a1e;
+  --color-gold-deep: #7e6211;
+  --color-gold-soft: #f5edd8;
+  --color-ok: #1e7a4c;
+  --color-ok-soft: #e4f2ea;
+  --color-warn: #9a6708;
+  --color-warn-soft: #f7eeda;
+  --color-risk: #b03a30;
+  --color-risk-soft: #f8e8e6;
+}
+
+/* Los tokens de fuente van inline: las variables de next/font viven en <body>,
+   no en :root, y sin `inline` la utilidad resolvería a un valor inválido. */
+@theme inline {
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-instrument), ui-sans-serif, sans-serif;
 }
 
 body {
-  background-color: var(--color-night);
+  background-color: var(--color-paper);
   color: var(--color-ink);
-  font-family: var(--font-body);
+  font-family: var(--font-instrument), ui-sans-serif, sans-serif;
   min-height: 100dvh;
-  /* Cielo estrellado sutil: capas de gradientes, cero imágenes externas. */
-  background-image:
-    radial-gradient(1px 1px at 12% 22%, rgba(238, 240, 255, 0.5) 50%, transparent 51%),
-    radial-gradient(1px 1px at 78% 12%, rgba(238, 240, 255, 0.35) 50%, transparent 51%),
-    radial-gradient(1.5px 1.5px at 62% 64%, rgba(255, 201, 77, 0.4) 50%, transparent 51%),
-    radial-gradient(1px 1px at 32% 82%, rgba(238, 240, 255, 0.3) 50%, transparent 51%),
-    radial-gradient(1px 1px at 90% 45%, rgba(139, 112, 255, 0.4) 50%, transparent 51%),
-    radial-gradient(1px 1px at 45% 38%, rgba(238, 240, 255, 0.25) 50%, transparent 51%),
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139, 112, 255, 0.12), transparent),
-    radial-gradient(ellipse 60% 40% at 85% 110%, rgba(85, 217, 230, 0.07), transparent);
-  background-attachment: fixed;
 }
 
-/* Revelado escalonado al cargar cada vista. */
+/* Regla editorial superior: doble filete tradicional de imprenta. */
+.masthead-rule {
+  border-top: 2px solid var(--color-ink);
+  box-shadow: 0 3px 0 -1px var(--color-ink);
+}
+
+/* Revelado editorial sutil al cargar cada vista. */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -49,65 +55,53 @@ body {
 }
 
 .rise {
-  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-.rise-1 { animation-delay: 0.05s; }
+.rise-1 { animation-delay: 0.06s; }
 .rise-2 { animation-delay: 0.12s; }
-.rise-3 { animation-delay: 0.2s; }
-.rise-4 { animation-delay: 0.28s; }
+.rise-3 { animation-delay: 0.18s; }
+.rise-4 { animation-delay: 0.24s; }
 
-/* Orbe del Mentor en misiones de voz. */
-@keyframes orb-pulse {
+/* Sesión de voz: anillo de presencia sobrio, sin efectos de juego. */
+@keyframes session-ring {
   0%, 100% {
-    box-shadow:
-      0 0 30px rgba(255, 201, 77, 0.35),
-      0 0 90px rgba(139, 112, 255, 0.25),
-      inset 0 0 40px rgba(255, 201, 77, 0.25);
-    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(36, 64, 142, 0.18);
   }
   50% {
-    box-shadow:
-      0 0 55px rgba(255, 201, 77, 0.55),
-      0 0 130px rgba(139, 112, 255, 0.4),
-      inset 0 0 60px rgba(255, 201, 77, 0.4);
-    transform: scale(1.04);
+    box-shadow: 0 0 0 14px rgba(36, 64, 142, 0);
   }
 }
 
-.mentor-orb {
-  background: radial-gradient(circle at 35% 30%, rgba(255, 201, 77, 0.9), rgba(232, 163, 23, 0.55) 45%, rgba(139, 112, 255, 0.5) 100%);
-  animation: orb-pulse 2.6s ease-in-out infinite;
+.session-ring {
+  animation: session-ring 2.8s ease-out infinite;
+}
+.session-ring-paused {
+  animation: none;
 }
 
-.mentor-orb-quiet {
-  animation-duration: 5s;
+/* Nodos de la ruta medible (línea de progreso académica). */
+.route-node {
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  border: 2px solid var(--color-line);
+  background-color: var(--color-surface);
 }
-
-/* Estrellas de competencia en la Ruta. */
-.star-node {
-  transition: box-shadow 0.4s ease, background-color 0.4s ease, transform 0.2s ease;
+.route-node[data-state='mastered'] {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold-deep);
 }
-.star-node[data-state='mastered'] {
-  background-color: var(--color-star);
-  box-shadow: 0 0 12px rgba(255, 201, 77, 0.8), 0 0 28px rgba(255, 201, 77, 0.35);
+.route-node[data-state='provisional'] {
+  background-color: var(--color-surface);
+  border-color: var(--color-gold-deep);
 }
-.star-node[data-state='provisional'] {
-  background-color: var(--color-sky);
-  box-shadow: 0 0 8px rgba(85, 217, 230, 0.6);
+.route-node[data-state='developing'] {
+  background-color: var(--color-primary-soft);
+  border-color: var(--color-primary);
 }
-.star-node[data-state='developing'] {
-  background-color: var(--color-nova);
-  box-shadow: 0 0 6px rgba(139, 112, 255, 0.5);
-}
-.star-node[data-state='review_required'] {
-  background-color: var(--color-warn);
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.55);
-}
-.star-node[data-state='not_seen'],
-.star-node[data-state='exposed'] {
-  background-color: var(--color-line);
+.route-node[data-state='review_required'] {
+  background-color: var(--color-warn-soft);
+  border-color: var(--color-warn);
 }
 
 ::selection {
-  background: rgba(255, 201, 77, 0.35);
+  background: rgba(36, 64, 142, 0.14);
 }

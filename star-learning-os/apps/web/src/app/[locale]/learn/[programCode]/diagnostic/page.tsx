@@ -56,11 +56,7 @@ export default function DiagnosticPage({
   }, [locale, programCode, router]);
 
   if (error) {
-    return (
-      <Card className="mt-10 border-risk/40 px-4 py-4 text-sm text-risk">
-        {error}
-      </Card>
-    );
+    return <Card className="mt-10 border-risk/40 bg-risk-soft px-4 py-4 text-sm text-risk">{error}</Card>;
   }
   if (!attempt) {
     return <p className="mt-16 text-center text-sm text-dim">Preparando tu StarMap…</p>;
@@ -96,35 +92,40 @@ export default function DiagnosticPage({
   return (
     <div className="flex flex-col gap-5">
       <section className="rise">
-        <p className="text-sm text-dim">StarMap 360 · diagnóstico inicial</p>
-        <h1 className="font-display text-xl font-semibold">
-          Pregunta {index + 1} de {attempt.items.length}
-        </h1>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-raised">
+        <p className="text-xs uppercase tracking-[0.14em] text-dim">StarMap 360 · diagnóstico inicial</p>
+        <div className="mt-1 flex items-baseline justify-between">
+          <h1 className="font-display text-xl font-semibold text-ink">
+            Pregunta {index + 1} <span className="font-medium text-dim">de {attempt.items.length}</span>
+          </h1>
+          <span className="font-display text-sm tabular-nums text-dim">{Math.round(progress)}%</span>
+        </div>
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-mist">
           <div
-            className="h-full rounded-full bg-nova transition-[width] duration-500"
+            className="h-full rounded-full bg-primary transition-[width] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-dim">
+        <p className="mt-2 text-xs leading-relaxed text-dim">
           Tu resultado será provisional: una persona del equipo académico lo confirma antes de
           volverse definitivo.
         </p>
       </section>
 
-      <Card className="rise rise-1 flex flex-col gap-4 px-4 py-5">
-        <Chip tone="nova">{SKILL_LABELS[item.skill] ?? item.skill}</Chip>
-        <p className="text-base leading-relaxed">{item.prompt}</p>
-        <div className="flex flex-col gap-2">
+      <Card accent className="rise rise-1 flex flex-col gap-4 px-5 py-5">
+        <Chip tone="primary">{SKILL_LABELS[item.skill] ?? item.skill}</Chip>
+        <p className="text-base leading-relaxed text-ink">{item.prompt}</p>
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Opciones">
           {item.options.map((option, optionIndex) => (
             <button
               key={option}
               type="button"
+              role="radio"
+              aria-checked={selected === optionIndex}
               onClick={() => setSelected(optionIndex)}
-              className={`rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+              className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
                 selected === optionIndex
-                  ? 'border-star bg-star/10 text-ink'
-                  : 'border-line bg-raised/50 text-dim hover:border-star/40 hover:text-ink'
+                  ? 'border-primary bg-primary-soft font-medium text-ink'
+                  : 'border-line bg-surface text-dim hover:border-primary/40 hover:text-ink'
               }`}
             >
               {option}
@@ -137,7 +138,7 @@ export default function DiagnosticPage({
         type="button"
         disabled={selected === null || busy || enrollmentId === null}
         onClick={submitAnswer}
-        className="rise rise-2 rounded-2xl bg-star px-6 py-4 font-display font-semibold text-night transition-opacity disabled:opacity-40"
+        className="rise rise-2 rounded-xl bg-primary px-6 py-4 font-display text-base font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
       >
         {busy ? 'Guardando…' : index + 1 === attempt.items.length ? 'Terminar diagnóstico' : 'Siguiente'}
       </button>

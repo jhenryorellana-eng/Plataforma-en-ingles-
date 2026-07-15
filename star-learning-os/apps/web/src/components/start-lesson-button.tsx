@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SessionResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
+import { Icon } from './ui';
 
 export function StartLessonButton({
   locale,
@@ -56,7 +57,7 @@ export function StartLessonButton({
           type="button"
           onClick={start}
           disabled={loading}
-          className="rounded-lg border border-star/50 px-3 py-1.5 text-xs text-star transition-colors hover:bg-star/10 disabled:opacity-50"
+          className="rounded-lg border border-primary/40 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-surface disabled:opacity-50"
         >
           {loading ? 'Abriendo…' : label}
         </button>
@@ -71,12 +72,15 @@ export function StartLessonButton({
         type="button"
         onClick={start}
         disabled={loading}
-        className="group w-full rounded-2xl bg-gradient-to-r from-star-deep via-star to-star-deep px-6 py-5 text-left text-night shadow-[0_0_40px_rgba(255,201,77,0.25)] transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
+        className="group flex w-full items-center justify-between rounded-xl bg-primary px-6 py-5 text-left text-surface shadow-[0_6px_18px_rgba(36,64,142,0.25)] transition-all hover:bg-primary-deep active:translate-y-px disabled:opacity-60"
       >
-        <span className="block font-display text-lg font-semibold">
-          {loading ? 'Preparando tu misión…' : label} <span aria-hidden>→</span>
+        <span>
+          <span className="block font-display text-lg font-semibold">
+            {loading ? 'Preparando tu sesión…' : label}
+          </span>
+          {sublabel && <span className="mt-0.5 block text-sm text-surface/75">{sublabel}</span>}
         </span>
-        {sublabel && <span className="mt-0.5 block text-sm text-night/70">{sublabel}</span>}
+        <Icon name="arrow" className="size-5 transition-transform group-hover:translate-x-1" />
       </button>
       {error && <p className="mt-2 text-sm text-risk">{error}</p>}
     </div>

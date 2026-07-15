@@ -4,7 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { Card, Chip, StarLogo } from '@/components/ui';
+import { Card, Chip, Wordmark } from '@/components/ui';
 
 const PACES = [
   {
@@ -66,11 +66,12 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
       <div className="rise">
-        <StarLogo className="text-lg" />
-        <h1 className="mt-4 font-display text-2xl font-semibold">Elige tu ritmo</h1>
-        <p className="mt-1 text-sm text-dim">
-          El destino es el mismo — Starbiz Global B2 — y las puertas de dominio también. Solo cambia
-          cuántas horas concentras por semana.
+        <div className="masthead-rule mb-6 w-16" />
+        <Wordmark />
+        <h1 className="mt-5 font-display text-2xl font-semibold text-ink">Elige tu ritmo</h1>
+        <p className="mt-2 text-sm leading-relaxed text-dim">
+          El destino es el mismo — Starbiz Global B2 — y las puertas de dominio también. Solo
+          cambia cuántas horas concentras por semana.
         </p>
       </div>
 
@@ -84,18 +85,20 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
           >
             <Card
               className={`px-4 py-4 transition-all ${
-                selected === pace.code ? 'border-star bg-star/5' : 'hover:border-star/40'
+                selected === pace.code
+                  ? 'border-primary ring-1 ring-primary'
+                  : 'hover:border-primary/40'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-display font-semibold">{pace.name}</span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-display text-lg font-semibold text-ink">{pace.name}</span>
                 <div className="flex gap-2">
-                  {'recommended' in pace && pace.recommended && <Chip tone="star">Recomendado</Chip>}
-                  <Chip>{pace.hours} h/sem</Chip>
+                  {'recommended' in pace && pace.recommended && <Chip tone="gold">Recomendado</Chip>}
+                  <Chip>{pace.hours} h/semana</Chip>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-dim">
-                {pace.detail} · {pace.voice} min de voz semanal incluidos
+              <p className="mt-1.5 text-xs leading-relaxed text-dim">
+                {pace.detail} · {pace.voice} minutos de voz semanal incluidos
               </p>
             </Card>
           </button>
@@ -106,15 +109,13 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
         type="button"
         disabled={busy}
         onClick={enroll}
-        className="rise rise-4 rounded-2xl bg-star px-6 py-4 font-display font-semibold text-night disabled:opacity-50"
+        className="rise rise-4 rounded-xl bg-primary px-6 py-4 font-display text-base font-semibold text-surface shadow-[0_6px_18px_rgba(36,64,142,0.25)] transition-colors hover:bg-primary-deep disabled:opacity-50"
       >
         {busy ? 'Creando tu ruta…' : 'Empezar con el diagnóstico'}
       </button>
 
       {error && (
-        <Card className="border-risk/40 px-4 py-3 text-sm text-risk">
-          {error}
-        </Card>
+        <Card className="border-risk/40 bg-risk-soft px-4 py-3 text-sm text-risk">{error}</Card>
       )}
     </main>
   );

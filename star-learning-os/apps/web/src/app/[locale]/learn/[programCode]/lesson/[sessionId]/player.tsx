@@ -9,7 +9,7 @@ import { Card, Chip } from '@/components/ui';
 const STATE_LABELS: Record<string, string> = {
   developing: 'En desarrollo',
   provisional: 'Casi dominada',
-  mastered: '¡Dominada!',
+  mastered: 'Dominada',
   review_required: 'Necesita repaso',
   exposed: 'Vista',
   not_seen: 'Nueva',
@@ -48,7 +48,7 @@ export function LessonPlayer({
   }, [session, focusActivityId]);
 
   if (error) {
-    return <Card className="mt-10 border-risk/40 px-4 py-4 text-sm text-risk">{error}</Card>;
+    return <Card className="mt-10 border-risk/40 bg-risk-soft px-4 py-4 text-sm text-risk">{error}</Card>;
   }
   if (!session || activities.length === 0) {
     return <p className="mt-16 text-center text-sm text-dim">Cargando tu lección…</p>;
@@ -93,15 +93,16 @@ export function LessonPlayer({
   return (
     <div className="flex flex-col gap-5">
       <section className="rise">
-        <p className="text-sm text-dim">
-          {reviewItemId ? 'Repaso · recuperación espaciada' : session.lessonContract.objective}
+        <p className="text-xs uppercase tracking-[0.14em] text-dim">
+          {reviewItemId ? 'Repaso · recuperación espaciada' : 'Sesión de práctica'}
         </p>
-        <div className="mt-2 flex items-center gap-2">
+        <p className="mt-1 text-sm leading-relaxed text-ink">{session.lessonContract.objective}</p>
+        <div className="mt-3 flex items-center gap-1.5">
           {activities.map((item, itemIndex) => (
             <span
               key={item.id}
-              className={`h-1.5 flex-1 rounded-full ${
-                itemIndex < index ? 'bg-star' : itemIndex === index ? 'bg-nova' : 'bg-raised'
+              className={`h-1 flex-1 rounded-full ${
+                itemIndex < index ? 'bg-gold' : itemIndex === index ? 'bg-primary' : 'bg-mist'
               }`}
             />
           ))}
@@ -113,23 +114,27 @@ export function LessonPlayer({
       )}
 
       {result && (
-        <Card glow className="rise flex flex-col gap-4 px-4 py-5">
+        <Card accent className="rise flex flex-col gap-4 px-5 py-5">
           <div className="flex items-center justify-between">
-            <span className="font-display text-lg font-semibold">
-              {result.correct === true ? '¡Correcto! ✦' : result.correct === false ? 'Aún no' : 'Recibido'}
+            <span className="font-display text-xl font-semibold text-ink">
+              {result.correct === true ? 'Correcto.' : result.correct === false ? 'Aún no.' : 'Recibido.'}
             </span>
-            <Chip tone={result.correct === false ? 'warn' : 'star'}>
+            <Chip tone={result.correct === false ? 'warn' : 'gold'}>
               {Math.round(result.score * 100)}%
             </Chip>
           </div>
           <p className="text-sm leading-relaxed text-dim">{result.feedback}</p>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Chip tone={result.competencyState === 'mastered' ? 'star' : 'nova'}>
+          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-xs">
+            <Chip tone={result.competencyState === 'mastered' ? 'gold' : 'primary'}>
               Competencia: {STATE_LABELS[result.competencyState] ?? result.competencyState}
             </Chip>
             {result.nextReviewAt && (
               <Chip>
-                Próximo repaso: {new Date(result.nextReviewAt).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}
+                Próximo repaso:{' '}
+                {new Date(result.nextReviewAt).toLocaleDateString('es-PE', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
               </Chip>
             )}
             {result.humanReviewCreated && <Chip tone="warn">En revisión humana</Chip>}
@@ -137,14 +142,14 @@ export function LessonPlayer({
           <button
             type="button"
             onClick={next}
-            className="rounded-xl bg-star px-5 py-3 font-display font-semibold text-night"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep"
           >
-            {isLast ? 'Terminar lección' : 'Continuar'}
+            {isLast ? 'Terminar sesión' : 'Continuar'}
           </button>
         </Card>
       )}
 
-      {error && <Card className="border-risk/40 px-4 py-3 text-sm text-risk">{error}</Card>}
+      {error && <Card className="border-risk/40 bg-risk-soft px-4 py-3 text-sm text-risk">{error}</Card>}
     </div>
   );
 }
@@ -176,33 +181,37 @@ function ActivityForm({
   const wordCount = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
 
   return (
-    <Card className="rise rise-1 flex flex-col gap-4 px-4 py-5">
+    <Card className="rise rise-1 flex flex-col gap-4 px-5 py-5">
       <div className="flex flex-wrap gap-2">
-        <Chip tone="nova">{activity.skill === 'language_use' ? 'Uso del idioma' : activity.skill}</Chip>
-        {activity.isTransferVariant && <Chip tone="sky">Transferencia · contexto nuevo</Chip>}
+        <Chip tone="primary">
+          {activity.skill === 'language_use' ? 'Uso del idioma' : activity.skill}
+        </Chip>
+        {activity.isTransferVariant && <Chip tone="gold">Transferencia · contexto nuevo</Chip>}
       </div>
 
-      {prompt.instructions && <p className="text-sm text-dim">{prompt.instructions}</p>}
+      {prompt.instructions && <p className="text-sm leading-relaxed text-dim">{prompt.instructions}</p>}
 
       {prompt.transcript && (
-        <blockquote className="rounded-xl border border-line bg-night/60 px-4 py-3 text-sm italic leading-relaxed">
+        <blockquote className="rounded-lg border-l-2 border-l-primary bg-mist/60 px-4 py-3 font-display text-[15px] italic leading-relaxed text-ink">
           {prompt.transcript}
         </blockquote>
       )}
 
       {activity.kind === 'mcq' && (
         <>
-          <p className="text-base font-medium">{prompt.stem}</p>
-          <div className="flex flex-col gap-2">
+          <p className="text-base font-medium text-ink">{prompt.stem}</p>
+          <div className="flex flex-col gap-2" role="radiogroup" aria-label="Opciones">
             {(prompt.options ?? []).map((option, optionIndex) => (
               <button
                 key={option}
                 type="button"
+                role="radio"
+                aria-checked={selected === optionIndex}
                 onClick={() => setSelected(optionIndex)}
-                className={`rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+                className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
                   selected === optionIndex
-                    ? 'border-star bg-star/10'
-                    : 'border-line bg-raised/50 text-dim hover:border-star/40 hover:text-ink'
+                    ? 'border-primary bg-primary-soft font-medium text-ink'
+                    : 'border-line bg-surface text-dim hover:border-primary/40 hover:text-ink'
                 }`}
               >
                 {option}
@@ -213,7 +222,7 @@ function ActivityForm({
             type="button"
             disabled={selected === null || busy}
             onClick={() => onSubmit({ kind: 'mcq', selectedIndex: selected })}
-            className="rounded-xl bg-star px-5 py-3 font-display font-semibold text-night disabled:opacity-40"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Responder'}
           </button>
@@ -222,14 +231,14 @@ function ActivityForm({
 
       {activity.kind === 'gap_fill' && (
         <>
-          <p className="text-base leading-loose">
+          <p className="text-base leading-loose text-ink">
             {(prompt.text ?? '').split('____').map((part, partIndex, parts) => (
               <span key={partIndex}>
                 {part}
                 {partIndex < parts.length - 1 && (
                   <input
                     aria-label={`Espacio ${partIndex + 1}`}
-                    className="mx-1 inline-block w-32 rounded-lg border border-line bg-night/60 px-2 py-1 text-center text-sm text-star focus:border-star focus:outline-none"
+                    className="mx-1 inline-block w-32 rounded-md border border-line bg-surface px-2 py-1 text-center text-sm font-medium text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     value={answers[partIndex] ?? ''}
                     onChange={(event) => {
                       const next = [...answers];
@@ -241,14 +250,12 @@ function ActivityForm({
               </span>
             ))}
           </p>
-          {prompt.hints && (
-            <p className="text-xs text-dim">Pistas: {prompt.hints.join(' · ')}</p>
-          )}
+          {prompt.hints && <p className="text-xs text-dim">Pistas: {prompt.hints.join(' · ')}</p>}
           <button
             type="button"
             disabled={busy || answers.filter((a) => a?.trim()).length < (prompt.gaps ?? 1)}
             onClick={() => onSubmit({ kind: 'gap_fill', answers })}
-            className="rounded-xl bg-star px-5 py-3 font-display font-semibold text-night disabled:opacity-40"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Responder'}
           </button>
@@ -257,17 +264,17 @@ function ActivityForm({
 
       {activity.kind === 'writing_prompt' && (
         <>
-          {prompt.scenario && <p className="text-sm">{prompt.scenario}</p>}
+          {prompt.scenario && <p className="text-sm leading-relaxed text-ink">{prompt.scenario}</p>}
           <textarea
             aria-label="Tu texto"
             rows={8}
             value={text}
             onChange={(event) => setText(event.target.value)}
             placeholder="Escribe tu correo aquí…"
-            className="rounded-xl border border-line bg-night/60 px-4 py-3 text-sm leading-relaxed focus:border-star focus:outline-none"
+            className="rounded-lg border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <div className="flex items-center justify-between text-xs text-dim">
-            <span>
+            <span className="tabular-nums">
               {wordCount} palabras{prompt.minWords ? ` · mínimo ${prompt.minWords}` : ''}
             </span>
             <span>Evaluación provisional + revisión humana si es crítica</span>
@@ -276,7 +283,7 @@ function ActivityForm({
             type="button"
             disabled={busy || wordCount < 10}
             onClick={() => onSubmit({ kind: 'writing_prompt', text })}
-            className="rounded-xl bg-star px-5 py-3 font-display font-semibold text-night disabled:opacity-40"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Entregar'}
           </button>

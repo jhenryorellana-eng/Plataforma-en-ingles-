@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { apiFetchOrNull } from '@/lib/api';
-import { Card, Chip, Meter, SectionTitle, StarLogo } from '@/components/ui';
+import { Card, Chip, InitialsAvatar, Meter, SectionTitle, Wordmark } from '@/components/ui';
 
 interface GuardianSummary {
   learners: Array<{
@@ -46,9 +46,12 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <header className="rise mb-8">
-        <StarLogo className="text-lg" />
-        <h1 className="mt-4 font-display text-2xl font-semibold">Portal familiar</h1>
-        <p className="mt-1 text-sm text-dim">
+        <div className="masthead-rule mb-6 w-16" />
+        <Wordmark />
+        <h1 className="mt-4 font-display text-[1.75rem] font-semibold leading-tight text-ink">
+          Portal familiar
+        </h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-dim">
           Progreso, carga, permisos y alertas — sin vigilancia secreta: aquí no hay transcripciones
           de las conversaciones de tus hijos, por diseño.
         </p>
@@ -56,15 +59,18 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
 
       <div className="flex flex-col gap-6">
         {summary.learners.map((learner, index) => (
-          <Card key={learner.learnerId} className={`rise rise-${index + 1} px-5 py-5`}>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="font-display text-lg font-semibold">{learner.displayName}</p>
-                <p className="text-xs text-dim">{AGE_LABELS[learner.ageBand ?? ''] ?? '—'}</p>
+          <Card key={learner.learnerId} accent className={`rise rise-${index + 1} px-5 py-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <InitialsAvatar name={learner.displayName} />
+                <div>
+                  <p className="font-display text-lg font-semibold text-ink">{learner.displayName}</p>
+                  <p className="text-xs text-dim">{AGE_LABELS[learner.ageBand ?? ''] ?? '—'}</p>
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col items-end gap-1.5">
                 {learner.pendingReviews > 0 && (
-                  <Chip tone="nova">{learner.pendingReviews} en revisión académica</Chip>
+                  <Chip tone="primary">{learner.pendingReviews} en revisión académica</Chip>
                 )}
                 {learner.openSafetyCases > 0 ? (
                   <Chip tone="warn">{learner.openSafetyCases} alerta(s)</Chip>
@@ -75,18 +81,18 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
             </div>
 
             {learner.enrollments.map((enrollment) => (
-              <div key={enrollment.enrollmentId} className="mb-4 rounded-xl border border-line bg-night/40 px-4 py-4">
+              <div key={enrollment.enrollmentId} className="mb-4 rounded-lg border border-line bg-paper px-4 py-4">
                 <div className="mb-3 flex items-center justify-between text-sm">
-                  <span className="font-medium">{enrollment.program}</span>
-                  <Chip>{enrollment.paceCode}</Chip>
+                  <span className="font-display font-semibold text-ink">{enrollment.program}</span>
+                  <Chip tone="primary">{enrollment.paceCode}</Chip>
                 </div>
                 <Meter
                   label="Competencias dominadas"
                   value={enrollment.totalCount === 0 ? 0 : enrollment.masteredCount / enrollment.totalCount}
                   hint={`${enrollment.masteredCount} de ${enrollment.totalCount}`}
-                  tone="star"
+                  tone="gold"
                 />
-                <div className="mt-3">
+                <div className="mt-4">
                   <Meter
                     label="Voz de la semana"
                     value={
@@ -94,8 +100,8 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
                         ? 0
                         : enrollment.voice.usedMinutes / enrollment.voice.includedMinutes
                     }
-                    hint={`${enrollment.voice.usedMinutes} / ${enrollment.voice.includedMinutes} min · avisos al 70/90/100%`}
-                    tone="sky"
+                    hint={`${enrollment.voice.usedMinutes} / ${enrollment.voice.includedMinutes} min · recibirás avisos al 70, 90 y 100%`}
+                    tone="primary"
                   />
                 </div>
               </div>
@@ -105,7 +111,7 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
             )}
 
             <SectionTitle className="mb-2">Permisos otorgados</SectionTitle>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {learner.consents.map((consent) => (
                 <Chip key={consent} tone="ok">
                   {CONSENT_LABELS[consent] ?? consent}
