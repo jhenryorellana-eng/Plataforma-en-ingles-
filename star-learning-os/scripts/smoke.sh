@@ -30,7 +30,8 @@ field() { jsonget "$TMP/last.json" x "$1"; }
 echo "=== 1. Diego (14-17): login, inscripción y diagnóstico ==="
 DIEGO="$TMP/diego.jar"; rm -f "$DIEGO"
 check "login Diego" 201 "$(req "$DIEGO" POST /auth/dev-login '{"profile":"learner_teen"}')"
-STATUS=$(req "$DIEGO" POST /enrollments '{"programCode":"english-path","paceCode":"accelerated"}')
+# Sin paceCode: la Metodología §7.5 elige el ritmo DESPUÉS del diagnóstico.
+STATUS=$(req "$DIEGO" POST /enrollments '{"programCode":"english-path"}')
 if [ "$STATUS" = "409" ]; then
   req "$DIEGO" GET /enrollments >/dev/null
   ENR=$(jsonget "$TMP/last.json" x "d[0]['id']")
@@ -53,9 +54,18 @@ if [ "$ESTADO" = "pending_diagnostic" ]; then
   check "completar diagnóstico" 201 "$(req "$DIEGO" POST "/diagnostic-attempts/$ATT/complete")"
   check "placement provisional (menor)" "True" "$(field "d['placement']['provisional']")"
   check "nivel general B1" B1 "$(field "d['placement']['overall']")"
+  check "ritmo pendiente tras diagnóstico (§7.5)" "False" "$(field "d['paceConfirmed']")"
+  check "siguiente acción: elegir ritmo" choose_pace "$(field "d['nextAction']['type']")"
 else
   echo "INFO  diagnóstico ya completado antes"
 fi
+
+echo "=== 1b. Selector de ritmo con proyección (Metodología §7.5 y §9.3) ==="
+check "opciones de ritmo" 200 "$(req "$DIEGO" GET "/enrollments/$ENR/pace-options")"
+check "nivel de entrada B1" B1 "$(field "d['entryLevel']")"
+check "Accelerated proyecta 5-8 meses" "5-8" "$(jsonget "$TMP/last.json" x "str([o for o in d['options'] if o['code']=='accelerated'][0]['monthsMin'])+'-'+str([o for o in d['options'] if o['code']=='accelerated'][0]['monthsMax'])")"
+check "confirmar ritmo Accelerated" 200 "$(req "$DIEGO" PATCH "/enrollments/$ENR/pace" '{"paceCode":"accelerated"}')"
+check "ritmo confirmado" "True" "$(field "d['paceConfirmed']")"
 
 echo "=== 2. Plan del día y lección ==="
 check "GET today" 200 "$(req "$DIEGO" GET "/enrollments/$ENR/today")"
@@ -81,7 +91,7 @@ check "cerrar sesión de voz" 201 "$(req "$DIEGO" POST "/voice-sessions/$VS/end"
 
 LUCIA="$TMP/lucia.jar"; rm -f "$LUCIA"
 check "login Lucía (12-13)" 201 "$(req "$LUCIA" POST /auth/dev-login '{"profile":"learner_young"}')"
-LSTATUS=$(req "$LUCIA" POST /enrollments '{"programCode":"english-path","paceCode":"flex"}')
+LSTATUS=$(req "$LUCIA" POST /enrollments '{"programCode":"english-path"}')
 if [ "$LSTATUS" = "409" ]; then req "$LUCIA" GET /enrollments >/dev/null; LENR=$(jsonget "$TMP/last.json" x "d[0]['id']"); else LENR=$(field "d['id']"); fi
 # Activamos su inscripción completando el diagnóstico, para aislar el gate ZDR:
 LESTADO=$(req "$LUCIA" GET "/enrollments/$LENR" >/dev/null; field "d['status']")

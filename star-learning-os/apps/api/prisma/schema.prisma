@@ -476,6 +476,8 @@ model Enrollment {
   programVersionId     String           @db.Uuid
   trackId              String?          @db.Uuid
   paceCode             PaceCode
+  /// Momento en que el alumno confirmó su ritmo TRAS el diagnóstico (Metodología §7.5).
+  paceConfirmedAt      DateTime?        @db.Timestamptz(6)
   supportLanguage      String
   interfaceLocale      String
   targetVariety        String

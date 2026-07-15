@@ -5,4 +5,5 @@ export * from './review-scheduler';
 export * from './voice-policy';
 export * from './promotion';
 export * from './placement';
+export * from './projection';
 export * from './scoring';

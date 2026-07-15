@@ -14,5 +14,8 @@ export default async function LearnDispatcher({ params }: { params: Promise<{ lo
   if (active.status === 'pending_diagnostic') {
     redirect(`/${locale}/learn/${active.program.code}/diagnostic`);
   }
+  if (!active.paceConfirmed) {
+    redirect(`/${locale}/learn/${active.program.code}/pace`);
+  }
   redirect(`/${locale}/learn/${active.program.code}/today`);
 }

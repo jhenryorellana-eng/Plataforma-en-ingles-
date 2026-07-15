@@ -1,5 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { zCreateEnrollmentRequest, type EnrollmentResponse, type PathResponse, type ProgressResponse } from '@star/contracts';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  zCreateEnrollmentRequest,
+  zUpdatePaceRequest,
+  type EnrollmentResponse,
+  type PaceOptionsResponse,
+  type PathResponse,
+  type ProgressResponse,
+} from '@star/contracts';
 import { AccessService } from '../../common/access.service';
 import { CurrentUser } from '../../common/decorators';
 import type { SessionUser } from '../../common/session';
@@ -28,6 +35,23 @@ export class EnrollmentController {
   async detail(@CurrentUser() user: SessionUser, @Param('id') id: string): Promise<EnrollmentResponse> {
     await this.accessService.assertEnrollmentAccess(user, id);
     return this.enrollmentService.toResponse(id);
+  }
+
+  @Get(':id/pace-options')
+  async paceOptions(@CurrentUser() user: SessionUser, @Param('id') id: string): Promise<PaceOptionsResponse> {
+    const enrollment = await this.accessService.assertEnrollmentAccess(user, id);
+    return this.enrollmentService.paceOptions(enrollment);
+  }
+
+  @Patch(':id/pace')
+  async updatePace(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<EnrollmentResponse> {
+    const request = parse(zUpdatePaceRequest, body);
+    const enrollment = await this.accessService.assertEnrollmentAccess(user, id);
+    return this.enrollmentService.updatePace(user, enrollment, request.paceCode);
   }
 
   @Get(':id/progress')

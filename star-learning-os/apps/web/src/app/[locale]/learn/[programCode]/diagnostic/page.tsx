@@ -83,7 +83,8 @@ export default function DiagnosticPage({
         setIndex(index + 1);
       } else {
         await clientApi(`/diagnostic-attempts/${attempt.id}/complete`, { method: 'POST' });
-        router.push(`/${locale}/learn/${programCode}/today`);
+        // Con el nivel detectado, el siguiente paso es elegir ritmo (Metodología §7.5).
+        router.push(`/${locale}/learn/${programCode}/pace`);
         return;
       }
     } catch (err) {

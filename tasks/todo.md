@@ -27,6 +27,7 @@
 - [x] 10. Build completo verde + tests verdes + smoke E2E verde
 - [x] 11. README + runbook (`star-learning-os/README.md`, `scripts/smoke.sh`)
 - [x] 12. Commits finales
+- [x] 13. Flujo "tal cual Metodología §7.5": inscripción → diagnóstico → **selector de ritmo con proyección §9.3** (fecha estimada por nivel de entrada, Sprint bloqueado para 12–13 por D04, cambio de cupos al confirmar) → plan diario. Smoke 28/28 + verificado en navegador.
 
 ### Arranque local (recordatorio)
 `pnpm install --ignore-scripts && pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm dev:api` + `pnpm dev:web`

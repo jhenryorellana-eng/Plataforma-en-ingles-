@@ -15,6 +15,8 @@ export default async function TodayPage({
   const enrollment = await resolveEnrollment(programCode);
   if (!enrollment) redirect(`/${locale}/login`);
   if (enrollment.status === 'pending_diagnostic') redirect(`/${locale}/learn/${programCode}/diagnostic`);
+  // Metodología §7.5: el ritmo se confirma tras el diagnóstico, antes del plan diario.
+  if (!enrollment.paceConfirmed) redirect(`/${locale}/learn/${programCode}/pace`);
 
   const [me, today] = await Promise.all([
     apiFetch<MeResponse>('/auth/me'),

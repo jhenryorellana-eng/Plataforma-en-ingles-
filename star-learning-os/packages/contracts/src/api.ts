@@ -49,12 +49,40 @@ export type RecordAssentRequest = z.infer<typeof zRecordAssentRequest>;
 
 export const zCreateEnrollmentRequest = z.object({
   programCode: z.string().min(2),
-  paceCode: zPaceCode,
+  /** Opcional: la Metodología §7.5 elige el ritmo DESPUÉS del diagnóstico. */
+  paceCode: zPaceCode.optional(),
   supportLanguage: z.string().min(2).max(10).default('es'),
   interfaceLocale: z.string().min(2).max(12).default('es-PE'),
   targetVariety: z.string().min(2).max(12).default('en-US'),
 });
 export type CreateEnrollmentRequest = z.infer<typeof zCreateEnrollmentRequest>;
+
+export const zUpdatePaceRequest = z.object({
+  paceCode: zPaceCode,
+});
+export type UpdatePaceRequest = z.infer<typeof zUpdatePaceRequest>;
+
+export const zPaceOption = z.object({
+  code: zPaceCode,
+  name: z.string(),
+  weeklyStudyHours: z.number(),
+  weeklyVoiceMinutes: z.number(),
+  monthsMin: z.number(),
+  monthsMax: z.number(),
+  recommended: z.boolean(),
+  allowed: z.boolean(),
+  note: z.string().nullable(),
+});
+export type PaceOption = z.infer<typeof zPaceOption>;
+
+export const zPaceOptionsResponse = z.object({
+  enrollmentId: z.string().uuid(),
+  entryLevel: zCefrLevel,
+  remainingHoursMin: z.number(),
+  remainingHoursMax: z.number(),
+  options: z.array(zPaceOption),
+});
+export type PaceOptionsResponse = z.infer<typeof zPaceOptionsResponse>;
 
 export const zEnrollmentResponse = z.object({
   id: z.string().uuid(),
@@ -64,6 +92,8 @@ export const zEnrollmentResponse = z.object({
     targetLanguage: z.string(),
   }),
   paceCode: zPaceCode,
+  /** false hasta que el alumno confirme su ritmo tras el diagnóstico (§7.5). */
+  paceConfirmed: z.boolean(),
   status: zEnrollmentStatus,
   placement: z
     .object({
@@ -74,7 +104,7 @@ export const zEnrollmentResponse = z.object({
     })
     .nullable(),
   nextAction: z.object({
-    type: z.enum(['start_diagnostic', 'continue_diagnostic', 'today']),
+    type: z.enum(['start_diagnostic', 'continue_diagnostic', 'choose_pace', 'today']),
     href: z.string(),
   }),
 });

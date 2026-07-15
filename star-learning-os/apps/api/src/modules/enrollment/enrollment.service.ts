@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import type { CreateEnrollmentRequest, EnrollmentResponse, PathResponse, ProgressResponse } from '@star/contracts';
-import { PLAN_LIMITS, type CefrLevel, type Skill } from '@star/domain';
+import type {
+  CreateEnrollmentRequest,
+  EnrollmentResponse,
+  PaceOptionsResponse,
+  PathResponse,
+  ProgressResponse,
+} from '@star/contracts';
+import {
+  PLAN_LIMITS,
+  projectCalendar,
+  type CefrLevel,
+  type PaceCode,
+  type Skill,
+} from '@star/domain';
 import type { EnrollmentWithLearner } from '../../common/access.service';
 import { AppError, forbidden } from '../../common/errors';
 import type { SessionUser } from '../../common/session';
@@ -75,14 +87,18 @@ export class EnrollmentService {
       });
     }
 
-    const limits = PLAN_LIMITS[request.paceCode];
+    // Sin elección explícita se inscribe en Accelerated (plan principal del piloto, D04)
+    // y queda pendiente de confirmar el ritmo tras el diagnóstico (Metodología §7.5).
+    const paceCode = request.paceCode ?? 'accelerated';
+    const limits = PLAN_LIMITS[paceCode];
     const enrollment = await this.prisma.$transaction(async (tx) => {
       const created = await tx.enrollment.create({
         data: {
           learnerId: actor.id,
           programId: program.id,
           programVersionId: version.id,
-          paceCode: request.paceCode,
+          paceCode,
+          paceConfirmedAt: request.paceCode ? new Date() : null,
           supportLanguage: request.supportLanguage,
           interfaceLocale: request.interfaceLocale,
           targetVariety: request.targetVariety,
@@ -99,7 +115,7 @@ export class EnrollmentService {
         aggregateType: 'enrollment',
         aggregateId: created.id,
         eventType: 'enrollment.created',
-        payload: { programCode: program.code, paceCode: request.paceCode },
+        payload: { programCode: program.code, paceCode },
       });
       await this.auditService.recordInTx(tx, {
         actorId: actor.id,
@@ -142,10 +158,13 @@ export class EnrollmentService {
       include: { program: true, programVersion: true },
     });
     const placement = (enrollment.placement as unknown as PlacementJson | null) ?? null;
+    const paceConfirmed = enrollment.paceConfirmedAt !== null;
     const nextAction =
       enrollment.status === 'pending_diagnostic'
         ? ({ type: 'start_diagnostic', href: `/v1/enrollments/${enrollment.id}/diagnostic-attempts` } as const)
-        : ({ type: 'today', href: `/v1/enrollments/${enrollment.id}/today` } as const);
+        : enrollment.status === 'active' && !paceConfirmed
+          ? ({ type: 'choose_pace', href: `/v1/enrollments/${enrollment.id}/pace-options` } as const)
+          : ({ type: 'today', href: `/v1/enrollments/${enrollment.id}/today` } as const);
     return {
       id: enrollment.id,
       program: {
@@ -154,6 +173,7 @@ export class EnrollmentService {
         targetLanguage: enrollment.program.targetLanguage,
       },
       paceCode: enrollment.paceCode,
+      paceConfirmed,
       status: enrollment.status,
       placement: placement
         ? {
@@ -165,6 +185,101 @@ export class EnrollmentService {
         : null,
       nextAction,
     };
+  }
+
+  /**
+   * Selector de ritmo posterior al diagnóstico (Metodología §7.5): tres
+   * alternativas sobre la misma ruta con proyección según el nivel detectado.
+   * Sprint no se ofrece automáticamente a 12–13 (D04, §9.1).
+   */
+  async paceOptions(enrollment: EnrollmentWithLearner): Promise<PaceOptionsResponse> {
+    const placement = (enrollment.placement as unknown as PlacementJson | null) ?? null;
+    const entryLevel: CefrLevel = placement?.overall ?? 'B1';
+    const isYoung = enrollment.learner.ageBand === 'y12_13';
+
+    const NAMES: Record<PaceCode, string> = {
+      flex: 'Starbiz Flex',
+      accelerated: 'Starbiz Accelerated',
+      sprint: 'Starbiz Sprint',
+    };
+    const NOTES: Record<PaceCode, string | null> = {
+      flex: 'Compatible con una carga escolar moderada',
+      accelerated: 'Equilibrio recomendado entre velocidad, escuela y descanso',
+      sprint: isYoung
+        ? 'No disponible para 12–13: requiere validación de carga, edad y bienestar (D04)'
+        : 'Solo con disponibilidad, bienestar y apoyo familiar validados; incluye semana de confirmación de carga',
+    };
+
+    const paces: PaceCode[] = ['flex', 'accelerated', 'sprint'];
+    const projection = projectCalendar(entryLevel, 'flex');
+    return {
+      enrollmentId: enrollment.id,
+      entryLevel,
+      remainingHoursMin: projection.remainingHoursMin,
+      remainingHoursMax: projection.remainingHoursMax,
+      options: paces.map((pace) => {
+        const calendar = projectCalendar(entryLevel, pace);
+        return {
+          code: pace,
+          name: NAMES[pace],
+          weeklyStudyHours: PLAN_LIMITS[pace].weeklyStudyHours,
+          weeklyVoiceMinutes: PLAN_LIMITS[pace].weeklyVoiceMinutes,
+          monthsMin: calendar.monthsMin,
+          monthsMax: calendar.monthsMax,
+          recommended: pace === 'accelerated',
+          allowed: !(pace === 'sprint' && isYoung),
+          note: NOTES[pace],
+        };
+      }),
+    };
+  }
+
+  /** Confirma o cambia el ritmo: modifica calendario y cupos, nunca el estándar (§9.4). */
+  async updatePace(actor: SessionUser, enrollment: EnrollmentWithLearner, paceCode: PaceCode): Promise<EnrollmentResponse> {
+    if (enrollment.status !== 'active' && enrollment.status !== 'paused') {
+      throw new AppError('ENROLLMENT_NOT_ACTIVE', 409, 'Completa el diagnóstico antes de elegir tu ritmo');
+    }
+    if (paceCode === 'sprint' && enrollment.learner.ageBand === 'y12_13') {
+      throw new AppError(
+        'AGE_NOT_ALLOWED',
+        403,
+        'Sprint requiere validación de carga, edad y bienestar; no está disponible para tu edad (D04)',
+      );
+    }
+
+    const limits = PLAN_LIMITS[paceCode];
+    await this.prisma.$transaction(async (tx) => {
+      await tx.enrollment.update({
+        where: { id: enrollment.id },
+        data: { paceCode, paceConfirmedAt: new Date(), rowVersion: { increment: 1 } },
+      });
+      await tx.entitlement.upsert({
+        where: { enrollmentId: enrollment.id },
+        create: {
+          enrollmentId: enrollment.id,
+          weeklyVoiceMinutes: limits.weeklyVoiceMinutes,
+          weeklyStudyHours: limits.weeklyStudyHours,
+        },
+        update: {
+          weeklyVoiceMinutes: limits.weeklyVoiceMinutes,
+          weeklyStudyHours: limits.weeklyStudyHours,
+        },
+      });
+      await this.outboxService.emitInTx(tx, {
+        aggregateType: 'enrollment',
+        aggregateId: enrollment.id,
+        eventType: 'enrollment.pace_confirmed',
+        payload: { paceCode },
+      });
+      await this.auditService.recordInTx(tx, {
+        actorId: actor.id,
+        action: 'enrollment.pace_confirmed',
+        objectType: 'enrollment',
+        objectId: enrollment.id,
+        metadata: { paceCode },
+      });
+    });
+    return this.toResponse(enrollment.id);
   }
 
   async progress(enrollment: EnrollmentWithLearner): Promise<ProgressResponse> {

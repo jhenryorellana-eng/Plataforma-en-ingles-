@@ -14,7 +14,12 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.register(fastifyCookie);
-  app.enableCors({ origin: config.webOrigin, credentials: true });
+  app.enableCors({
+    origin: config.webOrigin,
+    credentials: true,
+    // @fastify/cors solo permite GET,HEAD,POST por defecto; la API usa PATCH (ritmo).
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
   app.setGlobalPrefix('v1');
   app.useGlobalFilters(new AppExceptionFilter());
   app.enableShutdownHooks();
