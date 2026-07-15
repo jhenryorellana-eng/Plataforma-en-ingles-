@@ -1,0 +1,893 @@
+// STAR Learning OS — esquema multi-programa desde el día 1.
+// Implementa el patrón de Arquitectura Multilingüe §9 y Stack §7:
+// la inscripción (enrollment) es la frontera de todo progreso.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["identity", "family", "catalog", "curriculum", "learning", "assessment", "ai", "safety", "audit"]
+}
+
+// ---------------- identity ----------------
+
+enum UserRole {
+  learner
+  guardian
+  staff
+
+  @@schema("identity")
+}
+
+enum AgeBand {
+  y12_13
+  t14_17
+  a18_plus
+
+  @@schema("identity")
+}
+
+model User {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  email       String?  @unique
+  displayName String
+  role        UserRole
+  ageBand     AgeBand?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  guardianLinks      GuardianLearnerLink[] @relation("GuardianSide")
+  learnerLinks       GuardianLearnerLink[] @relation("LearnerSide")
+  consentsGranted    ConsentGrant[]        @relation("ConsentGrantedBy")
+  consentsAsSubject  ConsentGrant[]        @relation("ConsentSubject")
+  assents            YouthAssent[]
+  enrollments        Enrollment[]
+  safetySignals      SafetySignal[]
+  humanReviews       HumanReview[]         @relation("ReviewSubject")
+  decidedReviews     HumanReview[]         @relation("ReviewDecider")
+
+  @@map("users")
+  @@schema("identity")
+}
+
+// ---------------- family ----------------
+
+enum LinkStatus {
+  invited
+  active
+  revoked
+
+  @@schema("family")
+}
+
+enum ConsentPurpose {
+  service
+  ai_voice
+  storage
+  international_transfer
+  analytics
+  marketing
+  research
+
+  @@schema("family")
+}
+
+enum ConsentStatus {
+  granted
+  revoked
+  expired
+
+  @@schema("family")
+}
+
+model GuardianLearnerLink {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  guardianId String     @db.Uuid
+  learnerId  String     @db.Uuid
+  status     LinkStatus @default(active)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+  revokedAt  DateTime?  @db.Timestamptz(6)
+
+  guardian User @relation("GuardianSide", fields: [guardianId], references: [id])
+  learner  User @relation("LearnerSide", fields: [learnerId], references: [id])
+
+  @@unique([guardianId, learnerId])
+  @@index([learnerId, status])
+  @@map("guardian_learner_links")
+  @@schema("family")
+}
+
+model ConsentGrant {
+  id            String         @id @default(uuid(7)) @db.Uuid
+  learnerId     String         @db.Uuid
+  grantedById   String         @db.Uuid
+  purpose       ConsentPurpose
+  status        ConsentStatus  @default(granted)
+  noticeVersion String
+  grantedAt     DateTime       @default(now()) @db.Timestamptz(6)
+  revokedAt     DateTime?      @db.Timestamptz(6)
+
+  learner   User @relation("ConsentSubject", fields: [learnerId], references: [id])
+  grantedBy User @relation("ConsentGrantedBy", fields: [grantedById], references: [id])
+
+  @@index([learnerId, purpose, status])
+  @@map("consent_grants")
+  @@schema("family")
+}
+
+model YouthAssent {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  learnerId     String   @db.Uuid
+  noticeVersion String
+  recordedAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  learner User @relation(fields: [learnerId], references: [id])
+
+  @@index([learnerId])
+  @@map("youth_assents")
+  @@schema("family")
+}
+
+// ---------------- catalog ----------------
+
+enum ProgramStatus {
+  draft
+  active
+  retired
+
+  @@schema("catalog")
+}
+
+enum VersionStatus {
+  draft
+  review
+  published
+  retired
+
+  @@schema("catalog")
+}
+
+model LanguageProgram {
+  id                     String        @id @default(uuid(7)) @db.Uuid
+  code                   String        @unique
+  name                   String
+  targetLanguage         String
+  defaultSupportLanguage String
+  defaultInterfaceLocale String
+  defaultTargetVariety   String
+  minimumAge             Int
+  status                 ProgramStatus @default(draft)
+  createdAt              DateTime      @default(now()) @db.Timestamptz(6)
+
+  versions    ProgramVersion[]
+  enrollments Enrollment[]
+
+  @@map("language_programs")
+  @@schema("catalog")
+}
+
+model ProgramVersion {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  programId        String        @db.Uuid
+  version          String
+  engineMinVersion String        @default("1.0.0")
+  status           VersionStatus @default(draft)
+  contentHash      String        @default("sha256:seed")
+  publishedAt      DateTime?     @db.Timestamptz(6)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(6)
+
+  program LanguageProgram @relation(fields: [programId], references: [id])
+
+  tracks          ProgramTrack[]
+  stages          Stage[]
+  units           Unit[]
+  competencies    Competency[]
+  rubrics         RubricVersion[]
+  lessonContracts LessonContract[]
+  activities      Activity[]
+  enrollments     Enrollment[]
+
+  @@unique([programId, version])
+  @@unique([programId, id])
+  @@index([programId, status])
+  @@map("program_versions")
+  @@schema("catalog")
+}
+
+model ProgramTrack {
+  id                  String  @id @default(uuid(7)) @db.Uuid
+  programVersionId    String  @db.Uuid
+  code                String
+  name                String
+  qualificationTarget String?
+
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
+  enrollments    Enrollment[]
+
+  @@unique([programVersionId, code])
+  @@map("program_tracks")
+  @@schema("catalog")
+}
+
+// ---------------- curriculum ----------------
+
+enum Skill {
+  reading
+  listening
+  speaking
+  writing
+  language_use
+
+  @@schema("curriculum")
+}
+
+enum Criticality {
+  critical
+  complementary
+
+  @@schema("curriculum")
+}
+
+enum ActivityKind {
+  mcq
+  gap_fill
+  writing_prompt
+  voice_mission
+
+  @@schema("curriculum")
+}
+
+enum SupportLevel {
+  guided
+  independent
+
+  @@schema("curriculum")
+}
+
+enum EdgeKind {
+  requires
+  supports
+
+  @@schema("curriculum")
+}
+
+model Stage {
+  id               String @id @default(uuid(7)) @db.Uuid
+  programVersionId String @db.Uuid
+  code             String
+  name             String
+  cefrFrom         String
+  cefrTo           String
+  orderIndex       Int
+
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
+  units          Unit[]
+  competencies   Competency[]
+
+  @@unique([programVersionId, code])
+  @@map("stages")
+  @@schema("curriculum")
+}
+
+model Unit {
+  id               String @id @default(uuid(7)) @db.Uuid
+  programVersionId String @db.Uuid
+  stageId          String @db.Uuid
+  code             String
+  name             String
+  theme            String
+  orderIndex       Int
+
+  programVersion  ProgramVersion   @relation(fields: [programVersionId], references: [id])
+  stage           Stage            @relation(fields: [stageId], references: [id])
+  lessonContracts LessonContract[]
+
+  @@unique([programVersionId, code])
+  @@map("units")
+  @@schema("curriculum")
+}
+
+model Competency {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  programVersionId String      @db.Uuid
+  stageId          String      @db.Uuid
+  code             String
+  descriptor       String
+  skill            Skill
+  cefrLevel        String
+  criticality      Criticality
+  globalThreshold  Float       @default(0.8)
+  dimensionFloors  Json        @default("{}")
+  freshnessDays    Int         @default(45)
+
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
+  stage          Stage          @relation(fields: [stageId], references: [id])
+
+  outgoingEdges     CompetencyEdge[]        @relation("EdgeFrom")
+  incomingEdges     CompetencyEdge[]        @relation("EdgeTo")
+  lessonCompetencies LessonCompetency[]
+  activities        Activity[]
+  evidence          Evidence[]
+  states            CompetencyStateRecord[]
+  reviewItems       ReviewItem[]
+
+  @@unique([programVersionId, code])
+  @@map("competencies")
+  @@schema("curriculum")
+}
+
+model CompetencyEdge {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  fromCompetencyId String   @db.Uuid
+  toCompetencyId   String   @db.Uuid
+  kind             EdgeKind
+
+  fromCompetency Competency @relation("EdgeFrom", fields: [fromCompetencyId], references: [id])
+  toCompetency   Competency @relation("EdgeTo", fields: [toCompetencyId], references: [id])
+
+  @@unique([fromCompetencyId, toCompetencyId, kind])
+  @@map("competency_edges")
+  @@schema("curriculum")
+}
+
+model RubricVersion {
+  id               String @id @default(uuid(7)) @db.Uuid
+  programVersionId String @db.Uuid
+  code             String
+  name             String
+  version          Int    @default(1)
+  dimensions       Json
+
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
+  activities     Activity[]
+  evidence       Evidence[]
+
+  @@unique([programVersionId, code, version])
+  @@map("rubric_versions")
+  @@schema("curriculum")
+}
+
+model LessonContract {
+  id                   String @id @default(uuid(7)) @db.Uuid
+  programVersionId     String @db.Uuid
+  unitId               String @db.Uuid
+  code                 String
+  objective            String
+  mentorMode           String @default("tutor")
+  correctionPolicy     String @default("delayed_then_recast")
+  translationPolicy    String @default("on_request_only")
+  immersionRatio       Float  @default(0.7)
+  timeboxSeconds       Int    @default(900)
+  orderIndex           Int
+  evidenceRequirements Json   @default("{}")
+
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
+  unit           Unit           @relation(fields: [unitId], references: [id])
+
+  lessonCompetencies LessonCompetency[]
+  activities         Activity[]
+  learningSessions   LearningSession[]
+  voiceSessions      VoiceSession[]
+
+  @@unique([programVersionId, code])
+  @@map("lesson_contracts")
+  @@schema("curriculum")
+}
+
+model LessonCompetency {
+  lessonContractId String @db.Uuid
+  competencyId     String @db.Uuid
+
+  lessonContract LessonContract @relation(fields: [lessonContractId], references: [id])
+  competency     Competency     @relation(fields: [competencyId], references: [id])
+
+  @@id([lessonContractId, competencyId])
+  @@map("lesson_competencies")
+  @@schema("curriculum")
+}
+
+model Activity {
+  id                String       @id @default(uuid(7)) @db.Uuid
+  programVersionId  String       @db.Uuid
+  lessonContractId  String       @db.Uuid
+  competencyId      String       @db.Uuid
+  rubricVersionId   String?      @db.Uuid
+  code              String
+  kind              ActivityKind
+  skill             Skill
+  orderIndex        Int
+  isTransferVariant Boolean      @default(false)
+  supportLevel      SupportLevel @default(independent)
+  /// Contenido visible para el cliente. NUNCA incluye claves de respuesta.
+  prompt            Json
+  /// Clave de respuesta y especificación de scoring. Solo servidor (PRF-08).
+  answerKey         Json
+
+  programVersion ProgramVersion  @relation(fields: [programVersionId], references: [id])
+  lessonContract LessonContract  @relation(fields: [lessonContractId], references: [id])
+  competency     Competency      @relation(fields: [competencyId], references: [id])
+  rubricVersion  RubricVersion?  @relation(fields: [rubricVersionId], references: [id])
+  evidence       Evidence[]
+  reviewItems    ReviewItem[]
+
+  @@unique([programVersionId, code])
+  @@index([lessonContractId, orderIndex])
+  @@map("activities")
+  @@schema("curriculum")
+}
+
+// ---------------- learning ----------------
+
+enum PaceCode {
+  flex
+  accelerated
+  sprint
+
+  @@schema("learning")
+}
+
+enum EnrollmentStatus {
+  pending_diagnostic
+  active
+  paused
+  completed
+  cancelled
+
+  @@schema("learning")
+}
+
+enum SessionStatus {
+  created
+  active
+  completed
+  abandoned
+
+  @@schema("learning")
+}
+
+enum EvidenceSource {
+  practice
+  voice
+  checkpoint
+  diagnostic
+  exam_simulation
+
+  @@schema("learning")
+}
+
+enum CompetencyState {
+  not_seen
+  exposed
+  developing
+  provisional
+  mastered
+  review_required
+
+  @@schema("learning")
+}
+
+model Enrollment {
+  id                   String           @id @default(uuid(7)) @db.Uuid
+  learnerId            String           @db.Uuid
+  programId            String           @db.Uuid
+  programVersionId     String           @db.Uuid
+  trackId              String?          @db.Uuid
+  paceCode             PaceCode
+  supportLanguage      String
+  interfaceLocale      String
+  targetVariety        String
+  status               EnrollmentStatus @default(pending_diagnostic)
+  placement            Json?
+  placementProvisional Boolean          @default(true)
+  startedAt            DateTime?        @db.Timestamptz(6)
+  completedAt          DateTime?        @db.Timestamptz(6)
+  rowVersion           Int              @default(1)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(6)
+
+  learner        User            @relation(fields: [learnerId], references: [id])
+  program        LanguageProgram @relation(fields: [programId], references: [id])
+  programVersion ProgramVersion  @relation(fields: [programId, programVersionId], references: [programId, id])
+  track          ProgramTrack?   @relation(fields: [trackId], references: [id])
+
+  entitlement        Entitlement?
+  learningSessions   LearningSession[]
+  evidence           Evidence[]
+  competencyStates   CompetencyStateRecord[]
+  reviewItems        ReviewItem[]
+  diagnosticAttempts DiagnosticAttempt[]
+  voiceSessions      VoiceSession[]
+  humanReviews       HumanReview[]
+  usageRecords       AiUsageRecord[]
+
+  @@index([learnerId, status, createdAt(sort: Desc)])
+  @@map("enrollments")
+  @@schema("learning")
+}
+
+model Entitlement {
+  id                 String @id @default(uuid(7)) @db.Uuid
+  enrollmentId       String @unique @db.Uuid
+  weeklyVoiceMinutes Int
+  weeklyStudyHours   Int
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+
+  @@map("entitlements")
+  @@schema("learning")
+}
+
+model LearningSession {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  enrollmentId     String        @db.Uuid
+  lessonContractId String        @db.Uuid
+  status           SessionStatus @default(active)
+  startedAt        DateTime      @default(now()) @db.Timestamptz(6)
+  endedAt          DateTime?     @db.Timestamptz(6)
+
+  enrollment     Enrollment     @relation(fields: [enrollmentId], references: [id])
+  lessonContract LessonContract @relation(fields: [lessonContractId], references: [id])
+  evidence       Evidence[]
+
+  @@index([enrollmentId, status])
+  @@map("learning_sessions")
+  @@schema("learning")
+}
+
+model Evidence {
+  id                 String         @id @default(uuid(7)) @db.Uuid
+  enrollmentId       String         @db.Uuid
+  learningSessionId  String?        @db.Uuid
+  competencyId       String         @db.Uuid
+  activityId         String?        @db.Uuid
+  rubricVersionId    String?        @db.Uuid
+  sourceType         EvidenceSource
+  usedAids           Boolean        @default(false)
+  isTransfer         Boolean        @default(false)
+  isDelayedRetrieval Boolean        @default(false)
+  score              Float
+  dimensionScores    Json?
+  confidence         Float
+  alerts             Json?
+  normalizedPayload  Json
+  provenance         Json
+  inputHash          String
+  createdAt          DateTime       @default(now()) @db.Timestamptz(6)
+
+  enrollment      Enrollment       @relation(fields: [enrollmentId], references: [id])
+  learningSession LearningSession? @relation(fields: [learningSessionId], references: [id])
+  competency      Competency       @relation(fields: [competencyId], references: [id])
+  activity        Activity?        @relation(fields: [activityId], references: [id])
+  rubricVersion   RubricVersion?   @relation(fields: [rubricVersionId], references: [id])
+
+  @@index([enrollmentId, createdAt(sort: Desc)])
+  @@index([enrollmentId, competencyId, createdAt(sort: Desc)])
+  @@map("evidence")
+  @@schema("learning")
+}
+
+model CompetencyStateRecord {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  enrollmentId   String          @db.Uuid
+  competencyId   String          @db.Uuid
+  state          CompetencyState @default(not_seen)
+  masteryScore   Float           @default(0)
+  confidence     Float           @default(0)
+  freshness      Float           @default(0)
+  evidenceCount  Int             @default(0)
+  lastEvidenceAt DateTime?       @db.Timestamptz(6)
+  nextReviewAt   DateTime?       @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(6)
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+  competency Competency @relation(fields: [competencyId], references: [id])
+
+  @@unique([enrollmentId, competencyId])
+  @@index([enrollmentId, state])
+  @@map("competency_states")
+  @@schema("learning")
+}
+
+model ReviewItem {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  enrollmentId String    @db.Uuid
+  competencyId String    @db.Uuid
+  activityId   String?   @db.Uuid
+  dueAt        DateTime  @db.Timestamptz(6)
+  intervalDays Int
+  lapses       Int       @default(0)
+  completedAt  DateTime? @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+  competency Competency @relation(fields: [competencyId], references: [id])
+  activity   Activity?  @relation(fields: [activityId], references: [id])
+
+  @@index([enrollmentId, dueAt])
+  @@map("review_items")
+  @@schema("learning")
+}
+
+// ---------------- assessment ----------------
+
+enum DiagnosticStatus {
+  in_progress
+  completed
+  insufficient
+
+  @@schema("assessment")
+}
+
+enum ReviewCaseType {
+  placement
+  stage_gate
+  integrity
+  readiness
+  certificate
+  low_confidence
+  appeal
+
+  @@schema("assessment")
+}
+
+enum ReviewStatus {
+  pending
+  confirmed
+  corrected
+  invalidated
+
+  @@schema("assessment")
+}
+
+model DiagnosticItem {
+  id         String @id @default(uuid(7)) @db.Uuid
+  code       String @unique
+  skill      Skill
+  level      String
+  prompt     Json
+  answerKey  Json
+  orderIndex Int
+
+  @@map("diagnostic_items")
+  @@schema("assessment")
+}
+
+model DiagnosticAttempt {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  enrollmentId String           @db.Uuid
+  status       DiagnosticStatus @default(in_progress)
+  result       Json?
+  startedAt    DateTime         @default(now()) @db.Timestamptz(6)
+  completedAt  DateTime?        @db.Timestamptz(6)
+
+  enrollment Enrollment           @relation(fields: [enrollmentId], references: [id])
+  responses  DiagnosticResponse[]
+
+  @@index([enrollmentId, status])
+  @@map("diagnostic_attempts")
+  @@schema("assessment")
+}
+
+model DiagnosticResponse {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  attemptId     String   @db.Uuid
+  itemCode      String
+  skill         Skill
+  selectedIndex Int
+  correct       Boolean
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  attempt DiagnosticAttempt @relation(fields: [attemptId], references: [id])
+
+  @@unique([attemptId, itemCode])
+  @@map("diagnostic_responses")
+  @@schema("assessment")
+}
+
+model HumanReview {
+  id           String         @id @default(uuid(7)) @db.Uuid
+  enrollmentId String?        @db.Uuid
+  learnerId    String         @db.Uuid
+  caseType     ReviewCaseType
+  payload      Json
+  status       ReviewStatus   @default(pending)
+  decidedById  String?        @db.Uuid
+  decidedAt    DateTime?      @db.Timestamptz(6)
+  reason       String?
+  createdAt    DateTime       @default(now()) @db.Timestamptz(6)
+
+  enrollment Enrollment? @relation(fields: [enrollmentId], references: [id])
+  learner    User        @relation("ReviewSubject", fields: [learnerId], references: [id])
+  decidedBy  User?       @relation("ReviewDecider", fields: [decidedById], references: [id])
+
+  @@index([status, createdAt])
+  @@map("human_reviews")
+  @@schema("assessment")
+}
+
+// ---------------- ai ----------------
+
+enum VoiceMode {
+  realtime
+  mock
+
+  @@schema("ai")
+}
+
+enum VoiceStatus {
+  created
+  connected
+  completed
+  failed
+  terminated
+
+  @@schema("ai")
+}
+
+enum CostCenter {
+  learning
+  assessment
+  safety
+  qa
+
+  @@schema("ai")
+}
+
+model VoiceSession {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  enrollmentId     String      @db.Uuid
+  lessonContractId String      @db.Uuid
+  mode             VoiceMode
+  providerCallId   String?
+  modelAlias       String
+  modelSnapshot    String
+  promptVersion    String
+  policyVersion    String
+  targetLanguage   String
+  supportLanguage  String
+  targetVariety    String
+  immersionRatio   Float
+  status           VoiceStatus @default(created)
+  startedAt        DateTime?   @db.Timestamptz(6)
+  endedAt          DateTime?   @db.Timestamptz(6)
+  activeSeconds    Int         @default(0)
+  endReason        String?
+  createdAt        DateTime    @default(now()) @db.Timestamptz(6)
+
+  enrollment     Enrollment     @relation(fields: [enrollmentId], references: [id])
+  lessonContract LessonContract @relation(fields: [lessonContractId], references: [id])
+  usageRecords   AiUsageRecord[]
+
+  @@index([enrollmentId, createdAt(sort: Desc)])
+  @@map("voice_sessions")
+  @@schema("ai")
+}
+
+model AiUsageRecord {
+  id                 String     @id @default(uuid(7)) @db.Uuid
+  enrollmentId       String?    @db.Uuid
+  voiceSessionId     String?    @db.Uuid
+  costCenter         CostCenter
+  modelAlias         String
+  detail             Json
+  estimatedCostCents Int        @default(0)
+  createdAt          DateTime   @default(now()) @db.Timestamptz(6)
+
+  enrollment   Enrollment?   @relation(fields: [enrollmentId], references: [id])
+  voiceSession VoiceSession? @relation(fields: [voiceSessionId], references: [id])
+
+  @@index([enrollmentId, createdAt])
+  @@map("ai_usage_records")
+  @@schema("ai")
+}
+
+// ---------------- safety ----------------
+
+enum SignalSource {
+  student_report
+  gateway
+  moderation
+
+  @@schema("safety")
+}
+
+enum SafetySeverity {
+  p0
+  p1
+  p2
+  p3
+
+  @@schema("safety")
+}
+
+enum SafetyStatus {
+  open
+  triaged
+  resolved
+
+  @@schema("safety")
+}
+
+model SafetySignal {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  learnerId       String         @db.Uuid
+  enrollmentId    String?        @db.Uuid
+  voiceSessionId  String?        @db.Uuid
+  source          SignalSource
+  category        String
+  severity        SafetySeverity
+  excerptRedacted String?
+  status          SafetyStatus   @default(open)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6)
+
+  learner User        @relation(fields: [learnerId], references: [id])
+  case    SafetyCase?
+
+  @@index([status, severity, createdAt])
+  @@map("safety_signals")
+  @@schema("safety")
+}
+
+model SafetyCase {
+  id         String       @id @default(uuid(7)) @db.Uuid
+  signalId   String       @unique @db.Uuid
+  assigneeId String?      @db.Uuid
+  status     SafetyStatus @default(open)
+  resolution String?
+  resolvedAt DateTime?    @db.Timestamptz(6)
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6)
+
+  signal SafetySignal @relation(fields: [signalId], references: [id])
+
+  @@map("safety_cases")
+  @@schema("safety")
+}
+
+// ---------------- audit ----------------
+
+model OutboxEvent {
+  sequenceId    BigInt    @id @default(autoincrement())
+  eventId       String    @unique @db.Uuid
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  schemaVersion Int       @default(1)
+  payload       Json
+  occurredAt    DateTime  @db.Timestamptz(6)
+  publishedAt   DateTime? @db.Timestamptz(6)
+  attempts      Int       @default(0)
+
+  @@index([publishedAt, sequenceId])
+  @@map("outbox_events")
+  @@schema("audit")
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  objectType String
+  objectId   String
+  purpose    String?
+  metadata   Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([objectType, objectId, createdAt])
+  @@map("audit_events")
+  @@schema("audit")
+}
+
+model IdempotencyRecord {
+  key         String
+  route       String
+  requestHash String
+  response    Json?
+  statusCode  Int?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([key, route])
+  @@map("idempotency_records")
+  @@schema("audit")
+}

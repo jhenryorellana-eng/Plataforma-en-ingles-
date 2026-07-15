@@ -1,0 +1,32 @@
+import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { SessionGuard } from './common/session.guard';
+import { PrismaModule } from './prisma/prisma.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
+import { EnrollmentModule } from './modules/enrollment/enrollment.module';
+import { FamilyModule } from './modules/family/family.module';
+import { LearningModule } from './modules/learning/learning.module';
+import { ReviewModule } from './modules/review/review.module';
+import { SafetyModule } from './modules/safety/safety.module';
+import { VoiceModule } from './modules/voice/voice.module';
+
+@Module({
+  imports: [
+    PrismaModule,
+    AuditModule,
+    AuthModule,
+    CatalogModule,
+    FamilyModule,
+    EnrollmentModule,
+    DiagnosticModule,
+    LearningModule,
+    VoiceModule,
+    SafetyModule,
+    ReviewModule,
+  ],
+  providers: [{ provide: APP_GUARD, useClass: SessionGuard }],
+})
+export class AppModule {}

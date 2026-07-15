@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-night: #0b0e1a;
+  --color-surface: #151a33;
+  --color-raised: #1d2344;
+  --color-line: #2a3158;
+  --color-ink: #eef0ff;
+  --color-dim: #9aa1c4;
+  --color-star: #ffc94d;
+  --color-star-deep: #e8a317;
+  --color-nova: #8b70ff;
+  --color-sky: #55d9e6;
+  --color-ok: #4ade80;
+  --color-warn: #fbbf24;
+  --color-risk: #f87171;
+  --font-display: var(--font-unbounded), sans-serif;
+  --font-body: var(--font-schibsted), sans-serif;
+}
+
+body {
+  background-color: var(--color-night);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  /* Cielo estrellado sutil: capas de gradientes, cero imágenes externas. */
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, rgba(238, 240, 255, 0.5) 50%, transparent 51%),
+    radial-gradient(1px 1px at 78% 12%, rgba(238, 240, 255, 0.35) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 62% 64%, rgba(255, 201, 77, 0.4) 50%, transparent 51%),
+    radial-gradient(1px 1px at 32% 82%, rgba(238, 240, 255, 0.3) 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 45%, rgba(139, 112, 255, 0.4) 50%, transparent 51%),
+    radial-gradient(1px 1px at 45% 38%, rgba(238, 240, 255, 0.25) 50%, transparent 51%),
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139, 112, 255, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 85% 110%, rgba(85, 217, 230, 0.07), transparent);
+  background-attachment: fixed;
+}
+
+/* Revelado escalonado al cargar cada vista. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.12s; }
+.rise-3 { animation-delay: 0.2s; }
+.rise-4 { animation-delay: 0.28s; }
+
+/* Orbe del Mentor en misiones de voz. */
+@keyframes orb-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 30px rgba(255, 201, 77, 0.35),
+      0 0 90px rgba(139, 112, 255, 0.25),
+      inset 0 0 40px rgba(255, 201, 77, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 55px rgba(255, 201, 77, 0.55),
+      0 0 130px rgba(139, 112, 255, 0.4),
+      inset 0 0 60px rgba(255, 201, 77, 0.4);
+    transform: scale(1.04);
+  }
+}
+
+.mentor-orb {
+  background: radial-gradient(circle at 35% 30%, rgba(255, 201, 77, 0.9), rgba(232, 163, 23, 0.55) 45%, rgba(139, 112, 255, 0.5) 100%);
+  animation: orb-pulse 2.6s ease-in-out infinite;
+}
+
+.mentor-orb-quiet {
+  animation-duration: 5s;
+}
+
+/* Estrellas de competencia en la Ruta. */
+.star-node {
+  transition: box-shadow 0.4s ease, background-color 0.4s ease, transform 0.2s ease;
+}
+.star-node[data-state='mastered'] {
+  background-color: var(--color-star);
+  box-shadow: 0 0 12px rgba(255, 201, 77, 0.8), 0 0 28px rgba(255, 201, 77, 0.35);
+}
+.star-node[data-state='provisional'] {
+  background-color: var(--color-sky);
+  box-shadow: 0 0 8px rgba(85, 217, 230, 0.6);
+}
+.star-node[data-state='developing'] {
+  background-color: var(--color-nova);
+  box-shadow: 0 0 6px rgba(139, 112, 255, 0.5);
+}
+.star-node[data-state='review_required'] {
+  background-color: var(--color-warn);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.55);
+}
+.star-node[data-state='not_seen'],
+.star-node[data-state='exposed'] {
+  background-color: var(--color-line);
+}
+
+::selection {
+  background: rgba(255, 201, 77, 0.35);
+}
