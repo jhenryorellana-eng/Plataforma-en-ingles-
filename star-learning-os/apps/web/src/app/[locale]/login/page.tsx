@@ -76,6 +76,15 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
           Entorno de demostración. En producción, el acceso es con Identity Platform y verificación
           del apoderado.
         </p>
+        <div className="mt-5 flex items-center justify-center gap-5">
+          <a href={`/${locale}/register`} className="text-[14px] font-semibold text-primary">
+            Crear cuenta
+          </a>
+          <span className="text-line">·</span>
+          <a href={`/${locale}/preview`} className="text-[14px] font-semibold text-primary">
+            Probar StarMap Preview
+          </a>
+        </div>
       </div>
 
       {error && (

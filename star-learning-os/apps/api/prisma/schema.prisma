@@ -41,6 +41,7 @@ model User {
 
   guardianLinks      GuardianLearnerLink[] @relation("GuardianSide")
   learnerLinks       GuardianLearnerLink[] @relation("LearnerSide")
+  invitations        GuardianInvitation[]  @relation("InvitationLearner")
   consentsGranted    ConsentGrant[]        @relation("ConsentGrantedBy")
   consentsAsSubject  ConsentGrant[]        @relation("ConsentSubject")
   assents            YouthAssent[]
@@ -115,6 +116,32 @@ model ConsentGrant {
 
   @@index([learnerId, purpose, status])
   @@map("consent_grants")
+  @@schema("family")
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  expired
+
+  @@schema("family")
+}
+
+/// Invitación del alumno a su apoderado (Stack §5.2). En producción viaja por
+/// email verificado + proveedor A2; en dev el código se muestra en pantalla.
+model GuardianInvitation {
+  id            String           @id @default(uuid(7)) @db.Uuid
+  learnerId     String           @db.Uuid
+  guardianEmail String
+  code          String           @unique
+  status        InvitationStatus @default(pending)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(6)
+  acceptedAt    DateTime?        @db.Timestamptz(6)
+
+  learner User @relation("InvitationLearner", fields: [learnerId], references: [id])
+
+  @@index([learnerId, status])
+  @@map("guardian_invitations")
   @@schema("family")
 }
 
@@ -643,15 +670,25 @@ enum ReviewStatus {
   @@schema("assessment")
 }
 
+enum DiagnosticStage {
+  router
+  module
+  writing
+
+  @@schema("assessment")
+}
+
 model DiagnosticItem {
-  id         String @id @default(uuid(7)) @db.Uuid
-  code       String @unique
+  id         String          @id @default(uuid(7)) @db.Uuid
+  code       String          @unique
   skill      Skill
   level      String
+  stage      DiagnosticStage @default(router)
   prompt     Json
   answerKey  Json
   orderIndex Int
 
+  @@index([stage, level])
   @@map("diagnostic_items")
   @@schema("assessment")
 }
@@ -677,8 +714,11 @@ model DiagnosticResponse {
   attemptId     String   @db.Uuid
   itemCode      String
   skill         Skill
-  selectedIndex Int
-  correct       Boolean
+  selectedIndex Int?
+  correct       Boolean?
+  /// Muestra de Writing del StarMap (§7.2): texto + score heurístico provisional.
+  textResponse  String?
+  score         Float?
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
 
   attempt DiagnosticAttempt @relation(fields: [attemptId], references: [id])

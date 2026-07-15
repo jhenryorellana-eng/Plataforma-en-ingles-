@@ -27,6 +27,41 @@ req() { # req <cookiejar> <método> <ruta> [json] -> guarda cuerpo en $TMP/last.
 
 field() { jsonget "$TMP/last.json" x "$1"; }
 
+echo "=== 0. Onboarding completo: registro → invitación → vínculo → permisos → asentimiento ==="
+TS=$(date +%s)
+NICO="$TMP/nico.jar"; rm -f "$NICO"
+check "registro alumno con age gate (14 años)" 201 "$(req "$NICO" POST /auth/register-learner "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"birthYear\":2012}")"
+check "menor de 12 rechazado" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Peque\",\"email\":\"peque-$TS@demo.pe\",\"birthYear\":2020}" "$API/auth/register-learner")"
+check "inscripción bloqueada sin apoderado" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
+check "crear invitación al apoderado" 201 "$(req "$NICO" POST /family-invitations "{\"guardianEmail\":\"madre-$TS@demo.pe\"}")"
+ICODE=$(field "d['code']")
+PADRE="$TMP/padre.jar"; rm -f "$PADRE"
+check "registro apoderado" 201 "$(req "$PADRE" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\"}")"
+check "aceptar invitación con código" 201 "$(req "$PADRE" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
+NICOID=$(req "$NICO" GET /auth/me >/dev/null; field "d['id']")
+check "apoderado otorga consentimientos" 201 "$(req "$PADRE" POST /consents "{\"learnerId\":\"$NICOID\",\"purposes\":[\"service\",\"ai_voice\"]}")"
+check "asentimiento del alumno" 201 "$(req "$NICO" POST /assents '{}')"
+check "onboarding listo para inscribir" "True" "$(req "$NICO" GET /onboarding/status >/dev/null; field "d['readyToEnroll']")"
+check "ahora sí puede inscribirse" 201 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
+NICOENR=$(field "d['id']")
+check "revocar voz con IA (apoderado)" 201 "$(req "$PADRE" POST /consents/revoke "{\"learnerId\":\"$NICOID\",\"purpose\":\"ai_voice\"}")"
+
+echo "=== 0b. StarMap multietapa: router → módulo → writing (§7.2) ==="
+req "$NICO" POST "/enrollments/$NICOENR/diagnostic-attempts" >/dev/null
+NATT=$(field "d['id']")
+check "etapa 1: router" router "$(req "$NICO" GET "/diagnostic-attempts/$NATT/next-items" >/dev/null; field "d['stage']")"
+RCODES=$(jsonget "$TMP/last.json" x "' '.join(i['code'] for i in d['items'])")
+for c in $RCODES; do req "$NICO" POST "/diagnostic-attempts/$NATT/responses" "{\"itemCode\":\"$c\",\"selectedIndex\":1}" >/dev/null; done
+check "etapa 2: módulo ajustado al nivel" module "$(req "$NICO" GET "/diagnostic-attempts/$NATT/next-items" >/dev/null; field "d['stage']")"
+MCODES=$(jsonget "$TMP/last.json" x "' '.join(i['code'] for i in d['items'])")
+for c in $MCODES; do req "$NICO" POST "/diagnostic-attempts/$NATT/responses" "{\"itemCode\":\"$c\",\"selectedIndex\":1}" >/dev/null; done
+check "etapa 3: writing" writing "$(req "$NICO" GET "/diagnostic-attempts/$NATT/next-items" >/dev/null; field "d['stage']")"
+WCODE=$(jsonget "$TMP/last.json" x "d['items'][0]['code']")
+check "enviar muestra de writing" 201 "$(req "$NICO" POST "/diagnostic-attempts/$NATT/writing" "{\"itemCode\":\"$WCODE\",\"text\":\"My name is Nico and I am fourteen years old. I want to improve my English because I plan to study engineering at university and I will need it to read technical papers and to talk with classmates from other countries about our projects.\"}")"
+check "completar diagnóstico multietapa" 201 "$(req "$NICO" POST "/diagnostic-attempts/$NATT/complete")"
+check "perfil incluye writing" "True" "$(jsonget "$TMP/last.json" x "'writing' in d['placement']['perSkill']")"
+check "preview público sin sesión" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/preview/items")"
+
 echo "=== 1. Diego (14-17): login, inscripción y diagnóstico ==="
 DIEGO="$TMP/diego.jar"; rm -f "$DIEGO"
 check "login Diego" 201 "$(req "$DIEGO" POST /auth/dev-login '{"profile":"learner_teen"}')"

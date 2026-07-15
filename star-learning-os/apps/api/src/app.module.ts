@@ -9,6 +9,7 @@ import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { FamilyModule } from './modules/family/family.module';
 import { LearningModule } from './modules/learning/learning.module';
+import { PreviewModule } from './modules/preview/preview.module';
 import { ReviewModule } from './modules/review/review.module';
 import { SafetyModule } from './modules/safety/safety.module';
 import { VoiceModule } from './modules/voice/voice.module';
@@ -26,6 +27,7 @@ import { VoiceModule } from './modules/voice/voice.module';
     VoiceModule,
     SafetyModule,
     ReviewModule,
+    PreviewModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: SessionGuard }],
 })

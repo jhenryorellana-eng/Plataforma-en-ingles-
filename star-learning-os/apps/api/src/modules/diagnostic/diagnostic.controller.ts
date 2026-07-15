@@ -1,5 +1,10 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
-import { zDiagnosticAnswerRequest, type DiagnosticAttemptResponse } from '@star/contracts';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  zDiagnosticAnswerRequest,
+  zDiagnosticWritingRequest,
+  type DiagnosticAttemptResponse,
+  type DiagnosticNextResponse,
+} from '@star/contracts';
 import { AccessService } from '../../common/access.service';
 import { CurrentUser } from '../../common/decorators';
 import type { SessionUser } from '../../common/session';
@@ -29,6 +34,21 @@ export class DiagnosticController {
   ): Promise<unknown> {
     const request = parse(zDiagnosticAnswerRequest, body);
     return this.diagnosticService.answer(user, id, request.itemCode, request.selectedIndex);
+  }
+
+  @Get('diagnostic-attempts/:id/next-items')
+  async nextItems(@CurrentUser() user: SessionUser, @Param('id') id: string): Promise<DiagnosticNextResponse> {
+    return this.diagnosticService.nextItems(user, id);
+  }
+
+  @Post('diagnostic-attempts/:id/writing')
+  async writing(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<unknown> {
+    const request = parse(zDiagnosticWritingRequest, body);
+    return this.diagnosticService.submitWriting(user, id, request.itemCode, request.text);
   }
 
   @Post('diagnostic-attempts/:id/complete')

@@ -568,17 +568,146 @@ async function main(): Promise<void> {
   for (const [index, def] of diagnosticDefs.entries()) {
     await prisma.diagnosticItem.upsert({
       where: { code: def.code },
-      update: {},
+      update: { stage: 'router' },
       create: {
         code: def.code,
         skill: def.skill,
         level: def.level,
+        stage: 'router',
         orderIndex: index + 1,
         prompt: { stem: def.stem, options: [...def.options] } as Prisma.InputJsonObject,
         answerKey: { correctIndex: def.correctIndex } as Prisma.InputJsonObject,
       },
     });
   }
+
+  // ---------- Módulos del StarMap (etapa 2, §7.2: inferior/central/superior) ----------
+  const moduleDefs = [
+    {
+      code: 'MOD-A2-RD-01',
+      skill: 'reading',
+      level: 'A2',
+      stem: '"Closed on Mondays." The shop is closed…',
+      options: ['every day', 'on Mondays', 'in the morning', 'never'],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-A2-LIS-01',
+      skill: 'listening',
+      level: 'A2',
+      stem: '(Aviso) "Please turn off your phones during the exam." Debes…',
+      options: ['apagar el teléfono', 'llamar después', 'usar audífonos', 'salir del aula'],
+      correctIndex: 0,
+    },
+    {
+      code: 'MOD-A2-LU-01',
+      skill: 'language_use',
+      level: 'A2',
+      stem: 'There ____ many students in the library right now.',
+      options: ['is', 'are', 'be', 'was'],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-B1-RD-01',
+      skill: 'reading',
+      level: 'B1',
+      stem: '"Priority will be given to applicants with volunteer experience." ¿Quién tiene ventaja?',
+      options: [
+        'Los que pagan más',
+        'Los que tienen experiencia de voluntariado',
+        'Los que llegan primero',
+        'Nadie en particular',
+      ],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-B1-LIS-01',
+      skill: 'listening',
+      level: 'B1',
+      stem: '(Mensaje) "I was wondering if we could move our meeting up an hour." La persona quiere…',
+      options: [
+        'cancelar la reunión',
+        'adelantar la reunión una hora',
+        'retrasar la reunión una hora',
+        'reunirse otro día',
+      ],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-B1-LU-01',
+      skill: 'language_use',
+      level: 'B1',
+      stem: 'She suggested ____ the report before Friday.',
+      options: ['to finish', 'finishing', 'finish', 'finished'],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-B2-RD-01',
+      skill: 'reading',
+      level: 'B2',
+      stem: '"The results were far from conclusive." Los resultados fueron…',
+      options: ['definitivos', 'poco concluyentes', 'excelentes', 'inesperadamente rápidos'],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-B2-LIS-01',
+      skill: 'listening',
+      level: 'B2',
+      stem: '(Charla) "Not only did the policy fail, it made matters worse." La política…',
+      options: [
+        'funcionó parcialmente',
+        'falló y empeoró las cosas',
+        'se canceló a tiempo',
+        'mejoró la situación',
+      ],
+      correctIndex: 1,
+    },
+    {
+      code: 'MOD-B2-LU-01',
+      skill: 'language_use',
+      level: 'B2',
+      stem: '____ the deadline been extended, we would have submitted a stronger proposal.',
+      options: ['If', 'Had', 'Should', 'Were'],
+      correctIndex: 1,
+    },
+  ] as const;
+
+  for (const [index, def] of moduleDefs.entries()) {
+    await prisma.diagnosticItem.upsert({
+      where: { code: def.code },
+      update: { stage: 'module' },
+      create: {
+        code: def.code,
+        skill: def.skill,
+        level: def.level,
+        stage: 'module',
+        orderIndex: 100 + index,
+        prompt: { stem: def.stem, options: [...def.options] } as Prisma.InputJsonObject,
+        answerKey: { correctIndex: def.correctIndex } as Prisma.InputJsonObject,
+      },
+    });
+  }
+
+  // ---------- Muestra de Writing del StarMap (etapa 3, §7.1/§7.2) ----------
+  await prisma.diagnosticItem.upsert({
+    where: { code: 'DIAG-WR-01' },
+    update: { stage: 'writing' },
+    create: {
+      code: 'DIAG-WR-01',
+      skill: 'writing',
+      level: 'B1',
+      stage: 'writing',
+      orderIndex: 200,
+      prompt: {
+        instructions:
+          'Escribe en inglés (40–120 palabras): preséntate y cuenta por qué quieres mejorar tu inglés y para qué lo usarás.',
+        minWords: 40,
+      } as Prisma.InputJsonObject,
+      answerKey: {
+        rubricSpec: { minWords: 40, requiredElements: [] },
+      } as Prisma.InputJsonObject,
+    },
+  });
 
   // ---------- Familia demo ----------
   const guardian = await prisma.user.upsert({

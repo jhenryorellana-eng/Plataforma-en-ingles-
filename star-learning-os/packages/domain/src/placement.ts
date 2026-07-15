@@ -13,12 +13,26 @@ export interface PlacementEstimate {
   provisional: true;
 }
 
-const LEVEL_ORDER: CefrLevel[] = ['PRE_A1', 'A1', 'A2', 'B1', 'B2', 'C1'];
+export const CEFR_ORDER: CefrLevel[] = ['PRE_A1', 'A1', 'A2', 'B1', 'B2', 'C1'];
+
+export function minCefr(a: CefrLevel, b: CefrLevel): CefrLevel {
+  return CEFR_ORDER.indexOf(a) <= CEFR_ORDER.indexOf(b) ? a : b;
+}
+
+const LEVEL_ORDER = CEFR_ORDER;
 
 function levelFromAccuracy(accuracy: number): CefrLevel {
   if (accuracy >= 0.75) return 'B2';
   if (accuracy >= 0.5) return 'B1';
   if (accuracy >= 0.3) return 'A2';
+  return 'A1';
+}
+
+/** Nivel provisional de Writing desde el score heurístico de la muestra (§7.2). */
+export function levelFromWritingScore(score: number): CefrLevel {
+  if (score >= 0.75) return 'B2';
+  if (score >= 0.5) return 'B1';
+  if (score >= 0.3) return 'A2';
   return 'A1';
 }
 

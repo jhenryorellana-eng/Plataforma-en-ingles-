@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { apiFetchOrNull } from '@/lib/api';
 import { Chip, Group, IconTile, InitialsAvatar, Ring, Row, SectionHeader, Wordmark } from '@/components/ui';
+import { AcceptInvitationCard, ConsentToggles } from '@/components/family-manager';
 
 interface GuardianSummary {
   learners: Array<{
@@ -22,16 +23,6 @@ interface GuardianSummary {
   }>;
 }
 
-const CONSENT_LABELS: Record<string, string> = {
-  service: 'Servicio',
-  ai_voice: 'Voz con IA',
-  storage: 'Almacenamiento',
-  international_transfer: 'Transferencia internacional',
-  analytics: 'Analítica',
-  marketing: 'Marketing',
-  research: 'Investigación',
-};
-
 const AGE_LABELS: Record<string, string> = {
   y12_13: '12–13 años',
   t14_17: '14–17 años',
@@ -52,12 +43,16 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
       </header>
 
       <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
-        <div className="rise mb-7">
+        <div className="rise mb-6">
           <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Familia</h1>
           <p className="mt-1 text-[15px] leading-relaxed text-dim">
             Progreso, permisos y alertas — sin transcripciones de las conversaciones de tus hijos,
             por diseño.
           </p>
+        </div>
+
+        <div className="rise rise-1 mb-7">
+          <AcceptInvitationCard />
         </div>
 
         <div className="flex flex-col gap-8">
@@ -130,15 +125,12 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
                 <p className="mb-3 px-1 text-[14px] text-dim">Aún sin inscripciones activas.</p>
               )}
 
-              <SectionHeader className="mt-4">Permisos otorgados</SectionHeader>
-              <div className="flex flex-wrap gap-1.5 px-1">
-                {learner.consents.map((consent) => (
-                  <Chip key={consent} tone="ok">
-                    {CONSENT_LABELS[consent] ?? consent}
-                  </Chip>
-                ))}
-                {learner.consents.length === 0 && <Chip tone="warn">Sin permisos activos</Chip>}
-              </div>
+              <SectionHeader className="mt-4">Permisos por finalidad</SectionHeader>
+              <ConsentToggles learnerId={learner.learnerId} granted={learner.consents} />
+              <p className="mt-2 px-1 text-[12px] leading-relaxed text-dim">
+                Revocar &quot;Voz con IA&quot; impide crear nuevas sesiones de voz al instante. Cada
+                permiso es independiente (CNS-01).
+              </p>
             </section>
           ))}
         </div>

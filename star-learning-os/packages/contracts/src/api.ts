@@ -31,6 +31,55 @@ export const zMeResponse = z.object({
 });
 export type MeResponse = z.infer<typeof zMeResponse>;
 
+// ---------- Registro y onboarding familiar (Stack §5.2–5.3) ----------
+
+export const zRegisterLearnerRequest = z.object({
+  displayName: z.string().min(2).max(60),
+  email: z.string().email(),
+  birthYear: z.number().int().min(1940).max(2020),
+});
+export type RegisterLearnerRequest = z.infer<typeof zRegisterLearnerRequest>;
+
+export const zRegisterGuardianRequest = z.object({
+  displayName: z.string().min(2).max(60),
+  email: z.string().email(),
+});
+export type RegisterGuardianRequest = z.infer<typeof zRegisterGuardianRequest>;
+
+export const zCreateInvitationRequest = z.object({
+  guardianEmail: z.string().email(),
+});
+export type CreateInvitationRequest = z.infer<typeof zCreateInvitationRequest>;
+
+export const zInvitationResponse = z.object({
+  code: z.string(),
+  guardianEmail: z.string(),
+  status: z.enum(['pending', 'accepted', 'expired']),
+});
+export type InvitationResponse = z.infer<typeof zInvitationResponse>;
+
+export const zAcceptInvitationRequest = z.object({
+  code: z.string().min(4).max(12),
+});
+export type AcceptInvitationRequest = z.infer<typeof zAcceptInvitationRequest>;
+
+export const zOnboardingStatus = z.object({
+  ageBand: zAgeBand.nullable(),
+  isMinor: z.boolean(),
+  hasActiveLink: z.boolean(),
+  consents: z.array(zConsentPurpose),
+  hasAssent: z.boolean(),
+  invitation: zInvitationResponse.nullable(),
+  readyToEnroll: z.boolean(),
+});
+export type OnboardingStatus = z.infer<typeof zOnboardingStatus>;
+
+export const zRevokeConsentRequest = z.object({
+  learnerId: z.string().uuid(),
+  purpose: zConsentPurpose,
+});
+export type RevokeConsentRequest = z.infer<typeof zRevokeConsentRequest>;
+
 // ---------- Consentimiento y familia ----------
 
 export const zGrantConsentsRequest = z.object({
@@ -133,6 +182,50 @@ export const zDiagnosticAnswerRequest = z.object({
   selectedIndex: z.number().int().min(0),
 });
 export type DiagnosticAnswerRequest = z.infer<typeof zDiagnosticAnswerRequest>;
+
+export const zDiagnosticWritingRequest = z.object({
+  itemCode: z.string(),
+  text: z.string().min(20).max(3000),
+});
+export type DiagnosticWritingRequest = z.infer<typeof zDiagnosticWritingRequest>;
+
+/** Paso a paso multietapa (§7.2): router → módulo por nivel → writing. */
+export const zDiagnosticNextResponse = z.object({
+  attemptId: z.string().uuid(),
+  stage: z.enum(['router', 'module', 'writing', 'done']),
+  stageLabel: z.string(),
+  items: z.array(
+    z.object({
+      code: z.string(),
+      skill: zSkill,
+      kind: z.enum(['mcq', 'writing']),
+      prompt: z.string(),
+      options: z.array(z.string()),
+      minWords: z.number().nullable(),
+    }),
+  ),
+  answeredCount: z.number(),
+  totalPlanned: z.number(),
+});
+export type DiagnosticNextResponse = z.infer<typeof zDiagnosticNextResponse>;
+
+// ---------- StarMap Preview público (Especificación §7.2) ----------
+
+export const zPreviewEstimateRequest = z.object({
+  answers: z
+    .array(z.object({ itemCode: z.string(), selectedIndex: z.number().int().min(0) }))
+    .min(3)
+    .max(8),
+});
+export type PreviewEstimateRequest = z.infer<typeof zPreviewEstimateRequest>;
+
+export const zPreviewEstimateResponse = z.object({
+  band: zCefrLevel,
+  strength: z.string(),
+  gap: z.string(),
+  message: z.string(),
+});
+export type PreviewEstimateResponse = z.infer<typeof zPreviewEstimateResponse>;
 
 // ---------- Aprendizaje diario ----------
 

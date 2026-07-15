@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import type { User } from '@prisma/client';
-import type { DevLoginRequest } from '@star/contracts';
+import type { AgeBand, User } from '@prisma/client';
+import type { DevLoginRequest, RegisterGuardianRequest, RegisterLearnerRequest } from '@star/contracts';
 import { AppError } from '../../common/errors';
 import { PrismaService } from '../../prisma/prisma.service';
+
+const MINIMUM_AGE = 12;
 
 /** Emails fijos de la familia demo creada por el seed. */
 export const DEMO_EMAILS = {
@@ -40,6 +42,46 @@ export class AuthService {
         role: request.role,
         ageBand: request.ageBand ?? (request.role === 'learner' ? 't14_17' : null),
       },
+    });
+  }
+
+  /**
+   * Age gate del registro (Stack §5.4 nivel A0: edad declarada). La plataforma
+   * es 12+ (D16); la banda determina permisos, gates y experiencia.
+   */
+  async registerLearner(request: RegisterLearnerRequest): Promise<User> {
+    const age = new Date().getFullYear() - request.birthYear;
+    if (age < MINIMUM_AGE) {
+      throw new AppError(
+        'AGE_NOT_ALLOWED',
+        403,
+        'StarbizAcademy está diseñada para estudiantes desde los 12 años',
+      );
+    }
+    const ageBand: AgeBand = age <= 13 ? 'y12_13' : age <= 17 ? 't14_17' : 'a18_plus';
+
+    const existing = await this.prisma.user.findUnique({ where: { email: request.email } });
+    if (existing) {
+      if (existing.role !== 'learner') {
+        throw new AppError('VALIDATION_FAILED', 409, 'Ese correo ya está registrado con otro rol');
+      }
+      return existing;
+    }
+    return this.prisma.user.create({
+      data: { displayName: request.displayName, email: request.email, role: 'learner', ageBand },
+    });
+  }
+
+  async registerGuardian(request: RegisterGuardianRequest): Promise<User> {
+    const existing = await this.prisma.user.findUnique({ where: { email: request.email } });
+    if (existing) {
+      if (existing.role !== 'guardian') {
+        throw new AppError('VALIDATION_FAILED', 409, 'Ese correo ya está registrado con otro rol');
+      }
+      return existing;
+    }
+    return this.prisma.user.create({
+      data: { displayName: request.displayName, email: request.email, role: 'guardian' },
     });
   }
 }

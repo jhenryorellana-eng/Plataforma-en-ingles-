@@ -22,7 +22,11 @@ export async function clientApi<T>(path: string, init?: RequestInit): Promise<T>
   const response = await fetch(`${API_URL}/v1${path}`, {
     ...init,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    // Content-Type solo con cuerpo: Fastify rechaza JSON declarado con body vacío.
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...init?.headers,
+    },
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ErrorBody;

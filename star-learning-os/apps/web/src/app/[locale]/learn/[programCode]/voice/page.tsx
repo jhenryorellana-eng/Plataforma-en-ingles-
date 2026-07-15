@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse, TodayResponse, VoiceSessionResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
 import { Card, Group, Icon, Row, SectionHeader, StarMark, type IconName } from '@/components/ui';
+import { MicTest } from '@/components/mic-test';
 
 type Phase = 'loading' | 'preview' | 'live' | 'ended' | 'blocked';
 
@@ -38,6 +39,8 @@ export default function VoicePage({
   const [scriptIndex, setScriptIndex] = useState(1);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportSent, setReportSent] = useState(false);
+  const [techCheckDone, setTechCheckDone] = useState(false);
+  const [micWorks, setMicWorks] = useState(true);
   const [endSummary, setEndSummary] = useState<{ usedMinutes?: number; includedMinutes?: number } | null>(null);
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -288,12 +291,27 @@ export default function VoicePage({
                 subtitle="Solo queda la evidencia pedagógica mínima de tu práctica"
               />
             </Group>
+
+            <div className="mt-4">
+              <MicTest
+                onDone={(micOk) => {
+                  setTechCheckDone(true);
+                  setMicWorks(micOk);
+                }}
+              />
+            </div>
+
             <button
               type="button"
+              disabled={!techCheckDone}
               onClick={startMission}
-              className="mt-5 w-full rounded-2xl bg-ok py-3.5 text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(52,199,89,0.3)] transition-opacity hover:opacity-90"
+              className="mt-5 w-full rounded-2xl bg-ok py-3.5 text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(52,199,89,0.3)] transition-opacity hover:opacity-90 disabled:opacity-35"
             >
-              Comenzar misión
+              {techCheckDone
+                ? micWorks
+                  ? 'Comenzar misión'
+                  : 'Comenzar en modo texto'
+                : 'Completa la prueba técnica'}
             </button>
             {error && <p className="mt-2 text-center text-[14px] text-risk">{error}</p>}
           </div>

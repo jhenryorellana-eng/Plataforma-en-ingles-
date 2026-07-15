@@ -32,6 +32,14 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
         router.push(`/${locale}/learn`);
         return;
       }
+      if (
+        err instanceof ClientApiError &&
+        (err.code === 'GUARDIAN_LINK_REQUIRED' || err.code === 'CONSENT_REQUIRED')
+      ) {
+        // Falta el onboarding familiar: vínculo y permisos primero (Especificación §15.3).
+        router.push(`/${locale}/onboarding/guardian`);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'No se pudo crear la inscripción');
       setBusy(false);
     }

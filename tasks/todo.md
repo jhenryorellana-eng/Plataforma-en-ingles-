@@ -28,6 +28,16 @@
 - [x] 11. README + runbook (`star-learning-os/README.md`, `scripts/smoke.sh`)
 - [x] 12. Commits finales
 - [x] 13. Flujo "tal cual Metodología §7.5": inscripción → diagnóstico → **selector de ritmo con proyección §9.3** (fecha estimada por nivel de entrada, Sprint bloqueado para 12–13 por D04, cambio de cupos al confirmar) → plan diario. Smoke 28/28 + verificado en navegador.
+- [x] 14. **Embudo de entrada completo** (smoke 48/48 + recorrido real en navegador con familia nueva "Valeria/Carmen"):
+  - StarMap Preview público sin registro (§7.2, informativo, sin persistencia)
+  - Registro con age gate (rechaza <12; banda 12–13/14–17/18+ por año de nacimiento)
+  - Invitación del alumno → registro del apoderado → vínculo por código (A1; proveedor A2 = bloqueador externo #6)
+  - Portal familiar: aceptar invitación + **interruptores de consentimiento por finalidad** con otorgar/revocar (CNS-01; revocar voz bloquea sesiones al instante)
+  - Asentimiento juvenil con verificación de comprensión (CNS-02)
+  - Inscripción bloqueada técnicamente sin vínculo+consentimiento (§15.3)
+  - **StarMap 360 multietapa**: router (12) → módulo ajustado al nivel (3) → **muestra de Writing** con score heurístico que entra al perfil y a la regla de mínimo §7.4
+  - Prueba técnica de micrófono/altavoz antes de voz (TEC-01) con fallback a modo texto (TLK-04)
+  - Fixes: CORS PATCH, Content-Type en POST sin cuerpo
 
 ### Arranque local (recordatorio)
 `pnpm install --ignore-scripts && pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm dev:api` + `pnpm dev:web`
