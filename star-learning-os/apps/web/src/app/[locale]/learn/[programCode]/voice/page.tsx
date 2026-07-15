@@ -244,7 +244,7 @@ export default function VoicePage({
         <button
           type="button"
           onClick={() => router.push(`/${locale}/learn/${programCode}/today`)}
-          className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep"
+          className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep"
         >
           Volver a Inicio
         </button>
@@ -277,7 +277,7 @@ export default function VoicePage({
             <button
               type="button"
               onClick={startMission}
-              className="mt-1 rounded-xl bg-primary px-6 py-4 font-display text-base font-semibold text-surface shadow-[0_6px_18px_rgba(36,64,142,0.25)] transition-colors hover:bg-primary-deep"
+              className="mt-1 btn-gradient rounded-xl px-6 py-4 font-display text-base font-semibold text-white"
             >
               Comenzar misión
             </button>
@@ -308,7 +308,7 @@ export default function VoicePage({
                 : 'Conversación en vivo · WebRTC'}
             </p>
           </div>
-          <span className="font-display text-lg font-semibold tabular-nums text-ink">
+          <span className="font-mono text-base font-medium tabular-nums text-ink">
             {minutes}:{String(seconds).padStart(2, '0')}
           </span>
         </Card>
@@ -348,7 +348,7 @@ export default function VoicePage({
             type="button"
             onClick={sendMockTurn}
             aria-label="Enviar"
-            className="flex items-center justify-center rounded-lg bg-primary px-4 text-surface transition-colors hover:bg-primary-deep"
+            className="flex items-center justify-center rounded-lg bg-primary px-4 text-white transition-colors hover:bg-primary-deep"
           >
             <Icon name="arrow" className="size-4" />
           </button>

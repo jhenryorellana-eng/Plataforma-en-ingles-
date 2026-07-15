@@ -66,7 +66,7 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
       <div className="rise">
-        <div className="masthead-rule mb-6 w-16" />
+        <div className="mb-6 h-1 w-16 rounded-full bg-gradient-to-r from-primary to-cyan" />
         <Wordmark />
         <h1 className="mt-5 font-display text-2xl font-semibold text-ink">Elige tu ritmo</h1>
         <p className="mt-2 text-sm leading-relaxed text-dim">
@@ -109,7 +109,7 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
         type="button"
         disabled={busy}
         onClick={enroll}
-        className="rise rise-4 rounded-xl bg-primary px-6 py-4 font-display text-base font-semibold text-surface shadow-[0_6px_18px_rgba(36,64,142,0.25)] transition-colors hover:bg-primary-deep disabled:opacity-50"
+        className="rise rise-4 btn-gradient rounded-xl px-6 py-4 font-display text-base font-semibold text-white disabled:opacity-50"
       >
         {busy ? 'Creando tu ruta…' : 'Empezar con el diagnóstico'}
       </button>

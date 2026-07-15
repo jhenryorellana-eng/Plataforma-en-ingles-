@@ -26,7 +26,7 @@ export default async function TodayPage({
   return (
     <div className="flex flex-col gap-7">
       <section className="rise">
-        <p className="text-xs uppercase tracking-[0.14em] text-dim">Plan de hoy</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Plan de hoy</p>
         <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
           {today.trajectoryStatus === 'on_track' ? 'Vas en ruta.' : 'Recuperemos el ritmo.'}
         </h1>
@@ -96,7 +96,7 @@ export default async function TodayPage({
           <div className="px-4 py-3">
             <div className="mb-1.5 flex items-center justify-between text-sm">
               <span className="text-dim">Voz con tu Mentor</span>
-              <span className="font-display font-semibold tabular-nums text-ink">
+              <span className="font-mono font-medium tabular-nums text-ink">
                 {today.voice.usedMinutes} / {today.voice.includedMinutes} min
               </span>
             </div>
@@ -117,7 +117,7 @@ export default async function TodayPage({
           </div>
           <div className="flex items-center justify-between px-4 py-3 text-sm">
             <span className="text-dim">Repasos pendientes</span>
-            <span className="font-display font-semibold tabular-nums text-ink">{today.dueReviews}</span>
+            <span className="font-mono font-medium tabular-nums text-ink">{today.dueReviews}</span>
           </div>
         </Card>
       </section>

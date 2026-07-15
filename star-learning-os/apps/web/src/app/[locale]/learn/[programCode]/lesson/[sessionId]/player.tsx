@@ -93,7 +93,7 @@ export function LessonPlayer({
   return (
     <div className="flex flex-col gap-5">
       <section className="rise">
-        <p className="text-xs uppercase tracking-[0.14em] text-dim">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">
           {reviewItemId ? 'Repaso · recuperación espaciada' : 'Sesión de práctica'}
         </p>
         <p className="mt-1 text-sm leading-relaxed text-ink">{session.lessonContract.objective}</p>
@@ -142,7 +142,7 @@ export function LessonPlayer({
           <button
             type="button"
             onClick={next}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep"
           >
             {isLast ? 'Terminar sesión' : 'Continuar'}
           </button>
@@ -192,7 +192,7 @@ function ActivityForm({
       {prompt.instructions && <p className="text-sm leading-relaxed text-dim">{prompt.instructions}</p>}
 
       {prompt.transcript && (
-        <blockquote className="rounded-lg border-l-2 border-l-primary bg-mist/60 px-4 py-3 font-display text-[15px] italic leading-relaxed text-ink">
+        <blockquote className="rounded-lg border-l-2 border-l-primary bg-mist/60 px-4 py-3 font-display text-[15px] leading-relaxed text-ink">
           {prompt.transcript}
         </blockquote>
       )}
@@ -222,7 +222,7 @@ function ActivityForm({
             type="button"
             disabled={selected === null || busy}
             onClick={() => onSubmit({ kind: 'mcq', selectedIndex: selected })}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Responder'}
           </button>
@@ -255,7 +255,7 @@ function ActivityForm({
             type="button"
             disabled={busy || answers.filter((a) => a?.trim()).length < (prompt.gaps ?? 1)}
             onClick={() => onSubmit({ kind: 'gap_fill', answers })}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Responder'}
           </button>
@@ -283,7 +283,7 @@ function ActivityForm({
             type="button"
             disabled={busy || wordCount < 10}
             onClick={() => onSubmit({ kind: 'writing_prompt', text })}
-            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
+            className="rounded-xl bg-primary px-5 py-3 font-display font-semibold text-white transition-colors hover:bg-primary-deep disabled:opacity-40"
           >
             {busy ? 'Enviando…' : 'Entregar'}
           </button>

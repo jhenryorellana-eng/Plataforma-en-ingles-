@@ -1,9 +1,9 @@
 # Lecciones aprendidas
 
-## 2026-07-15: Identidad visual de StarbizAcademy
-**Error**: La primera interfaz usó una dirección "cósmica oscura" con emojis, que Henry rechazó por completo.
-**Root cause**: Prioricé un tema llamativo juvenil sobre lo que el producto ES según los documentos: una academia digital seria que vende confianza a padres (pagan ellos), credibilidad TOEFL y gobierno académico humano.
-**Regla**: El diseño de StarbizAcademy debe leerse institucional-editorial: fondo papel claro, serif editorial (Fraunces) para títulos, azul academia (#24408E), dorado sobrio solo para dominio/logro, iconos SVG propios y cero emojis en UI. "Moderno y no infantilizado" (Stack §4.2) significa premium académico, no gamificado.
+## 2026-07-15: Identidad visual de StarbizAcademy (dos iteraciones rechazadas)
+**Error**: v1 "cósmica oscura con emojis" → rechazada (lee como app de juego). v2 "editorial académica clara con serif" → rechazada ("parece notarial, muy formal").
+**Root cause**: Ninguno de los dos extremos era lo que Henry quiere: el producto debe leerse como una **app tecnológica premium y única** (referentes: Linear, Vercel, Raycast), coherente con el nombre "STAR Learning OS".
+**Regla (v3 aprobable)**: Dark tech premium — fondo casi-negro violáceo con aurora degradada firma (violeta #7C6CFF → cian #4CC9F0), retícula de puntos sutil, superficies de cristal, dock flotante, Bricolage Grotesque (display) + Geist (cuerpo) + Geist Mono para datos/etiquetas de consola, iconos SVG propios, cero emojis, degradado reservado para momentos firma (CTA principal, dominio, wordmark). Ni gamificado ni notarial.
 
 ## 2026-07-15: Variables de next/font con Tailwind v4
 **Error**: Los títulos no renderizaban Fraunces; la utilidad `font-display` resolvía al stack por defecto.

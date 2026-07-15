@@ -92,7 +92,7 @@ export default function DiagnosticPage({
   return (
     <div className="flex flex-col gap-5">
       <section className="rise">
-        <p className="text-xs uppercase tracking-[0.14em] text-dim">StarMap 360 · diagnóstico inicial</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">StarMap 360 · diagnóstico inicial</p>
         <div className="mt-1 flex items-baseline justify-between">
           <h1 className="font-display text-xl font-semibold text-ink">
             Pregunta {index + 1} <span className="font-medium text-dim">de {attempt.items.length}</span>
@@ -138,7 +138,7 @@ export default function DiagnosticPage({
         type="button"
         disabled={selected === null || busy || enrollmentId === null}
         onClick={submitAnswer}
-        className="rise rise-2 rounded-xl bg-primary px-6 py-4 font-display text-base font-semibold text-surface transition-colors hover:bg-primary-deep disabled:opacity-40"
+        className="btn-gradient rise rise-2 rounded-xl px-6 py-4 font-display text-base font-semibold text-white disabled:opacity-40"
       >
         {busy ? 'Guardando…' : index + 1 === attempt.items.length ? 'Terminar diagnóstico' : 'Siguiente'}
       </button>

@@ -20,7 +20,7 @@ export default async function ReviewPage({
   return (
     <div className="flex flex-col gap-7">
       <section className="rise">
-        <p className="text-xs uppercase tracking-[0.14em] text-dim">Recuperación espaciada</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Recuperación espaciada</p>
         <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
           Repasar
         </h1>

@@ -27,7 +27,7 @@ export default async function ProgressPage({
   return (
     <div className="flex flex-col gap-7">
       <section className="rise">
-        <p className="text-xs uppercase tracking-[0.14em] text-dim">Reporte de avance</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Reporte de avance</p>
         <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
           Progreso honesto
         </h1>
@@ -40,8 +40,8 @@ export default async function ProgressPage({
       {progress.placement && (
         <Card accent className="rise rise-1 flex items-center justify-between px-5 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-dim">Nivel estimado</p>
-            <p className="font-display text-3xl font-semibold text-primary">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Nivel estimado</p>
+            <p className="text-gradient font-display text-3xl font-semibold">
               {progress.placement.overall}
             </p>
           </div>

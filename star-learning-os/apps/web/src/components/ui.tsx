@@ -11,18 +11,23 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-line bg-surface shadow-[0_1px_2px_rgba(28,36,52,0.05)] ${
-        accent ? 'border-t-2 border-t-primary' : ''
-      } ${className}`}
+      className={`relative rounded-2xl border border-line bg-surface/90 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_8px_24px_rgba(0,0,0,0.25)] ${className}`}
     >
+      {accent && (
+        <span
+          aria-hidden
+          className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-primary via-cyan to-transparent"
+        />
+      )}
       {children}
     </div>
   );
 }
 
+/** Etiqueta de sección estilo consola: monoespaciada, mínima. */
 export function SectionTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className={`text-xs font-semibold uppercase tracking-[0.14em] text-dim ${className}`}>
+    <h2 className={`font-mono text-[10px] uppercase tracking-[0.22em] text-dim ${className}`}>
       {children}
     </h2>
   );
@@ -36,16 +41,16 @@ export function Chip({
   tone?: 'default' | 'gold' | 'ok' | 'warn' | 'risk' | 'primary';
 }) {
   const tones: Record<string, string> = {
-    default: 'border-line bg-mist/60 text-dim',
-    gold: 'border-gold/50 bg-gold-soft text-gold-deep',
+    default: 'border-line bg-mist/70 text-dim',
+    gold: 'border-gold/40 bg-gold-soft text-gold-deep',
     ok: 'border-ok/40 bg-ok-soft text-ok',
     warn: 'border-warn/40 bg-warn-soft text-warn',
     risk: 'border-risk/40 bg-risk-soft text-risk',
-    primary: 'border-primary/30 bg-primary-soft text-primary',
+    primary: 'border-primary/40 bg-primary-soft text-[#b6abff]',
   };
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${tones[tone]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10.5px] font-medium tracking-wide ${tones[tone]}`}
     >
       {children}
     </span>
@@ -53,8 +58,8 @@ export function Chip({
 }
 
 /**
- * Medidor tipo instrumento de reporte académico. Las cuatro métricas
- * (cobertura, dominio, retención, readiness) SIEMPRE separadas (Especificación §6.4).
+ * Medidor de telemetría. Las cuatro métricas (cobertura, dominio, retención,
+ * readiness) SIEMPRE separadas (Especificación §6.4).
  */
 export function Meter({
   label,
@@ -68,20 +73,20 @@ export function Meter({
   tone?: 'primary' | 'gold' | 'ok' | 'ink';
 }) {
   const tones: Record<string, string> = {
-    primary: 'bg-primary',
-    gold: 'bg-gold',
+    primary: 'bg-gradient-to-r from-primary to-cyan',
+    gold: 'bg-gradient-to-r from-gold to-gold-deep',
     ok: 'bg-ok',
-    ink: 'bg-ink',
+    ink: 'bg-dim',
   };
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-4">
         <span className="text-sm text-ink">{label}</span>
-        <span className="font-display text-lg font-semibold tabular-nums text-ink">
+        <span className="font-mono text-sm font-medium tabular-nums text-ink">
           {value === null ? '—' : `${Math.round(value * 100)}%`}
         </span>
       </div>
-      <div className="h-1 overflow-hidden rounded-full bg-mist">
+      <div className="h-1.5 overflow-hidden rounded-full bg-mist">
         {value !== null && (
           <div
             className={`h-full rounded-full ${tones[tone]} transition-[width] duration-700`}
@@ -94,8 +99,8 @@ export function Meter({
   );
 }
 
-/** Estrella de cuatro puntas: la marca STAR, en trazo sobrio. */
-export function StarMark({ className = 'size-4 text-gold' }: { className?: string }) {
+/** Estrella de cuatro puntas: la marca STAR. */
+export function StarMark({ className = 'size-4 text-primary' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
       <path d="M12 2c.6 5.2 4.8 9.4 10 10-5.2.6-9.4 4.8-10 10-.6-5.2-4.8-9.4-10-10 5.2-.6 9.4-4.8 10-10z" />
@@ -106,15 +111,17 @@ export function StarMark({ className = 'size-4 text-gold' }: { className?: strin
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <StarMark className="size-4 text-gold" />
+      <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-cyan shadow-[0_0_16px_rgba(124,108,255,0.45)]">
+        <StarMark className="size-4 text-white" />
+      </span>
       <span className="font-display text-lg font-semibold tracking-tight text-ink">
-        Starbiz<span className="font-medium text-dim">Academy</span>
+        Starbiz<span className="text-gradient">Academy</span>
       </span>
     </span>
   );
 }
 
-/** Iconografía propia en SVG (trazo 1.75, sin librerías): nada de emojis. */
+/** Iconografía propia en SVG (trazo 1.75, sin librerías). */
 export function Icon({
   name,
   className = 'size-5',
@@ -201,7 +208,7 @@ export function Icon({
   );
 }
 
-/** Avatar con iniciales, estilo expediente académico. */
+/** Avatar con iniciales y anillo de degradado firma. */
 export function InitialsAvatar({ name, className = '' }: { name: string; className?: string }) {
   const initials = name
     .split(/\s+/)
@@ -210,10 +217,12 @@ export function InitialsAvatar({ name, className = '' }: { name: string; classNa
     .join('');
   return (
     <span
-      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-primary-soft font-display text-sm font-semibold text-primary ${className}`}
+      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-cyan p-px ${className}`}
       aria-hidden
     >
-      {initials}
+      <span className="flex size-full items-center justify-center rounded-full bg-surface font-mono text-xs font-medium text-ink">
+        {initials}
+      </span>
     </span>
   );
 }

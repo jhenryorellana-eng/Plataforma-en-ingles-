@@ -46,7 +46,7 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <header className="rise mb-8">
-        <div className="masthead-rule mb-6 w-16" />
+        <div className="mb-6 h-1 w-16 rounded-full bg-gradient-to-r from-primary to-cyan" />
         <Wordmark />
         <h1 className="mt-4 font-display text-[1.75rem] font-semibold leading-tight text-ink">
           Portal familiar

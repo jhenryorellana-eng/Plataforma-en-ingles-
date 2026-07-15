@@ -45,7 +45,7 @@ export default async function PathPage({
   return (
     <div className="flex flex-col gap-7">
       <section className="rise">
-        <p className="text-xs uppercase tracking-[0.14em] text-dim">Tu ruta medible</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-dim">Tu ruta medible</p>
         <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink">
           Hacia Starbiz Global B2
         </h1>

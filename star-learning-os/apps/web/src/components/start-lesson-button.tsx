@@ -57,7 +57,7 @@ export function StartLessonButton({
           type="button"
           onClick={start}
           disabled={loading}
-          className="rounded-lg border border-primary/40 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-surface disabled:opacity-50"
+          className="rounded-lg border border-primary/40 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-white disabled:opacity-50"
         >
           {loading ? 'Abriendo…' : label}
         </button>
@@ -72,13 +72,13 @@ export function StartLessonButton({
         type="button"
         onClick={start}
         disabled={loading}
-        className="group flex w-full items-center justify-between rounded-xl bg-primary px-6 py-5 text-left text-surface shadow-[0_6px_18px_rgba(36,64,142,0.25)] transition-all hover:bg-primary-deep active:translate-y-px disabled:opacity-60"
+        className="group flex w-full items-center justify-between rounded-xl bg-primary px-6 py-5 text-left text-white  transition-all hover:bg-primary-deep active:translate-y-px disabled:opacity-60"
       >
         <span>
           <span className="block font-display text-lg font-semibold">
             {loading ? 'Preparando tu sesión…' : label}
           </span>
-          {sublabel && <span className="mt-0.5 block text-sm text-surface/75">{sublabel}</span>}
+          {sublabel && <span className="mt-0.5 block text-sm text-white/75">{sublabel}</span>}
         </span>
         <Icon name="arrow" className="size-5 transition-transform group-hover:translate-x-1" />
       </button>

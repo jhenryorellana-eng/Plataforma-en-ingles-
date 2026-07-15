@@ -55,10 +55,12 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 px-6 py-12">
       <div className="rise">
-        <div className="masthead-rule mb-6 w-16" />
+        <div className="mb-6 h-1 w-16 rounded-full bg-gradient-to-r from-primary to-cyan" />
         <Wordmark />
-        <h1 className="mt-5 font-display text-[2rem] font-semibold leading-tight text-ink">
-          Una ruta medible hacia tu meta en inglés.
+        <h1 className="mt-5 font-display text-[2.15rem] font-semibold leading-[1.15] text-ink">
+          Tu sistema operativo
+          <br />
+          <span className="text-gradient">de aprendizaje.</span>
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-dim">
           Diagnóstico real, dominio verificable y preparación TOEFL con supervisión académica
@@ -95,8 +97,8 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
         ))}
       </div>
 
-      <p className="rise rise-4 flex items-center gap-2 text-xs text-dim">
-        <StarMark className="size-3 text-gold" />
+      <p className="rise rise-4 flex items-center gap-2 font-mono text-[11px] text-dim">
+        <StarMark className="size-3 text-primary" />
         La IA personaliza el apoyo y el tiempo; el estándar de salida no cambia.
       </p>
 
