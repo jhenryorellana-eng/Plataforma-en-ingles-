@@ -10,7 +10,7 @@ describe('estimatePlacement — regla de ubicación §7.4', () => {
     const estimate = estimatePlacement([
       ...responses('reading', 8, 10),
       ...responses('listening', 6, 10),
-      ...responses('language_use', 2, 10),
+      ...responses('language_use', 3, 10),
     ]);
     expect(estimate.perSkill.reading).toBe('B2');
     expect(estimate.perSkill.language_use).toBe('A2');

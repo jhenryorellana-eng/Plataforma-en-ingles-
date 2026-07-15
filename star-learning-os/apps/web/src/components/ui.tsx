@@ -31,7 +31,7 @@ export function Chip({
   tone = 'default',
 }: {
   children: ReactNode;
-  tone?: 'default' | 'star' | 'ok' | 'warn' | 'risk' | 'nova';
+  tone?: 'default' | 'star' | 'ok' | 'warn' | 'risk' | 'nova' | 'sky';
 }) {
   const tones: Record<string, string> = {
     default: 'border-line text-dim',
@@ -40,6 +40,7 @@ export function Chip({
     warn: 'border-warn/40 text-warn',
     risk: 'border-risk/40 text-risk',
     nova: 'border-nova/40 text-nova',
+    sky: 'border-sky/40 text-sky',
   };
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs ${tones[tone]}`}>

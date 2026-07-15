@@ -20,3 +20,4 @@ coverage/
 # SO / editor
 .DS_Store
 Thumbs.db
+.playwright-mcp/

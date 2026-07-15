@@ -1,8 +1,11 @@
-import type { ZodType } from 'zod';
+import type { z, ZodTypeAny } from 'zod';
 import { AppError } from './errors';
 
-/** Valida entrada externa con Zod en el límite de la API (Stack §4.1). */
-export function parse<T>(schema: ZodType<T>, data: unknown): T {
+/**
+ * Valida entrada externa con Zod en el límite de la API (Stack §4.1).
+ * Devuelve el tipo de SALIDA del esquema, con defaults ya aplicados.
+ */
+export function parse<S extends ZodTypeAny>(schema: S, data: unknown): z.output<S> {
   const result = schema.safeParse(data);
   if (!result.success) {
     throw new AppError('VALIDATION_FAILED', 400, 'Los datos enviados no son válidos', {
@@ -12,5 +15,5 @@ export function parse<T>(schema: ZodType<T>, data: unknown): T {
       })),
     });
   }
-  return result.data;
+  return result.data as z.output<S>;
 }
