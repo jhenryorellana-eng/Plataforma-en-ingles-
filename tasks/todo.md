@@ -106,10 +106,13 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
      exitoso el authId del proveedor es la autoridad (re-vínculo automático).
    - dev-login: 403 si `NODE_ENV=production`; cookie `secure` en producción; el bloque
      demo del /login solo aparece con `NEXT_PUBLIC_DEMO_LOGIN=true` (apps/web/.env.local).
-   - ⏳ FALTA para activar Supabase Auth real: `SUPABASE_SECRET_KEY` en .env (dashboard →
-     Project Settings → API Keys → Secret keys). Sin ella corre el mock (solo dev).
-     Registros hechos en modo mock contra la BD de producción: purgarlos al activar
-     (el re-vínculo del login cubre a los demás).
+   - ✅ **Supabase Auth real ACTIVADO** (2026-07-16): registro 201 crea la cuenta en
+     auth.users CONFIRMADA de inmediato (sin correo de verificación), login 201,
+     contraseña mala 401, duplicado 409 — verificado E2E contra el proyecto real;
+     usuario de prueba borrado (Admin API + identity.users).
+   - ⚠️ ROTACIÓN pre-lanzamiento (ampliada): contraseña de BD **y** SUPABASE_SECRET_KEY
+     **y** legacy service_role JWT — los tres se pegaron en el chat (2026-07-16).
+     En el dashboard: Reset database password + rotar/deshabilitar API keys legacy.
 3. ☐ Hosting API NestJS: Railway/Render (proceso persistente — el outbox worker lo
    necesita; serverless NO sirve tal cual). Requiere cuenta de Henry.
 4. ☐ Web en Vercel con **rewrite `/v1/* → API`** (mismo dominio = cookies same-site,
