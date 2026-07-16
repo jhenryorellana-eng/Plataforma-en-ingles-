@@ -20,6 +20,12 @@ const configSchema = z.object({
     .string()
     .default('false')
     .transform((value) => value === 'true'),
+  /** Supabase Auth: sin las 3 variables, el login con contraseña corre en modo mock (solo dev). */
+  SUPABASE_URL: z.string().optional().default(''),
+  SUPABASE_PUBLISHABLE_KEY: z.string().optional().default(''),
+  SUPABASE_SECRET_KEY: z.string().optional().default(''),
+  /** El acceso demo sin contraseña JAMÁS se habilita en producción. */
+  NODE_ENV: z.string().optional().default('development'),
 });
 
 export interface AppConfig {
@@ -32,6 +38,10 @@ export interface AppConfig {
   realtimeModelTutorPrimary: string;
   realtimeVoice: string;
   zdrVerified: boolean;
+  supabaseUrl: string;
+  supabasePublishableKey: string;
+  supabaseSecretKey: string;
+  devLoginEnabled: boolean;
 }
 
 let cached: AppConfig | null = null;
@@ -49,6 +59,10 @@ export function loadConfig(): AppConfig {
     realtimeModelTutorPrimary: parsed.REALTIME_MODEL_TUTOR_PRIMARY,
     realtimeVoice: parsed.REALTIME_VOICE,
     zdrVerified: parsed.ZDR_VERIFIED,
+    supabaseUrl: parsed.SUPABASE_URL,
+    supabasePublishableKey: parsed.SUPABASE_PUBLISHABLE_KEY,
+    supabaseSecretKey: parsed.SUPABASE_SECRET_KEY,
+    devLoginEnabled: parsed.NODE_ENV !== 'production',
   };
   if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = cached.databaseUrl;

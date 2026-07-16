@@ -10,6 +10,8 @@ export default function RegisterGuardianPage({ params }: { params: Promise<{ loc
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +21,7 @@ export default function RegisterGuardianPage({ params }: { params: Promise<{ loc
     try {
       await clientApi('/auth/register-guardian', {
         method: 'POST',
-        body: JSON.stringify({ displayName, email }),
+        body: JSON.stringify({ displayName, email, password }),
       });
       router.push(`/${locale}/family`);
     } catch (err) {
@@ -61,11 +63,32 @@ export default function RegisterGuardianPage({ params }: { params: Promise<{ loc
             className="rounded-xl bg-mist px-4 py-3 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-dim">Tu contraseña</span>
+          <span className="relative block">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              className="w-full rounded-xl bg-mist px-4 py-3 pr-20 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-primary"
+            >
+              {showPassword ? 'Ocultar' : 'Mostrar'}
+            </button>
+          </span>
+        </label>
       </Card>
 
       <button
         type="button"
-        disabled={busy || displayName.trim().length < 2 || !email.includes('@')}
+        disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
         onClick={submit}
         className="rise rise-2 mt-5 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
       >

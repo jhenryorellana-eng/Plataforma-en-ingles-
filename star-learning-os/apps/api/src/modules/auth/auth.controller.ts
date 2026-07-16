@@ -3,6 +3,8 @@ import type { FastifyReply } from 'fastify';
 import type { User } from '@prisma/client';
 import {
   zDevLoginRequest,
+  zForgotPasswordRequest,
+  zLoginRequest,
   zRegisterGuardianRequest,
   zRegisterLearnerRequest,
   type MeResponse,
@@ -23,6 +25,24 @@ export class AuthController {
     const request = parse(zDevLoginRequest, body ?? {});
     const user = await this.authService.devLogin(request);
     return this.openSession(user, reply);
+  }
+
+  /** Inicio de sesión con correo y contraseña (Supabase Auth en producción). */
+  @Public()
+  @Post('login')
+  async login(@Body() body: unknown, @Res({ passthrough: true }) reply: FastifyReply): Promise<MeResponse> {
+    const request = parse(zLoginRequest, body);
+    const user = await this.authService.login(request);
+    return this.openSession(user, reply);
+  }
+
+  /** Siempre responde 200 con el mismo cuerpo: no revela si el correo existe. */
+  @Public()
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: unknown): Promise<{ ok: true }> {
+    const request = parse(zForgotPasswordRequest, body);
+    await this.authService.forgotPassword(request.email);
+    return { ok: true };
   }
 
   /** Registro del alumno con age gate (12+). En producción: Identity Platform. */
@@ -49,14 +69,16 @@ export class AuthController {
   }
 
   private async openSession(user: User, reply: FastifyReply): Promise<MeResponse> {
+    const config = loadConfig();
     const token = await signSession(
       { id: user.id, displayName: user.displayName, role: user.role, ageBand: user.ageBand },
-      loadConfig().sessionSecret,
+      config.sessionSecret,
     );
     reply.setCookie(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
+      // En producción la cookie solo viaja por HTTPS.
+      secure: !config.devLoginEnabled,
       path: '/',
       maxAge: 8 * 60 * 60,
     });

@@ -29,14 +29,20 @@ field() { jsonget "$TMP/last.json" x "$1"; }
 
 echo "=== 0. Onboarding completo: registro → invitación → vínculo → permisos → asentimiento ==="
 TS=$(date +%s)
+SMOKE_PW="Sm0keTest-$TS"
 NICO="$TMP/nico.jar"; rm -f "$NICO"
-check "registro alumno con age gate (14 años)" 201 "$(req "$NICO" POST /auth/register-learner "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"birthYear\":2012}")"
-check "menor de 12 rechazado" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Peque\",\"email\":\"peque-$TS@demo.pe\",\"birthYear\":2020}" "$API/auth/register-learner")"
+check "registro alumno con age gate (14 años)" 201 "$(req "$NICO" POST /auth/register-learner "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2012}")"
+check "menor de 12 rechazado" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Peque\",\"email\":\"peque-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2020}" "$API/auth/register-learner")"
+check "registro duplicado rechazado (409)" 409 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Nico Clon\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2012}" "$API/auth/register-learner")"
+NICO2="$TMP/nico2.jar"; rm -f "$NICO2"
+check "login con contraseña correcta" 201 "$(req "$NICO2" POST /auth/login "{\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
+check "login con contraseña incorrecta (401)" 401 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"email\":\"nico-$TS@demo.pe\",\"password\":\"incorrecta-123\"}" "$API/auth/login")"
+check "recuperación no revela existencia" 201 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"no-existe@demo.pe"}' "$API/auth/forgot-password")"
 check "inscripción bloqueada sin apoderado" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
 check "crear invitación al apoderado" 201 "$(req "$NICO" POST /family-invitations "{\"guardianEmail\":\"madre-$TS@demo.pe\"}")"
 ICODE=$(field "d['code']")
 PADRE="$TMP/padre.jar"; rm -f "$PADRE"
-check "registro apoderado" 201 "$(req "$PADRE" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\"}")"
+check "registro apoderado" 201 "$(req "$PADRE" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
 check "aceptar invitación con código" 201 "$(req "$PADRE" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
 NICOID=$(req "$NICO" GET /auth/me >/dev/null; field "d['id']")
 check "apoderado otorga consentimientos" 201 "$(req "$PADRE" POST /consents "{\"learnerId\":\"$NICOID\",\"purposes\":[\"service\",\"ai_voice\"]}")"

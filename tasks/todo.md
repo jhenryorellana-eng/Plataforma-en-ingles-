@@ -93,11 +93,23 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
      .env/hosting ANTES del lanzamiento público.
    - El .env de la raíz ahora apunta a Supabase (la línea local quedó comentada
      para volver al Postgres embebido cuando se quiera).
-2. ☐ **Auth real (hallazgo crítico 2026-07-16)**: el AuthService actual es SOLO dev —
-   sin contraseña, register devuelve el usuario existente por email (= cualquiera entra
-   conociendo el email), dev-login crea usuarios con cualquier rol, cookie `secure:false`.
-   Reemplazo: **Supabase Auth** (email+password, verificación, reset) detrás de la misma
-   interfaz; columna `authId` en User; dev-login solo con `NODE_ENV=development`.
+2. ✅ **Auth real con contraseña** (2026-07-16, smoke 59/59 + verificado en navegador):
+   - `IdentityProvider` adaptador: `SupabaseIdentityProvider` (Admin API server-side,
+     usuarios creados con `email_confirm:true` = **registro instantáneo SIN verificación
+     de correo — decisión de Henry**; el correo queda solo para recuperar contraseña)
+     + `MockIdentityProvider` en memoria (dev/smoke sin claves).
+   - Registro alumno/apoderado ahora exige contraseña (zod min 8); registro duplicado
+     → 409 (ya NO abre sesión sobre cuenta ajena); `POST /auth/login`;
+     `POST /auth/forgot-password` (respuesta uniforme, no revela existencia).
+   - `authId` en identity.users (migración `20260716034500_add_auth_id`, aplicada a
+     Supabase vía `migrate deploy` — el ledger de checksums funcionó); tras login
+     exitoso el authId del proveedor es la autoridad (re-vínculo automático).
+   - dev-login: 403 si `NODE_ENV=production`; cookie `secure` en producción; el bloque
+     demo del /login solo aparece con `NEXT_PUBLIC_DEMO_LOGIN=true` (apps/web/.env.local).
+   - ⏳ FALTA para activar Supabase Auth real: `SUPABASE_SECRET_KEY` en .env (dashboard →
+     Project Settings → API Keys → Secret keys). Sin ella corre el mock (solo dev).
+     Registros hechos en modo mock contra la BD de producción: purgarlos al activar
+     (el re-vínculo del login cubre a los demás).
 3. ☐ Hosting API NestJS: Railway/Render (proceso persistente — el outbox worker lo
    necesita; serverless NO sirve tal cual). Requiere cuenta de Henry.
 4. ☐ Web en Vercel con **rewrite `/v1/* → API`** (mismo dominio = cookies same-site,

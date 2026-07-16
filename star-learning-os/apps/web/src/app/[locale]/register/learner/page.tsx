@@ -14,6 +14,8 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [birthYear, setBirthYear] = useState<number>(CURRENT_YEAR - 14);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
     try {
       const me = await clientApi<MeResponse>('/auth/register-learner', {
         method: 'POST',
-        body: JSON.stringify({ displayName, email, birthYear }),
+        body: JSON.stringify({ displayName, email, password, birthYear }),
       });
       if (me.ageBand === 'a18_plus') {
         router.push(`/${locale}/enroll`);
@@ -74,6 +76,27 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
           />
         </label>
         <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-dim">Tu contraseña</span>
+          <span className="relative block">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              className="w-full rounded-xl bg-mist px-4 py-3 pr-20 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-primary"
+            >
+              {showPassword ? 'Ocultar' : 'Mostrar'}
+            </button>
+          </span>
+        </label>
+        <label className="flex flex-col gap-1.5">
           <span className="text-[13px] font-semibold text-dim">Año de nacimiento</span>
           <select
             value={birthYear}
@@ -91,7 +114,7 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
 
       <button
         type="button"
-        disabled={busy || displayName.trim().length < 2 || !email.includes('@')}
+        disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
         onClick={submit}
         className="rise rise-2 mt-5 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
       >
@@ -105,8 +128,8 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
       )}
 
       <p className="mt-5 px-5 text-center text-[12px] leading-relaxed text-dim">
-        En producción este registro corre sobre Identity Platform con verificación reforzada del
-        apoderado (nivel A2 del Stack §5.4).
+        Entras de inmediato, sin esperar correos de confirmación. Usa un correo real: es tu única
+        vía para recuperar la contraseña.
       </p>
     </main>
   );

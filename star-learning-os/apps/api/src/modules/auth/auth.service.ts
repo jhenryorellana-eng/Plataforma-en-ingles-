@@ -1,8 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { AgeBand, User } from '@prisma/client';
-import type { DevLoginRequest, RegisterGuardianRequest, RegisterLearnerRequest } from '@star/contracts';
+import type {
+  DevLoginRequest,
+  LoginRequest,
+  RegisterGuardianRequest,
+  RegisterLearnerRequest,
+} from '@star/contracts';
 import { AppError } from '../../common/errors';
+import { loadConfig } from '../../config/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildIdentityProvider, type IdentityProvider } from './identity-providers';
 
 const MINIMUM_AGE = 12;
 
@@ -15,15 +22,30 @@ export const DEMO_EMAILS = {
 } as const;
 
 /**
- * Proveedor de identidad de DESARROLLO. En producción se reemplaza por
- * Google Identity Platform detrás de la misma interfaz (Stack §5.1);
- * este proveedor jamás debe habilitarse fuera de entorno local.
+ * Autenticación con contraseña vía IdentityProvider (Supabase Auth en producción,
+ * mock en desarrollo). Registro instantáneo sin verificación de correo (decisión
+ * de Henry 2026-07-16); el correo se usa para recuperar la contraseña.
  */
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly identity: IdentityProvider;
+  private readonly devLoginEnabled: boolean;
 
+  constructor(private readonly prisma: PrismaService) {
+    const config = loadConfig();
+    this.identity = buildIdentityProvider(config);
+    this.devLoginEnabled = config.devLoginEnabled;
+  }
+
+  get identityProviderName(): string {
+    return this.identity.name;
+  }
+
+  /** Acceso demo sin contraseña: SOLO entornos de desarrollo (jamás producción). */
   async devLogin(request: DevLoginRequest): Promise<User> {
+    if (!this.devLoginEnabled) {
+      throw new AppError('FORBIDDEN', 403, 'El acceso demo está deshabilitado en producción');
+    }
     if (request.profile) {
       const email = DEMO_EMAILS[request.profile];
       const user = await this.prisma.user.findUnique({ where: { email } });
@@ -45,6 +67,28 @@ export class AuthService {
     });
   }
 
+  /** Inicio de sesión con correo y contraseña. */
+  async login(request: LoginRequest): Promise<User> {
+    const { authId } = await this.identity.signIn(request.email, request.password);
+    const user =
+      (await this.prisma.user.findUnique({ where: { authId } })) ??
+      (await this.prisma.user.findUnique({ where: { email: request.email } }));
+    if (!user) {
+      throw new AppError('NOT_FOUND', 404, 'Tu cuenta no tiene perfil en la plataforma. Contáctanos.');
+    }
+    if (user.authId !== authId) {
+      // El proveedor que validó la contraseña es la autoridad: re-vincula cuentas
+      // previas (seed o creadas cuando regía otro proveedor de identidad).
+      return this.prisma.user.update({ where: { id: user.id }, data: { authId } });
+    }
+    return user;
+  }
+
+  /** Recuperación de contraseña. Siempre responde igual: no revela si el correo existe. */
+  async forgotPassword(email: string): Promise<void> {
+    await this.identity.sendPasswordRecovery(email);
+  }
+
   /**
    * Age gate del registro (Stack §5.4 nivel A0: edad declarada). La plataforma
    * es 12+ (D16); la banda determina permisos, gates y experiencia.
@@ -60,28 +104,30 @@ export class AuthService {
     }
     const ageBand: AgeBand = age <= 13 ? 'y12_13' : age <= 17 ? 't14_17' : 'a18_plus';
 
-    const existing = await this.prisma.user.findUnique({ where: { email: request.email } });
-    if (existing) {
-      if (existing.role !== 'learner') {
-        throw new AppError('VALIDATION_FAILED', 409, 'Ese correo ya está registrado con otro rol');
-      }
-      return existing;
-    }
+    await this.ensureEmailFree(request.email, 'learner');
+    const { authId } = await this.identity.signUp(request.email, request.password);
     return this.prisma.user.create({
-      data: { displayName: request.displayName, email: request.email, role: 'learner', ageBand },
+      data: { displayName: request.displayName, email: request.email, authId, role: 'learner', ageBand },
     });
   }
 
   async registerGuardian(request: RegisterGuardianRequest): Promise<User> {
-    const existing = await this.prisma.user.findUnique({ where: { email: request.email } });
-    if (existing) {
-      if (existing.role !== 'guardian') {
-        throw new AppError('VALIDATION_FAILED', 409, 'Ese correo ya está registrado con otro rol');
-      }
-      return existing;
-    }
+    await this.ensureEmailFree(request.email, 'guardian');
+    const { authId } = await this.identity.signUp(request.email, request.password);
     return this.prisma.user.create({
-      data: { displayName: request.displayName, email: request.email, role: 'guardian' },
+      data: { displayName: request.displayName, email: request.email, authId, role: 'guardian' },
     });
+  }
+
+  /** El registro jamás abre sesión sobre una cuenta existente: eso es del login. */
+  private async ensureEmailFree(email: string, role: 'learner' | 'guardian'): Promise<void> {
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      const detail =
+        existing.role === role
+          ? 'Ese correo ya tiene una cuenta. Inicia sesión.'
+          : 'Ese correo ya está registrado con otro rol';
+      throw new AppError('VALIDATION_FAILED', 409, detail);
+    }
   }
 }

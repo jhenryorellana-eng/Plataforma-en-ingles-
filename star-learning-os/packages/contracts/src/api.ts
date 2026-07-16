@@ -13,7 +13,7 @@ import {
   zUserRole,
 } from './enums';
 
-// ---------- Auth (proveedor dev; Identity Platform en producción vía adaptador) ----------
+// ---------- Auth (Supabase Auth en producción; dev-login solo en desarrollo) ----------
 
 export const zDevLoginRequest = z.object({
   profile: z.enum(['learner_teen', 'learner_young', 'guardian', 'staff']).optional(),
@@ -22,6 +22,22 @@ export const zDevLoginRequest = z.object({
   ageBand: zAgeBand.optional(),
 });
 export type DevLoginRequest = z.infer<typeof zDevLoginRequest>;
+
+export const zPassword = z
+  .string()
+  .min(8, 'La contraseña debe tener al menos 8 caracteres')
+  .max(72);
+
+export const zLoginRequest = z.object({
+  email: z.string().email(),
+  password: zPassword,
+});
+export type LoginRequest = z.infer<typeof zLoginRequest>;
+
+export const zForgotPasswordRequest = z.object({
+  email: z.string().email(),
+});
+export type ForgotPasswordRequest = z.infer<typeof zForgotPasswordRequest>;
 
 export const zMeResponse = z.object({
   id: z.string().uuid(),
@@ -36,6 +52,7 @@ export type MeResponse = z.infer<typeof zMeResponse>;
 export const zRegisterLearnerRequest = z.object({
   displayName: z.string().min(2).max(60),
   email: z.string().email(),
+  password: zPassword,
   birthYear: z.number().int().min(1940).max(2020),
 });
 export type RegisterLearnerRequest = z.infer<typeof zRegisterLearnerRequest>;
@@ -43,6 +60,7 @@ export type RegisterLearnerRequest = z.infer<typeof zRegisterLearnerRequest>;
 export const zRegisterGuardianRequest = z.object({
   displayName: z.string().min(2).max(60),
   email: z.string().email(),
+  password: zPassword,
 });
 export type RegisterGuardianRequest = z.infer<typeof zRegisterGuardianRequest>;
 
