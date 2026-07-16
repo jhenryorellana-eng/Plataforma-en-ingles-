@@ -73,10 +73,21 @@ del Stack v1.0 §17 para esta fase; GCP queda para cuando se active esa cuenta).
 arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_URL`.
 
 **Plan de subida (en orden):**
-1. ⏳ Proyecto Supabase dedicado `star-learning-os` — BLOQUEADO: cuenta jhenry.orellana@gmail.com
-   en el límite de 2 proyectos free (uno es Starbooks con data real — NO compartir por
-   salvaguarda de menores). Henry está gestionando el acceso ("yo te daré el acceso").
-   Al tenerlo: `prisma migrate deploy` + seed + RLS en todas las tablas + smoke.
+1. ✅ **BD de producción en Supabase** (2026-07-16): proyecto "Academia de ingles"
+   (`addkqfebkufynjovqxsv`, región sa-east-1, Postgres 17.6, org wakriowwiycapmfzzxql).
+   - 5 migraciones aplicadas vía MCP + ledger `public._prisma_migrations` con checksums
+     reales (futuros `prisma migrate deploy` reconocen el estado).
+   - RLS habilitado en las 33 tablas SIN policies = denegación total a anon/PostgREST;
+     la API entra por conexión directa (owner). Advisor de seguridad: solo INFOs esperados.
+   - Data curada insertada (88 filas): 2 programas, catálogo B1, 4 lecciones PUBLICADAS
+     en foco (University Life + Beca universitaria EE. UU.), 13 actividades, 22 ítems
+     diagnóstico, familia demo (6 usuarios @demo.starbiz.pe — purgar antes del lanzamiento).
+   - EXCLUIDO a propósito: lecciones de astronomía duplicadas del smoke (encoding roto),
+     units U02/U04/U06/U07, y toda la data transaccional de pruebas.
+   - Falta conectar la API: Henry copia el string "Session pooler" del dashboard
+     (Connect) a `.env` como DATABASE_URL — nunca por chat ni al repo (.env.example
+     tiene la forma). La API en Railway/Render usará ese mismo string; región del
+     hosting: São Paulo o us-east (BD está en sa-east-1).
 2. ☐ **Auth real (hallazgo crítico 2026-07-16)**: el AuthService actual es SOLO dev —
    sin contraseña, register devuelve el usuario existente por email (= cualquiera entra
    conociendo el email), dev-login crea usuarios con cualquier rol, cookie `secure:false`.
