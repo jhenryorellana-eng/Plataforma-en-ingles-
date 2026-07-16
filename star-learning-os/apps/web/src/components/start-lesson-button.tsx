@@ -73,7 +73,7 @@ export function StartLessonButton({
         type="button"
         onClick={start}
         disabled={loading}
-        className="group relative w-full overflow-hidden rounded-3xl px-6 pb-6 pt-14 text-left text-white shadow-[0_14px_34px_rgba(94,92,230,0.4)] transition-transform active:scale-[0.99] disabled:opacity-70"
+        className="sheen group relative w-full overflow-hidden rounded-3xl px-6 pb-6 pt-14 text-left text-white shadow-[0_16px_38px_rgba(94,92,230,0.42),inset_0_1px_0_rgba(255,255,255,0.25)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-70"
         style={{
           backgroundImage:
             'radial-gradient(340px 200px at 90% -20%, rgba(23,184,205,0.5), transparent 65%), linear-gradient(120deg, #7c7aff 0%, #5e5ce6 55%, #4b49d6 100%)',

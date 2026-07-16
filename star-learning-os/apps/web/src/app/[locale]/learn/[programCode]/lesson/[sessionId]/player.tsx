@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ActivityDto, SessionResponse, SubmissionResult } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Card, Chip, Group, Icon } from '@/components/ui';
+import { Card, Chip, Group, Icon, LoadingStack } from '@/components/ui';
 
 const STATE_LABELS: Record<string, string> = {
   developing: 'En desarrollo',
@@ -55,7 +55,7 @@ export function LessonPlayer({
     );
   }
   if (!session || activities.length === 0) {
-    return <p className="mt-16 text-center text-[15px] text-dim">Cargando tu lección…</p>;
+    return <LoadingStack label="Cargando tu lección" />;
   }
 
   const activity = activities[index];

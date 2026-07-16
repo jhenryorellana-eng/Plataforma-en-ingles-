@@ -11,7 +11,7 @@ export default async function LearnLayout({
   return (
     <div className="min-h-dvh">
       <TopBar locale={locale} />
-      <main className="mx-auto max-w-2xl px-4 pb-32 pt-6">{children}</main>
+      <main className="mx-auto max-w-2xl px-4 pb-36 pt-6">{children}</main>
       <BottomNav locale={locale} programCode={programCode} />
     </div>
   );

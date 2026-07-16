@@ -19,7 +19,13 @@ export function MicTest({ onDone }: { onDone: (micOk: boolean) => void }) {
   async function testMic() {
     setMicState('testing');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // El permiso puede quedar pendiente para siempre: TEC-01 nunca debe colgar.
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({ audio: true }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('mic-permission-timeout')), 6000),
+        ),
+      ]);
       const context = new AudioContext();
       const source = context.createMediaStreamSource(stream);
       const analyser = context.createAnalyser();

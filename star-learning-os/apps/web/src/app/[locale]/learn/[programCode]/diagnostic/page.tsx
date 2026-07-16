@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { DiagnosticNextResponse, EnrollmentResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Card, Group, Icon } from '@/components/ui';
+import { Card, Group, Icon, LoadingStack } from '@/components/ui';
 
 const SKILL_LABELS: Record<string, string> = {
   reading: 'Lectura',
@@ -78,7 +78,7 @@ export default function DiagnosticPage({
     );
   }
   if (!batch || !attemptId) {
-    return <p className="mt-16 text-center text-[15px] text-dim">Preparando tu StarMap…</p>;
+    return <LoadingStack label="Preparando tu StarMap" />;
   }
 
   const item = batch.items[queueIndex];

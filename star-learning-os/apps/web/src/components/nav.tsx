@@ -13,15 +13,15 @@ const TABS = [
   { slug: 'progress', label: 'Progreso', icon: 'progress' },
 ] as const;
 
-/** Tab bar iOS: traslúcida, hairline superior, tinte de acento en la activa. */
+/** Dock flotante de cristal con tinte de acento en la pestaña activa. */
 export function BottomNav({ locale, programCode }: { locale: string; programCode: string }) {
   const pathname = usePathname();
   return (
     <nav
       aria-label="Navegación principal"
-      className="material-bar fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[max(env(safe-area-inset-bottom),8px)]"
+      className="fixed inset-x-4 bottom-[max(env(safe-area-inset-bottom),12px)] z-40 mx-auto max-w-md"
     >
-      <div className="mx-auto flex max-w-2xl items-stretch justify-between px-2 pt-1.5">
+      <div className="glass-dock flex items-stretch justify-between rounded-[26px] px-2 py-1.5">
         {TABS.map((tab) => {
           const href = `/${locale}/learn/${programCode}/${tab.slug}`;
           const active = pathname.startsWith(href);

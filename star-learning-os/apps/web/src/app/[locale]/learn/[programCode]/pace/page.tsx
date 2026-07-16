@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse, PaceOptionsResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Chip, Group, Icon } from '@/components/ui';
+import { Chip, Group, Icon, LoadingStack } from '@/components/ui';
 
 export default function PacePage({
   params,
@@ -57,11 +57,10 @@ export default function PacePage({
   }
 
   if (!options || !enrollment) {
-    return (
-      <p className="mt-16 text-center text-[15px] text-dim">
-        {error ?? 'Preparando tus alternativas de ritmo…'}
-      </p>
-    );
+    if (error) {
+      return <p className="mt-16 text-center text-[15px] text-risk">{error}</p>;
+    }
+    return <LoadingStack label="Preparando tus alternativas de ritmo" />;
   }
 
   return (

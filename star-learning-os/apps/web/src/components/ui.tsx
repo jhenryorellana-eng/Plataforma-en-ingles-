@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
-/** Tarjeta iOS: blanca, sin borde, esquinas continuas. */
+const CARD_SHADOW =
+  'shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_1px_2px_rgba(21,21,42,0.05),0_12px_28px_-16px_rgba(21,21,42,0.18)]';
+
+/** Tarjeta iOS premium: blanca, luz interior superior y sombra en dos capas. */
 export function Card({
   children,
   className = '',
@@ -9,20 +12,34 @@ export function Card({
   className?: string;
   accent?: boolean;
 }) {
-  return (
-    <div className={`rounded-2xl bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`rounded-2xl bg-surface ${CARD_SHADOW} ${className}`}>{children}</div>;
 }
 
 /** Grupo de filas estilo Ajustes: tarjeta con separadores hairline. */
 export function Group({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`overflow-hidden rounded-2xl bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04)] [&>*+*]:border-t [&>*+*]:border-line ${className}`}
+      className={`overflow-hidden rounded-2xl bg-surface ${CARD_SHADOW} [&>*+*]:border-t [&>*+*]:border-line ${className}`}
     >
       {children}
+    </div>
+  );
+}
+
+/** Placeholder con shimmer para estados de carga. */
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <span aria-hidden className={`skeleton block ${className}`} />;
+}
+
+/** Pila de skeletons estándar para páginas cargando. */
+export function LoadingStack({ label }: { label: string }) {
+  return (
+    <div className="mt-10 flex flex-col gap-4" role="status" aria-label={label}>
+      <Skeleton className="h-8 w-2/3" />
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-36 w-full rounded-2xl" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <span className="sr-only">{label}</span>
     </div>
   );
 }
@@ -79,10 +96,10 @@ const TILE_GRADIENTS: Record<string, string> = {
 export function IconTile({ name, color = 'bg-primary' }: { name: IconName; color?: string }) {
   return (
     <span
-      className="flex size-8 shrink-0 items-center justify-center rounded-[9px] shadow-[0_2px_6px_rgba(23,23,43,0.18)]"
+      className="flex size-8 shrink-0 items-center justify-center rounded-[9px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_8px_rgba(23,23,43,0.22)]"
       style={{ backgroundImage: TILE_GRADIENTS[color] ?? TILE_GRADIENTS['bg-primary'] }}
     >
-      <Icon name={name} className="size-4.5 text-white" />
+      <Icon name={name} className="size-4.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]" />
     </span>
   );
 }
@@ -137,10 +154,10 @@ export function Meter({
           {value === null ? '—' : `${Math.round(value * 100)}%`}
         </span>
       </div>
-      <div className="h-[5px] overflow-hidden rounded-full bg-fill">
+      <div className="h-[6px] overflow-hidden rounded-full bg-fill shadow-[inset_0_1px_2px_rgba(21,21,42,0.08)]">
         {value !== null && (
           <div
-            className={`h-full rounded-full ${tones[tone]} transition-[width] duration-700`}
+            className={`meter-bar h-full rounded-full ${tones[tone]} transition-[width] duration-700`}
             style={{ width: `${Math.min(100, Math.round(value * 100))}%` }}
           />
         )}
@@ -177,7 +194,12 @@ export function Ring({
   const gradientId = colorTo ? `ring-grad-${(ringGradientCounter += 1)}` : null;
   return (
     <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+      <svg
+        width={size}
+        height={size}
+        className="-rotate-90"
+        style={colorTo ? { filter: `drop-shadow(0 2px 6px ${colorTo}55)` } : undefined}
+      >
         {gradientId && (
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -209,9 +231,11 @@ export function Ring({
 export function RingCluster({
   rings,
   size = 168,
+  children,
 }: {
   rings: Array<{ value: number | null; color: string; colorTo?: string }>;
   size?: number;
+  children?: ReactNode;
 }) {
   const strokeWidth = 13;
   const gap = 3;
@@ -231,6 +255,9 @@ export function RingCluster({
           </span>
         );
       })}
+      {children && (
+        <span className="absolute inset-0 flex flex-col items-center justify-center">{children}</span>
+      )}
     </span>
   );
 }

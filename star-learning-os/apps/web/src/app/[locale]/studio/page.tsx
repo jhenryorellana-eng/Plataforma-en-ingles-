@@ -189,8 +189,8 @@ export default function StudioPage({ params }: { params: Promise<{ locale: strin
         )}
 
         <section className="rise rise-2 mb-8">
-          <div className="frame-gradient shadow-[0_16px_40px_rgba(94,92,230,0.16)]">
-            <div className="relative overflow-hidden rounded-[20px] bg-surface px-6 py-6">
+          <div className="frame-animated shadow-[0_18px_44px_rgba(94,92,230,0.2)]">
+            <div className="relative overflow-hidden rounded-[22px] bg-surface px-6 py-6">
               <StarMark className="star-float pointer-events-none absolute -right-8 -top-10 size-40 text-primary/8" />
               <p className="text-[17px] font-bold text-ink">Sugerir un tema para una nueva clase</p>
               <p className="mt-0.5 text-[13px] text-dim">
@@ -369,7 +369,7 @@ function StatCard({
   value: string;
 }) {
   return (
-    <Card className="flex items-center gap-3 px-4 py-4">
+    <Card className="lift flex items-center gap-3 px-4 py-4">
       <IconTile name={icon} color={color} />
       <div className="min-w-0">
         <p className="truncate text-[12px] font-medium text-dim">{label}</p>

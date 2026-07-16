@@ -52,7 +52,14 @@ export default async function ProgressPage({
           <RingCluster
             size={172}
             rings={legend.map((entry) => ({ value: entry.value, color: entry.from, colorTo: entry.to }))}
-          />
+          >
+            <span className="text-gradient text-[26px] font-extrabold leading-none tabular-nums">
+              {Math.round(progress.mastery * 100)}%
+            </span>
+            <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-dim">
+              dominio
+            </span>
+          </RingCluster>
           <ul className="flex min-w-0 flex-1 flex-col gap-3">
             {legend.map((entry) => (
               <li key={entry.key} className="flex items-baseline gap-2.5">

@@ -39,8 +39,11 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
-        <AppIcon className="size-20" />
-        <h1 className="mt-6 text-[34px] font-extrabold leading-tight tracking-tight text-ink">
+        <span className="relative inline-flex items-center justify-center">
+          <span className="halo-ring absolute -inset-4 rounded-full" aria-hidden />
+          <AppIcon className="icon-glow size-20" />
+        </span>
+        <h1 className="mt-7 text-[34px] font-extrabold leading-tight tracking-tight text-ink">
           Starbiz<span className="text-gradient">Academy</span>
         </h1>
         <p className="mt-2 max-w-[30ch] text-[16px] leading-relaxed text-dim">
@@ -57,7 +60,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
               type="button"
               disabled={loading !== null}
               onClick={() => login(item.profile)}
-              className="flex w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-mist/60 active:bg-mist disabled:opacity-60"
+              className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-all hover:bg-primary-soft/50 active:bg-mist disabled:opacity-60"
             >
               <InitialsAvatar name={item.name} className="size-10" />
               <span className="min-w-0 flex-1">

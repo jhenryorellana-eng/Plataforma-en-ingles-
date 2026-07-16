@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse, TodayResponse, VoiceSessionResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { Card, Group, Icon, Row, SectionHeader, StarMark, type IconName } from '@/components/ui';
+import { Card, Group, Icon, LoadingStack, Row, SectionHeader, StarMark, type IconName } from '@/components/ui';
 import { MicTest } from '@/components/mic-test';
 
 type Phase = 'loading' | 'preview' | 'live' | 'ended' | 'blocked';
@@ -212,7 +212,7 @@ export default function VoicePage({
   const seconds = elapsed % 60;
 
   if (phase === 'loading') {
-    return <p className="mt-16 text-center text-[15px] text-dim">Buscando tu misión de voz…</p>;
+    return <LoadingStack label="Buscando tu misión de voz" />;
   }
 
   if (phase === 'blocked') {
@@ -326,16 +326,29 @@ export default function VoicePage({
       <audio ref={audioRef} className="hidden" />
 
       <header className="flex flex-col items-center text-center">
-        <span className={`mentor-avatar flex size-20 items-center justify-center rounded-full ${paused ? 'mentor-avatar-paused' : ''}`}>
-          <StarMark className="size-8 text-white" />
+        <span className="relative inline-flex items-center justify-center">
+          <span className="mentor-halo absolute -inset-5 rounded-full" aria-hidden />
+          <span
+            className={`mentor-avatar flex size-20 items-center justify-center rounded-full ${paused ? 'mentor-avatar-paused' : ''}`}
+          >
+            <StarMark className="size-8 text-white" />
+          </span>
         </span>
-        <h1 className="mt-3 text-[22px] font-bold tracking-tight">Mentor STAR</h1>
+        <h1 className="mt-4 text-[22px] font-bold tracking-tight">Mentor STAR</h1>
         <p className="text-[13px] text-white/60">
           {voice?.mode === 'mock' ? 'Modo demo · interlocutor guiado' : 'En vivo · WebRTC'}
         </p>
-        <p className="mt-1 text-[28px] font-semibold tabular-nums tracking-tight text-white/90">
-          {minutes}:{String(seconds).padStart(2, '0')}
-        </p>
+        <div className="mt-1.5 flex items-center gap-3">
+          <span className={`eq ${paused ? 'eq-paused' : ''}`} aria-hidden>
+            <span /><span /><span /><span /><span />
+          </span>
+          <p className="text-[28px] font-semibold tabular-nums tracking-tight text-white/90">
+            {minutes}:{String(seconds).padStart(2, '0')}
+          </p>
+          <span className={`eq ${paused ? 'eq-paused' : ''}`} aria-hidden>
+            <span /><span /><span /><span /><span />
+          </span>
+        </div>
       </header>
 
       {voice?.mode === 'mock' && (
