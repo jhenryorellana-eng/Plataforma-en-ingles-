@@ -45,6 +45,11 @@
   - Autor IA por adaptador: OpenAI (OPENAI_TEXT_MODEL) o plantillas locales sin API key
   - Overview con cobertura de competencias y temario completo por unidad
   - Estado editorial en el modelo (draft/published/retired) filtrado en today/path/sesiones/voz
+- [x] 16. **Acabado premium v6** (commit a727f33; lint limpio, smoke 55/55, capturas v8-*):
+  - Atmósfera: malla de gradiente animada + grano fractal en toda la app
+  - Luz: sheen recorrido en botones/héroe, sombras con luz interior, glow en anillos de progreso
+  - Movimiento: borde cónico animado (Studio), dock de cristal flotante, resorte `.lift`, skeletons shimmer, ecualizador vivo en la llamada, halos de mentor/login; `prefers-reduced-motion` respetado
+  - Robustez: getUserMedia con timeout 6 s (TEC-01 jamás cuelga → modo texto TLK-04)
 
 ### Arranque local (recordatorio)
 `pnpm install --ignore-scripts && pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm dev:api` + `pnpm dev:web`
