@@ -165,6 +165,16 @@ fi
 check "reporte de seguridad (alumno)" 201 "$(req "$DIEGO" POST /safety/report '{"category":"technical","comment":"El audio se cortó"}')"
 check "staff ve casos de safety" 200 "$(req "$STAFF" GET /admin/safety/cases)"
 
+echo "=== 4b. Estudio de contenido: tema → borrador IA → revisión docente → publicar (§8.1) ==="
+check "overview del estudio" 200 "$(req "$STAFF" GET /studio/overview)"
+check "generar borrador desde tema" 201 "$(req "$STAFF" POST /studio/lesson-drafts '{"topic":"El club de astronomía"}')"
+DRAFT=$(field "d['id']")
+check "borrador en estado draft" draft "$(field "d['status']")"
+check "borrador INVISIBLE para el alumno" 404 "$(req "$DIEGO" POST "/enrollments/$ENR/sessions" "{\"lessonContractId\":\"$DRAFT\"}")"
+check "publicar tras revisión docente" 201 "$(req "$STAFF" POST "/studio/lessons/$DRAFT/decision" '{"action":"publish"}')"
+check "estado published" published "$(field "d['status']")"
+check "publicada: el alumno ya puede estudiarla" 201 "$(req "$DIEGO" POST "/enrollments/$ENR/sessions" "{\"lessonContractId\":\"$DRAFT\"}")"
+
 echo "=== 5. Aislamiento: Lucía no puede ver la inscripción de Diego ==="
 check "acceso cruzado denegado" 403 "$(req "$LUCIA" GET "/enrollments/$ENR")"
 

@@ -45,6 +45,9 @@ export default async function StaffPage({ params }: { params: Promise<{ locale: 
       <header className="material-bar sticky top-0 z-40 border-b border-line">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
           <Wordmark />
+          <a href={`/${locale}/studio`} className="text-[15px] font-medium text-primary">
+            Estudio de contenido
+          </a>
         </div>
       </header>
 

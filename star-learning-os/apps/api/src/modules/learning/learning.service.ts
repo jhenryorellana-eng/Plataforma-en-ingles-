@@ -58,7 +58,8 @@ export class LearningService {
         where: { enrollmentId: enrollment.id, completedAt: null, dueAt: { lte: now } },
       }),
       this.prisma.lessonContract.findMany({
-        where: { programVersionId: enrollment.programVersionId },
+        // Solo contenido publicado por el docente llega al alumno (§8.1).
+        where: { programVersionId: enrollment.programVersionId, status: 'published' },
         include: {
           unit: true,
           lessonCompetencies: { include: { competency: true } },
@@ -151,7 +152,7 @@ export class LearningService {
       throw new AppError('ENROLLMENT_NOT_ACTIVE', 409, 'La inscripción no está activa');
     }
     const lesson = await this.prisma.lessonContract.findFirst({
-      where: { id: lessonContractId, programVersionId: enrollment.programVersionId },
+      where: { id: lessonContractId, programVersionId: enrollment.programVersionId, status: 'published' },
     });
     if (!lesson) throw notFound('Lección no encontrada en tu versión del programa');
 

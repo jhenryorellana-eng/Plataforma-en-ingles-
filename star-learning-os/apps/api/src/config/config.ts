@@ -12,6 +12,8 @@ const configSchema = z.object({
   WEB_ORIGIN: z.string().default('http://localhost:3000'),
   SESSION_SECRET: z.string().min(8).default('dev-only-secret-change-in-production'),
   OPENAI_API_KEY: z.string().optional().default(''),
+  /** Alias lógico del modelo de texto para autoría (ADR-M009); vacío = plantillas. */
+  OPENAI_TEXT_MODEL: z.string().optional().default(''),
   REALTIME_MODEL_TUTOR_PRIMARY: z.string().default('gpt-realtime'),
   REALTIME_VOICE: z.string().default('marin'),
   ZDR_VERIFIED: z
@@ -26,6 +28,7 @@ export interface AppConfig {
   webOrigin: string;
   sessionSecret: string;
   openaiApiKey: string;
+  openaiTextModel: string;
   realtimeModelTutorPrimary: string;
   realtimeVoice: string;
   zdrVerified: boolean;
@@ -42,6 +45,7 @@ export function loadConfig(): AppConfig {
     webOrigin: parsed.WEB_ORIGIN,
     sessionSecret: parsed.SESSION_SECRET,
     openaiApiKey: parsed.OPENAI_API_KEY,
+    openaiTextModel: parsed.OPENAI_TEXT_MODEL,
     realtimeModelTutorPrimary: parsed.REALTIME_MODEL_TUTOR_PRIMARY,
     realtimeVoice: parsed.REALTIME_VOICE,
     zdrVerified: parsed.ZDR_VERIFIED,

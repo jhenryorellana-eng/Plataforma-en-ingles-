@@ -90,7 +90,11 @@ export class VoiceService {
     }
 
     const lesson = await this.prisma.lessonContract.findFirst({
-      where: { id: request.lessonContractId, programVersionId: enrollment.programVersionId },
+      where: {
+        id: request.lessonContractId,
+        programVersionId: enrollment.programVersionId,
+        status: 'published',
+      },
       include: { activities: { where: { kind: 'voice_mission' } }, unit: true },
     });
     if (!lesson || lesson.activities.length === 0) {

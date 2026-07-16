@@ -347,6 +347,7 @@ export class EnrollmentService {
           orderBy: { orderIndex: 'asc' },
           include: {
             lessonContracts: {
+              where: { status: 'published' },
               orderBy: { orderIndex: 'asc' },
               include: { lessonCompetencies: { include: { competency: true } } },
             },

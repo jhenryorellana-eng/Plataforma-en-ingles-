@@ -38,6 +38,13 @@
   - **StarMap 360 multietapa**: router (12) → módulo ajustado al nivel (3) → **muestra de Writing** con score heurístico que entra al perfil y a la regla de mínimo §7.4
   - Prueba técnica de micrófono/altavoz antes de voz (TEC-01) con fallback a modo texto (TLK-04)
   - Fixes: CORS PATCH, Content-Type en POST sin cuerpo
+- [x] 15. **Dashboard del Docente (Curriculum Studio, §8.1)** — smoke 55/55 + verificado en navegador:
+  - El docente sugiere un TEMA → el autor IA redacta la lección completa con la Metodología (objetivo observable, secuencia STAR, transferencia, writing con rúbrica, misión de voz con guion)
+  - El tema es CONTEXTO: las actividades se anclan a las competencias del mapa oficial — el estándar no cambia
+  - Flujo editorial real: borrador → revisión docente → publicar/descartar; el borrador es INVISIBLE para el alumno (404) hasta publicar (§4.2: quien crea no publica)
+  - Autor IA por adaptador: OpenAI (OPENAI_TEXT_MODEL) o plantillas locales sin API key
+  - Overview con cobertura de competencias y temario completo por unidad
+  - Estado editorial en el modelo (draft/published/retired) filtrado en today/path/sesiones/voz
 
 ### Arranque local (recordatorio)
 `pnpm install --ignore-scripts && pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm dev:api` + `pnpm dev:web`

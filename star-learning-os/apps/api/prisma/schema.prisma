@@ -377,19 +377,31 @@ model RubricVersion {
   @@schema("curriculum")
 }
 
+enum ContentStatus {
+  draft
+  published
+  retired
+
+  @@schema("curriculum")
+}
+
 model LessonContract {
-  id                   String @id @default(uuid(7)) @db.Uuid
-  programVersionId     String @db.Uuid
-  unitId               String @db.Uuid
+  id                   String        @id @default(uuid(7)) @db.Uuid
+  programVersionId     String        @db.Uuid
+  unitId               String        @db.Uuid
   code                 String
   objective            String
-  mentorMode           String @default("tutor")
-  correctionPolicy     String @default("delayed_then_recast")
-  translationPolicy    String @default("on_request_only")
-  immersionRatio       Float  @default(0.7)
-  timeboxSeconds       Int    @default(900)
+  mentorMode           String        @default("tutor")
+  correctionPolicy     String        @default("delayed_then_recast")
+  translationPolicy    String        @default("on_request_only")
+  immersionRatio       Float         @default(0.7)
+  timeboxSeconds       Int           @default(900)
   orderIndex           Int
-  evidenceRequirements Json   @default("{}")
+  evidenceRequirements Json          @default("{}")
+  /// Flujo editorial §8.1: la IA propone (draft), el docente publica.
+  status               ContentStatus @default(published)
+  createdBy            String        @default("seed")
+  sourceTopic          String?
 
   programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
   unit           Unit           @relation(fields: [unitId], references: [id])

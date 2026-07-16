@@ -11,6 +11,7 @@ import { FamilyModule } from './modules/family/family.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { PreviewModule } from './modules/preview/preview.module';
 import { ReviewModule } from './modules/review/review.module';
+import { StudioModule } from './modules/studio/studio.module';
 import { SafetyModule } from './modules/safety/safety.module';
 import { VoiceModule } from './modules/voice/voice.module';
 
@@ -28,6 +29,7 @@ import { VoiceModule } from './modules/voice/voice.module';
     SafetyModule,
     ReviewModule,
     PreviewModule,
+    StudioModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: SessionGuard }],
 })
