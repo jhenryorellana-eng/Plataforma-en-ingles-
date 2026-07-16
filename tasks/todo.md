@@ -50,6 +50,17 @@
 `pnpm install --ignore-scripts && pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm dev:api` + `pnpm dev:web`
 (los scripts postinstall se saltan a propósito: ver lessons.md sobre script-shell)
 
+## Decisión de foco declarada por Henry (2026-07-16)
+
+**Público objetivo:** jóvenes latinos en Estados Unidos + Latinoamérica; bidireccional
+inglés↔español; meta aspiracional: venir a estudiar a EE. UU. (TOEFL).
+- Es el insumo directo para **D01 (mercado del piloto)** — formalizarlo en Decisiones_para_concretar.
+- **Consecuencia legal**: operar con menores en EE. UU. activa el gate **COPPA + leyes estatales**
+  (Arquitectura §19.1) además del marco peruano. Añadir a la revisión legal (bloqueador #7).
+- En código: autor IA orientado a contextos de admisiones/becas/vida universitaria EE. UU.;
+  `spanish-path` sembrado como programa DRAFT (invisible en catálogo hasta gates §23.1).
+- Contenido demo fuera de foco (Canadá/astronomía) retirado vía flujo editorial.
+
 ## Bloqueadores externos (solo Starbiz puede resolverlos — NO son código)
 
 | # | Dependencia | Referencia | Estado |

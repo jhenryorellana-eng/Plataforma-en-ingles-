@@ -38,6 +38,24 @@ async function main(): Promise<void> {
     },
   });
 
+  // Vía bidireccional (Arquitectura Multilingüe): Spanish Path para jóvenes
+  // angloparlantes/latinos de herencia en EE. UU. Queda en DRAFT: invisible en
+  // catálogo hasta cumplir gates (equipo ELE, gold sets, COPPA — §19.1, §23.1).
+  await prisma.languageProgram.upsert({
+    where: { code: 'spanish-path' },
+    update: {},
+    create: {
+      code: 'spanish-path',
+      name: 'Spanish Path',
+      targetLanguage: 'es',
+      defaultSupportLanguage: 'en',
+      defaultInterfaceLocale: 'en-US',
+      defaultTargetVariety: 'es-419',
+      minimumAge: 12,
+      status: 'draft',
+    },
+  });
+
   await prisma.programTrack.upsert({
     where: { programVersionId_code: { programVersionId: version.id, code: 'toefl-45' } },
     update: {},
