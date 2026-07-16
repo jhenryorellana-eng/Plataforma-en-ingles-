@@ -1,32 +1,31 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Lenguaje Apple HIG: fondo agrupado, tarjetas blancas sin borde, paleta de sistema. */
-  --color-paper: #f2f2f7;
+  /* Estructura Apple + identidad Starbiz: luz cálida, índigo eléctrico y acentos vivos. */
+  --color-paper: #f5f4fb;
   --color-surface: #ffffff;
-  --color-mist: #f2f2f7;
-  --color-fill: #e9e9ee;
-  --color-line: rgba(60, 60, 67, 0.12);
-  --color-ink: #1c1c1e;
-  --color-dim: #86868b;
+  --color-mist: #f1f0f8;
+  --color-fill: #e8e7f2;
+  --color-line: rgba(60, 60, 90, 0.1);
+  --color-ink: #17172b;
+  --color-dim: #7c7c93;
   --color-primary: #5e5ce6;
   --color-primary-deep: #4b49d6;
   --color-primary-soft: rgba(94, 92, 230, 0.1);
   --color-blue: #0a84ff;
-  --color-teal: #30b0c7;
+  --color-teal: #17b8cd;
   --color-gold: #ff9f0a;
-  --color-gold-deep: #c77700;
-  --color-gold-soft: rgba(255, 159, 10, 0.12);
-  --color-ok: #34c759;
-  --color-ok-deep: #248a3d;
-  --color-ok-soft: rgba(52, 199, 89, 0.12);
+  --color-gold-deep: #b06e00;
+  --color-gold-soft: rgba(255, 159, 10, 0.13);
+  --color-ok: #2fbf5f;
+  --color-ok-deep: #1d8a42;
+  --color-ok-soft: rgba(47, 191, 95, 0.13);
   --color-warn: #ff9f0a;
-  --color-warn-soft: rgba(255, 159, 10, 0.12);
-  --color-risk: #ff3b30;
-  --color-risk-soft: rgba(255, 59, 48, 0.1);
+  --color-warn-soft: rgba(255, 159, 10, 0.13);
+  --color-risk: #ff453a;
+  --color-risk-soft: rgba(255, 69, 58, 0.11);
 }
 
-/* Una sola familia (peso = jerarquía), como hace Apple. */
 @theme inline {
   --font-display: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
@@ -41,61 +40,140 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Revelado suave al cargar. */
+/* Malla de marca: lavanda y turquesa respirando en las esquinas superiores. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(560px 380px at 8% -6%, rgba(124, 122, 255, 0.16), transparent 62%),
+    radial-gradient(620px 420px at 96% -8%, rgba(23, 184, 205, 0.12), transparent 62%),
+    radial-gradient(480px 360px at 85% 108%, rgba(94, 92, 230, 0.08), transparent 60%);
+  animation: mesh-drift 22s ease-in-out infinite alternate;
+}
+
+@keyframes mesh-drift {
+  from {
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(1.5%, 2%, 0) scale(1.05);
+  }
+}
+
+/* Degradado firma de la marca. */
+.grad-brand {
+  background-image: linear-gradient(120deg, #7c7aff 0%, #5e5ce6 48%, #17b8cd 125%);
+}
+
+.text-gradient {
+  background-image: linear-gradient(100deg, #6d6bff 0%, #5e5ce6 45%, #17b8cd 110%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-gradient {
+  background-image: linear-gradient(115deg, #7c7aff 0%, #5e5ce6 55%, #4b49d6 100%);
+  box-shadow:
+    0 10px 26px rgba(94, 92, 230, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition: filter 0.2s ease, box-shadow 0.25s ease, transform 0.12s ease;
+}
+.btn-gradient:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 12px 32px rgba(94, 92, 230, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.btn-gradient:active {
+  transform: translateY(1px);
+}
+
+/* Marco degradado fino para tarjetas protagonistas. */
+.frame-gradient {
+  background-image: linear-gradient(130deg, rgba(124, 122, 255, 0.55), rgba(23, 184, 205, 0.45));
+  padding: 1.5px;
+  border-radius: 22px;
+}
+
+/* Barras traslúcidas (materiales iOS). */
+.material-bar {
+  background: rgba(248, 247, 253, 0.85);
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
+}
+
+/* Revelado suave. */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(9px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
-.rise {
-  animation: rise 0.45s cubic-bezier(0.25, 0.6, 0.2, 1) both;
-}
+.rise { animation: rise 0.45s cubic-bezier(0.25, 0.6, 0.2, 1) both; }
 .rise-1 { animation-delay: 0.05s; }
 .rise-2 { animation-delay: 0.1s; }
 .rise-3 { animation-delay: 0.15s; }
 .rise-4 { animation-delay: 0.2s; }
 
-/* Barra superior y tab bar traslúcidas (materiales iOS). */
-.material-bar {
-  background: rgba(249, 249, 251, 0.82);
-  backdrop-filter: blur(20px) saturate(1.8);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+/* Estrella flotante de los héroes. */
+@keyframes star-float {
+  0%, 100% {
+    transform: rotate(-8deg) translateY(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-8px);
+  }
+}
+.star-float {
+  animation: star-float 7s ease-in-out infinite;
 }
 
-/* Anillos: la transición del trazo anima el llenado. */
 .ring-progress {
   transition: stroke-dashoffset 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
 }
 
-/* Pantalla de voz: escenario oscuro tipo FaceTime. */
+/* Escenario de llamada: profundidad índigo con auroras. */
 .call-stage {
-  background: radial-gradient(120% 90% at 50% 0%, #3a3a55 0%, #1c1c28 55%, #101016 100%);
+  background:
+    radial-gradient(420px 300px at 18% 8%, rgba(124, 122, 255, 0.35), transparent 60%),
+    radial-gradient(460px 340px at 85% 20%, rgba(23, 184, 205, 0.22), transparent 62%),
+    radial-gradient(120% 95% at 50% 0%, #34345c 0%, #1d1d33 55%, #101020 100%);
 }
 
 @keyframes mentor-breathe {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(94, 92, 230, 0.4), 0 18px 50px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 0 0 rgba(124, 122, 255, 0.45), 0 18px 55px rgba(0, 0, 0, 0.5);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 18px rgba(94, 92, 230, 0), 0 18px 50px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 0 22px rgba(124, 122, 255, 0), 0 18px 55px rgba(0, 0, 0, 0.5);
     transform: scale(1.03);
   }
 }
-
 .mentor-avatar {
-  background: linear-gradient(135deg, #7d7aff 0%, #5e5ce6 55%, #3634a3 100%);
+  background: linear-gradient(135deg, #8f8dff 0%, #5e5ce6 52%, #2fb6cf 130%);
   animation: mentor-breathe 3.2s ease-in-out infinite;
 }
 .mentor-avatar-paused {
   animation: none;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes halo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.mentor-halo {
+  border: 1.5px dashed rgba(160, 158, 255, 0.4);
+  animation: halo-spin 24s linear infinite;
 }
 
 ::selection {

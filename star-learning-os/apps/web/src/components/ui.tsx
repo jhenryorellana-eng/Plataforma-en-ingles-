@@ -65,10 +65,23 @@ export function Row({
   );
 }
 
-/** Tesela de icono con color, como en Ajustes de iOS. */
+/** Tesela de icono con degradado de marca (estructura Ajustes, identidad Starbiz). */
+const TILE_GRADIENTS: Record<string, string> = {
+  'bg-primary': 'linear-gradient(135deg,#8f8dff,#4b49d6)',
+  'bg-blue': 'linear-gradient(135deg,#57a8ff,#0a6fe0)',
+  'bg-teal': 'linear-gradient(135deg,#3fd2e6,#0f96ad)',
+  'bg-gold': 'linear-gradient(135deg,#ffc25c,#f08a00)',
+  'bg-ok': 'linear-gradient(135deg,#55d97e,#1d9c4b)',
+  'bg-risk': 'linear-gradient(135deg,#ff7a70,#e02d22)',
+  'bg-fill': 'linear-gradient(135deg,#d9d8ea,#b9b8cf)',
+};
+
 export function IconTile({ name, color = 'bg-primary' }: { name: IconName; color?: string }) {
   return (
-    <span className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] ${color}`}>
+    <span
+      className="flex size-8 shrink-0 items-center justify-center rounded-[9px] shadow-[0_2px_6px_rgba(23,23,43,0.18)]"
+      style={{ backgroundImage: TILE_GRADIENTS[color] ?? TILE_GRADIENTS['bg-primary'] }}
+    >
       <Icon name={name} className="size-4.5 text-white" />
     </span>
   );
@@ -137,19 +150,23 @@ export function Meter({
   );
 }
 
-/** Anillo de progreso estilo Actividad de Apple. */
+let ringGradientCounter = 0;
+
+/** Anillo de progreso estilo Actividad de Apple, con trazo degradado opcional. */
 export function Ring({
   value,
   size = 56,
   strokeWidth = 7,
   color = '#5e5ce6',
-  track = '#e9e9ee',
+  colorTo,
+  track = '#e8e7f2',
   children,
 }: {
   value: number | null;
   size?: number;
   strokeWidth?: number;
   color?: string;
+  colorTo?: string;
   track?: string;
   children?: ReactNode;
 }) {
@@ -157,9 +174,18 @@ export function Ring({
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(1, Math.max(0, value ?? 0));
   const offset = circumference * (1 - clamped);
+  const gradientId = colorTo ? `ring-grad-${(ringGradientCounter += 1)}` : null;
   return (
     <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
+        {gradientId && (
+          <defs>
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={color} />
+              <stop offset="100%" stopColor={colorTo} />
+            </linearGradient>
+          </defs>
+        )}
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={track} strokeWidth={strokeWidth} />
         <circle
           className="ring-progress"
@@ -167,7 +193,7 @@ export function Ring({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={color}
+          stroke={gradientId ? `url(#${gradientId})` : color}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -184,7 +210,7 @@ export function RingCluster({
   rings,
   size = 168,
 }: {
-  rings: Array<{ value: number | null; color: string }>;
+  rings: Array<{ value: number | null; color: string; colorTo?: string }>;
   size?: number;
 }) {
   const strokeWidth = 13;
@@ -195,7 +221,13 @@ export function RingCluster({
         const ringSize = size - index * 2 * (strokeWidth + gap);
         return (
           <span key={index} className="absolute inset-0 flex items-center justify-center">
-            <Ring value={ring.value} size={ringSize} strokeWidth={strokeWidth} color={ring.color} />
+            <Ring
+              value={ring.value}
+              size={ringSize}
+              strokeWidth={strokeWidth}
+              color={ring.color}
+              colorTo={ring.colorTo}
+            />
           </span>
         );
       })}
@@ -216,9 +248,9 @@ export function StarMark({ className = 'size-4 text-primary' }: { className?: st
 export function AppIcon({ className = 'size-16' }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-[22%] bg-gradient-to-br from-[#7d7aff] to-[#4b49d6] shadow-[0_8px_24px_rgba(94,92,230,0.35)] ${className}`}
+      className={`grad-brand inline-flex items-center justify-center rounded-[24%] shadow-[0_10px_28px_rgba(94,92,230,0.4)] ring-1 ring-white/40 ${className}`}
     >
-      <StarMark className="size-1/2 text-white" />
+      <StarMark className="size-1/2 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]" />
     </span>
   );
 }
@@ -344,7 +376,7 @@ export function Icon({ name, className = 'size-5' }: { name: IconName; className
   );
 }
 
-/** Avatar con iniciales, plano y limpio. */
+/** Avatar con iniciales y anillo de marca. */
 export function InitialsAvatar({ name, className = '' }: { name: string; className?: string }) {
   const initials = name
     .split(/\s+/)
@@ -353,10 +385,12 @@ export function InitialsAvatar({ name, className = '' }: { name: string; classNa
     .join('');
   return (
     <span
-      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[15px] font-semibold text-primary ${className}`}
+      className={`grad-brand inline-flex size-11 shrink-0 items-center justify-center rounded-full p-[2px] ${className}`}
       aria-hidden
     >
-      {initials}
+      <span className="flex size-full items-center justify-center rounded-full bg-surface text-[14px] font-bold text-primary">
+        {initials}
+      </span>
     </span>
   );
 }

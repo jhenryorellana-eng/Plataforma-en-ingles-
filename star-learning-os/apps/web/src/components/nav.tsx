@@ -29,11 +29,17 @@ export function BottomNav({ locale, programCode }: { locale: string; programCode
             <Link
               key={tab.slug}
               href={href}
-              className={`flex min-w-14 flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium transition-colors ${
-                active ? 'text-primary' : 'text-[#98989f] hover:text-dim'
+              className={`flex min-w-14 flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold transition-colors ${
+                active ? 'text-primary' : 'text-[#9a9aae] hover:text-dim'
               }`}
             >
-              <Icon name={tab.icon} className="size-6" />
+              <span
+                className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                  active ? 'bg-primary-soft' : ''
+                }`}
+              >
+                <Icon name={tab.icon} className="size-[22px]" />
+              </span>
               {tab.label}
             </Link>
           );

@@ -55,6 +55,25 @@ clave, usan **OpenAI Realtime por WebRTC** con secreto efímero emitido por el s
 - Progreso en 4 métricas separadas: cobertura, dominio, retención, readiness.
 - Multi-programa desde el día 1: todo cuelga de `enrollment` + `program_version`.
 
+## PWA y app nativa (Capacitor)
+
+**PWA**: la web ya es instalable — manifest en `/manifest.webmanifest`, iconos SVG
+(normal + maskable) y `display: standalone`. En Chrome/Edge: menú → "Instalar app".
+
+**App nativa Android/iOS** (Capacitor 8, proyecto en `apps/web/android/`):
+
+```bash
+# 1. Apunta el shell nativo a tu servidor Next (ver .env.example):
+#    Emulador Android: CAP_SERVER_URL=http://10.0.2.2:3000
+#    Dispositivo real:  CAP_SERVER_URL=http://<IP-de-tu-PC>:3000
+CAP_SERVER_URL=http://10.0.2.2:3000 pnpm --filter @star/web cap:sync
+pnpm --filter @star/web cap:open:android   # abre Android Studio → Run
+# iOS (requiere macOS): pnpm --filter @star/web cap:add:ios && cap:open:ios
+```
+
+En producción, `CAP_SERVER_URL` es la URL pública HTTPS desplegada; sin ella, la app
+muestra el shell offline de `capacitor-shell/`.
+
 ## Verificación
 
 ```bash

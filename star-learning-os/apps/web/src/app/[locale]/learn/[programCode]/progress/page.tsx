@@ -13,10 +13,10 @@ const SKILL_LABELS: Record<string, string> = {
 };
 
 const RING_COLORS = {
-  coverage: '#0a84ff',
-  mastery: '#5e5ce6',
-  retention: '#30b0c7',
-  readiness: '#34c759',
+  coverage: { from: '#57a8ff', to: '#0a6fe0' },
+  mastery: { from: '#8f8dff', to: '#4b49d6' },
+  retention: { from: '#3fd2e6', to: '#0f96ad' },
+  readiness: { from: '#55d97e', to: '#1d9c4b' },
 } as const;
 
 export default async function ProgressPage({
@@ -32,10 +32,10 @@ export default async function ProgressPage({
   const progress = await apiFetch<ProgressResponse>(`/enrollments/${enrollment.id}/progress`);
 
   const legend = [
-    { key: 'Cobertura', value: progress.coverage, color: RING_COLORS.coverage, hint: 'del mapa recorrido' },
-    { key: 'Dominio', value: progress.mastery, color: RING_COLORS.mastery, hint: 'demostrado con evidencia' },
-    { key: 'Retención', value: progress.retention, color: RING_COLORS.retention, hint: 'sigue fresco en memoria' },
-    { key: 'Readiness', value: progress.readiness, color: RING_COLORS.readiness, hint: 'simulacros S4 · aún no aplica' },
+    { key: 'Cobertura', value: progress.coverage, ...RING_COLORS.coverage, hint: 'del mapa recorrido' },
+    { key: 'Dominio', value: progress.mastery, ...RING_COLORS.mastery, hint: 'demostrado con evidencia' },
+    { key: 'Retención', value: progress.retention, ...RING_COLORS.retention, hint: 'sigue fresco en memoria' },
+    { key: 'Readiness', value: progress.readiness, ...RING_COLORS.readiness, hint: 'simulacros S4 · aún no aplica' },
   ];
 
   return (
@@ -51,16 +51,19 @@ export default async function ProgressPage({
         <div className="flex items-center gap-6">
           <RingCluster
             size={172}
-            rings={legend.map((entry) => ({ value: entry.value, color: entry.color }))}
+            rings={legend.map((entry) => ({ value: entry.value, color: entry.from, colorTo: entry.to }))}
           />
           <ul className="flex min-w-0 flex-1 flex-col gap-3">
             {legend.map((entry) => (
               <li key={entry.key} className="flex items-baseline gap-2.5">
-                <span className="size-2.5 shrink-0 translate-y-[-1px] rounded-full" style={{ backgroundColor: entry.color }} />
+                <span
+                  className="size-2.5 shrink-0 translate-y-[-1px] rounded-full"
+                  style={{ backgroundImage: `linear-gradient(135deg, ${entry.from}, ${entry.to})` }}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-[15px] font-semibold text-ink">{entry.key}</span>
-                    <span className="text-[15px] font-semibold tabular-nums" style={{ color: entry.color }}>
+                    <span className="text-[15px] font-bold tabular-nums" style={{ color: entry.to }}>
                       {entry.value === null ? '—' : `${Math.round(entry.value * 100)}%`}
                     </span>
                   </div>

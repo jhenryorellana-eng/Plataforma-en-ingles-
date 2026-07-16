@@ -40,8 +40,8 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
         <AppIcon className="size-20" />
-        <h1 className="mt-6 text-[32px] font-extrabold leading-tight tracking-tight text-ink">
-          StarbizAcademy
+        <h1 className="mt-6 text-[34px] font-extrabold leading-tight tracking-tight text-ink">
+          Starbiz<span className="text-gradient">Academy</span>
         </h1>
         <p className="mt-2 max-w-[30ch] text-[16px] leading-relaxed text-dim">
           Tu ruta medible desde tu nivel real hasta tu meta en inglés.

@@ -39,8 +39,8 @@ export default async function TodayPage({
     <div className="flex flex-col gap-7">
       <header className="rise">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-dim">{dateLabel}</p>
-        <h1 className="mt-0.5 text-[34px] font-extrabold leading-tight tracking-tight text-ink">
-          Hola, {firstName}
+        <h1 className="mt-0.5 text-[36px] font-extrabold leading-tight tracking-tight text-ink">
+          Hola, <span className="text-gradient">{firstName}</span>
         </h1>
       </header>
 
