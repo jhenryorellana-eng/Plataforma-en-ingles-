@@ -84,10 +84,15 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
      diagnóstico, familia demo (6 usuarios @demo.starbiz.pe — purgar antes del lanzamiento).
    - EXCLUIDO a propósito: lecciones de astronomía duplicadas del smoke (encoding roto),
      units U02/U04/U06/U07, y toda la data transaccional de pruebas.
-   - Falta conectar la API: Henry copia el string "Session pooler" del dashboard
-     (Connect) a `.env` como DATABASE_URL — nunca por chat ni al repo (.env.example
-     tiene la forma). La API en Railway/Render usará ese mismo string; región del
-     hosting: São Paulo o us-east (BD está en sa-east-1).
+   - ✅ API conectada y VERIFICADA contra Supabase (2026-07-16): login staff/learner,
+     Studio overview (4 publicadas, 6/6 competencias), catálogo (draft oculto),
+     preview público (5 ítems), UTF-8 íntegro. Conexión Session pooler ~1.7 s el
+     primer handshake TLS desde Perú; la API en producción irá en la misma región.
+   - ⚠️ PENDIENTE DE SEGURIDAD: la contraseña de la BD quedó pegada en el chat
+     (2026-07-16) — ROTARLA en Supabase (Settings → Database → Reset) y actualizar
+     .env/hosting ANTES del lanzamiento público.
+   - El .env de la raíz ahora apunta a Supabase (la línea local quedó comentada
+     para volver al Postgres embebido cuando se quiera).
 2. ☐ **Auth real (hallazgo crítico 2026-07-16)**: el AuthService actual es SOLO dev —
    sin contraseña, register devuelve el usuario existente por email (= cualquiera entra
    conociendo el email), dev-login crea usuarios con cualquier rol, cookie `secure:false`.
