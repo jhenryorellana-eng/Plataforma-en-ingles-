@@ -66,6 +66,29 @@ inglés↔español; meta aspiracional: venir a estudiar a EE. UU. (TOEFL).
   `spanish-path` sembrado como programa DRAFT (invisible en catálogo hasta gates §23.1).
 - Contenido demo fuera de foco (Canadá/astronomía) retirado vía flujo editorial.
 
+## Producción real — decisión Supabase (Henry, 2026-07-16)
+
+Henry decidió usar **Supabase** como base de datos de producción (reemplaza a Cloud SQL
+del Stack v1.0 §17 para esta fase; GCP queda para cuando se active esa cuenta). La
+arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_URL`.
+
+**Plan de subida (en orden):**
+1. ⏳ Proyecto Supabase dedicado `star-learning-os` — BLOQUEADO: cuenta jhenry.orellana@gmail.com
+   en el límite de 2 proyectos free (uno es Starbooks con data real — NO compartir por
+   salvaguarda de menores). Henry está gestionando el acceso ("yo te daré el acceso").
+   Al tenerlo: `prisma migrate deploy` + seed + RLS en todas las tablas + smoke.
+2. ☐ **Auth real (hallazgo crítico 2026-07-16)**: el AuthService actual es SOLO dev —
+   sin contraseña, register devuelve el usuario existente por email (= cualquiera entra
+   conociendo el email), dev-login crea usuarios con cualquier rol, cookie `secure:false`.
+   Reemplazo: **Supabase Auth** (email+password, verificación, reset) detrás de la misma
+   interfaz; columna `authId` en User; dev-login solo con `NODE_ENV=development`.
+3. ☐ Hosting API NestJS: Railway/Render (proceso persistente — el outbox worker lo
+   necesita; serverless NO sirve tal cual). Requiere cuenta de Henry.
+4. ☐ Web en Vercel con **rewrite `/v1/* → API`** (mismo dominio = cookies same-site,
+   sin SameSite=None). Hobby prohíbe uso comercial → Pro $20/mes para producción.
+5. ☐ Config producción: SESSION_SECRET fuerte, cookies secure, CORS al dominio real,
+   OPENAI_API_KEY (voz real) + OPENAI_TEXT_MODEL (autor IA real).
+
 ## Bloqueadores externos (solo Starbiz puede resolverlos — NO son código)
 
 | # | Dependencia | Referencia | Estado |
