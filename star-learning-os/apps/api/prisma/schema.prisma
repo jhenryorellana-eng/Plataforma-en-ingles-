@@ -5,6 +5,8 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["multiSchema"]
+  // native = esta máquina; rhel = runtime Linux de Vercel Functions.
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
