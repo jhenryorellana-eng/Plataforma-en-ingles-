@@ -113,12 +113,29 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
    - ⚠️ ROTACIÓN pre-lanzamiento (ampliada): contraseña de BD **y** SUPABASE_SECRET_KEY
      **y** legacy service_role JWT — los tres se pegaron en el chat (2026-07-16).
      En el dashboard: Reset database password + rotar/deshabilitar API keys legacy.
-3. ☐ Hosting API NestJS: Railway/Render (proceso persistente — el outbox worker lo
-   necesita; serverless NO sirve tal cual). Requiere cuenta de Henry.
-4. ☐ Web en Vercel con **rewrite `/v1/* → API`** (mismo dominio = cookies same-site,
-   sin SameSite=None). Hobby prohíbe uso comercial → Pro $20/mes para producción.
-5. ☐ Config producción: SESSION_SECRET fuerte, cookies secure, CORS al dominio real,
-   OPENAI_API_KEY (voz real) + OPENAI_TEXT_MODEL (autor IA real).
+3. ✅ **API en Railway** (2026-07-17): proyecto "starbiz", servicio conectado al repo
+   (rootDirectory star-learning-os, build pnpm filtrado, start node apps/api/dist/main.js,
+   PORT/API_PORT 4000, SESSION_SECRET fuerte generado, NODE_ENV=production). Dominio:
+   plataforma-en-ingles-production.up.railway.app. Auto-deploy por push a main ✓.
+   Todo configurado vía API GraphQL de Railway con el token de Henry (rotar, en chat).
+   Intento previo de API serverless en Vercel: descartado con evidencia (bundle
+   incompleto en monorepo pnpm + cap 60s degradaría el autor IA + sin worker).
+   Nota: queda un servicio vacío "pacific-consideration" que Henry puede borrar.
+4. ✅ **Web conectada** (2026-07-17): rewrite same-origin `/v1/* → Railway` en
+   vercel.json (cookies first-party en todos los navegadores) + NEXT_PUBLIC_API_URL.
+   Gotchas resueltos: framework null del proyecto (vercel.json), .npmrc con ruta
+   Windows rompía pnpm en Linux, `vercel env add` con printf sin \n guarda VACÍO
+   (usar echo), build cache no invalida por env nueva (--force).
+5. ✅ **RECORRIDO E2E EN PRODUCCIÓN VERIFICADO** (2026-07-17, Playwright): registro
+   de Mateo Quispe (14) con contraseña real → onboarding apoderado con código →
+   registro de Carmen → vínculo → 4 consentimientos → login con contraseña →
+   asentimiento → inscripción → StarMap 360 corriendo (Pregunta 1 de 16).
+   Capturas v10/v11. Cuentas de prueba vivas para que Henry explore:
+   mateo.prueba@starbiz-test.pe / carmen.prueba@starbiz-test.pe.
+   **Hallazgo y fix en caliente**: la inscripción no exigía el asentimiento juvenil
+   (CNS-02) — gate añadido al enrollment + check negativo en smoke (60/60).
+   ☐ Pendiente config: OPENAI_API_KEY en Railway cuando Henry cargue créditos.
+   ☐ Vercel Hobby prohíbe uso comercial → Pro $20/mes al cobrar.
 
 ## Bloqueadores externos (solo Starbiz puede resolverlos — NO son código)
 
