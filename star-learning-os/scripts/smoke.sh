@@ -46,6 +46,7 @@ check "registro apoderado" 201 "$(req "$PADRE" POST /auth/register-guardian "{\"
 check "aceptar invitación con código" 201 "$(req "$PADRE" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
 NICOID=$(req "$NICO" GET /auth/me >/dev/null; field "d['id']")
 check "apoderado otorga consentimientos" 201 "$(req "$PADRE" POST /consents "{\"learnerId\":\"$NICOID\",\"purposes\":[\"service\",\"ai_voice\"]}")"
+check "inscripción bloqueada sin asentimiento (CNS-02)" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
 check "asentimiento del alumno" 201 "$(req "$NICO" POST /assents '{}')"
 check "onboarding listo para inscribir" "True" "$(req "$NICO" GET /onboarding/status >/dev/null; field "d['readyToEnroll']")"
 check "ahora sí puede inscribirse" 201 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"

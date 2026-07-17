@@ -72,6 +72,14 @@ export class EnrollmentService {
           purpose: 'service',
         });
       }
+      // El asentimiento del propio menor es requisito de inscripción (CNS-02),
+      // no solo de voz: la autorización del adulto no sustituye su comprensión.
+      const assent = await this.prisma.youthAssent.findFirst({
+        where: { learnerId: actor.id },
+      });
+      if (!assent) {
+        throw new AppError('ASSENT_REQUIRED', 403, 'Primero confirma que entiendes cómo funciona la plataforma');
+      }
     }
 
     const existing = await this.prisma.enrollment.findFirst({
