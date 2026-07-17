@@ -41,12 +41,17 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return (await response.json()) as T;
 }
 
-/** Devuelve null en 401 para poder redirigir a login sin try/catch repetido. */
+/**
+ * Devuelve null cuando no hay sesión verificable: 401/403, o la API
+ * inalcanzable (error de red). La puerta de entrada degrada a /login,
+ * jamás a un 500.
+ */
 export async function apiFetchOrNull<T>(path: string, init?: RequestInit): Promise<T | null> {
   try {
     return await apiFetch<T>(path, init);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return null;
+    if (!(error instanceof ApiError)) return null;
     throw error;
   }
 }
