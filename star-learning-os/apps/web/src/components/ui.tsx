@@ -1,8 +1,5 @@
 import type { ReactNode } from 'react';
 
-const CARD_SHADOW =
-  'shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_1px_2px_rgba(21,21,42,0.05),0_12px_28px_-16px_rgba(21,21,42,0.18)]';
-
 /** Tarjeta iOS premium: blanca, luz interior superior y sombra en dos capas. */
 export function Card({
   children,
@@ -12,14 +9,14 @@ export function Card({
   className?: string;
   accent?: boolean;
 }) {
-  return <div className={`rounded-2xl bg-surface ${CARD_SHADOW} ${className}`}>{children}</div>;
+  return <div className={`card-shadow rounded-2xl bg-surface ${className}`}>{children}</div>;
 }
 
 /** Grupo de filas estilo Ajustes: tarjeta con separadores hairline. */
 export function Group({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`overflow-hidden rounded-2xl bg-surface ${CARD_SHADOW} [&>*+*]:border-t [&>*+*]:border-line ${className}`}
+      className={`card-shadow overflow-hidden rounded-2xl bg-surface [&>*+*]:border-t [&>*+*]:border-line ${className}`}
     >
       {children}
     </div>
@@ -93,10 +90,18 @@ const TILE_GRADIENTS: Record<string, string> = {
   'bg-fill': 'linear-gradient(135deg,#d9d8ea,#b9b8cf)',
 };
 
-export function IconTile({ name, color = 'bg-primary' }: { name: IconName; color?: string }) {
+export function IconTile({
+  name,
+  color = 'bg-primary',
+  className = '',
+}: {
+  name: IconName;
+  color?: string;
+  className?: string;
+}) {
   return (
     <span
-      className="flex size-8 shrink-0 items-center justify-center rounded-[9px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_8px_rgba(23,23,43,0.22)]"
+      className={`flex size-8 shrink-0 items-center justify-center rounded-[9px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_8px_rgba(23,23,43,0.22)] ${className}`}
       style={{ backgroundImage: TILE_GRADIENTS[color] ?? TILE_GRADIENTS['bg-primary'] }}
     >
       <Icon name={name} className="size-4.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]" />
@@ -176,7 +181,7 @@ export function Ring({
   strokeWidth = 7,
   color = '#5e5ce6',
   colorTo,
-  track = '#e8e7f2',
+  track = 'var(--color-fill)',
   children,
 }: {
   value: number | null;
@@ -307,7 +312,12 @@ export type IconName =
   | 'arrow'
   | 'chevron'
   | 'book'
-  | 'pencil';
+  | 'pencil'
+  | 'logout'
+  | 'flame'
+  | 'sun'
+  | 'moon'
+  | 'lock';
 
 /** Iconografía propia en SVG (trazo 1.8, sin librerías). */
 export function Icon({ name, className = 'size-5' }: { name: IconName; className?: string }) {
@@ -386,6 +396,28 @@ export function Icon({ name, className = 'size-5' }: { name: IconName; className
         <path d="M13.5 6.5l3 3" />
       </>
     ),
+    logout: (
+      <>
+        <path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" />
+        <path d="M10 17l5-5-5-5M15 12H3" />
+      </>
+    ),
+    flame: (
+      <path d="M12 2c1.2 4.2-4.5 6.2-4.5 11.2A4.7 4.7 0 0 0 12 18a4.7 4.7 0 0 0 4.5-4.8c0-2-1-3.4-1-3.4s2.8 1.6 2.8 4.9A7.3 7.3 0 1 1 4 14.7C4 8.9 10.4 7 12 2z" />
+    ),
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </>
+    ),
+    moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+    lock: (
+      <>
+        <rect x="5" y="11" width="14" height="10" rx="2.5" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </>
+    ),
   };
   return (
     <svg
@@ -419,5 +451,32 @@ export function InitialsAvatar({ name, className = '' }: { name: string; classNa
         {initials}
       </span>
     </span>
+  );
+}
+
+/** Estado vacío diseñado: ícono con aura, título, cuerpo y acción opcional. */
+export function EmptyState({
+  icon,
+  iconColor = 'bg-primary',
+  title,
+  body,
+  action,
+}: {
+  icon: IconName;
+  iconColor?: string;
+  title: string;
+  body: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 py-12 text-center">
+      <span className="relative inline-flex items-center justify-center">
+        <span className="halo-ring absolute -inset-3 rounded-full" aria-hidden />
+        <IconTile name={icon} color={iconColor} className="size-12 rounded-2xl [&>svg]:size-6" />
+      </span>
+      <p className="mt-5 text-[18px] font-bold tracking-tight text-ink">{title}</p>
+      <p className="mt-1.5 max-w-[40ch] text-[14px] leading-relaxed text-dim">{body}</p>
+      {action && <div className="mt-5">{action}</div>}
+    </div>
   );
 }

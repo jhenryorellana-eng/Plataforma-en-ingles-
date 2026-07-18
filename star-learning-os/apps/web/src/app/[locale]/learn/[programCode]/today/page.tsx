@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import type { MeResponse, TodayResponse } from '@star/contracts';
 import { apiFetch } from '@/lib/api';
 import { resolveEnrollment } from '@/lib/enrollment';
-import { Group, Icon, Row, SectionHeader } from '@/components/ui';
+import { Group, IconTile, Ring, Row, SectionHeader } from '@/components/ui';
 import { StartLessonButton } from '@/components/start-lesson-button';
 
 export default async function TodayPage({
@@ -34,6 +34,7 @@ export default async function TodayPage({
   const primaryBlock = today.blocks.find((block) => block.kind === 'lesson') ?? today.blocks[0];
   const voiceBlock = today.blocks.find((block) => block.kind === 'voice_mission');
   const reviewBlock = today.blocks.find((block) => block.kind === 'review');
+  const totalMinutes = today.blocks.reduce((sum, block) => sum + block.estimatedMinutes, 0);
 
   return (
     <div className="flex flex-col gap-7">
@@ -42,115 +43,133 @@ export default async function TodayPage({
         <h1 className="mt-0.5 text-[36px] font-extrabold leading-tight tracking-tight text-ink">
           Hola, <span className="text-gradient">{firstName}</span>
         </h1>
-      </header>
-
-      {primaryBlock && primaryBlock.lessonContractId && (
-        <div className="rise rise-1">
-          <StartLessonButton
-            locale={locale}
-            programCode={programCode}
-            enrollmentId={enrollment.id}
-            lessonContractId={primaryBlock.lessonContractId}
-            label={primaryBlock.title}
-            sublabel={`${primaryBlock.description} · ${primaryBlock.estimatedMinutes} min`}
-          />
-        </div>
-      )}
-
-      <section className="rise rise-2">
-        <SectionHeader>Tu día</SectionHeader>
-        <Group>
-          {voiceBlock && (
-            <Link href={`/${locale}/learn/${programCode}/voice`} className="block transition-colors hover:bg-mist/60">
-              <Row
-                icon="mic"
-                iconColor="bg-teal"
-                title={voiceBlock.title}
-                subtitle={voiceBlock.description}
-                trailing={`${voiceBlock.estimatedMinutes} min`}
-                chevron
-              />
-            </Link>
-          )}
-          {reviewBlock && (
-            <Link href={`/${locale}/learn/${programCode}/review`} className="block transition-colors hover:bg-mist/60">
-              <Row
-                icon="review"
-                iconColor="bg-gold"
-                title="Repasos pendientes"
-                subtitle={reviewBlock.description}
-                trailing={`${reviewBlock.dueCount ?? ''}`}
-                chevron
-              />
-            </Link>
-          )}
-          <Link href={`/${locale}/learn/${programCode}/path`} className="block transition-colors hover:bg-mist/60">
-            <Row
-              icon="route"
-              iconColor="bg-blue"
-              title="Tu siguiente hito"
-              subtitle={today.nextMilestone}
-              chevron
-            />
-          </Link>
-        </Group>
-        {today.blocks.length === 0 && (
-          <p className="mt-3 px-5 text-[13px] text-dim">
-            Estás al día. La constancia vale más que la maratón.
+        {today.blocks.length > 0 && (
+          <p className="mt-1 text-[15px] text-dim">
+            {today.blocks.length} {today.blocks.length === 1 ? 'actividad' : 'actividades'} · ~
+            {totalMinutes} min para hoy
           </p>
         )}
-      </section>
+      </header>
 
-      <section className="rise rise-3">
-        <SectionHeader>Esta semana</SectionHeader>
-        <Group>
-          <Row
-            icon="today"
-            iconColor="bg-primary"
-            title="Meta semanal"
-            trailing={<span className="font-semibold text-ink">{today.weeklyGoalHours} h</span>}
-          />
-          <div className="px-4 py-3">
-            <div className="flex items-center gap-3.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-teal">
-                <Icon name="mic" className="size-4.5 text-white" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-[16px] text-ink">Voz con tu Mentor</p>
-                  <p className="text-[15px] font-semibold tabular-nums text-ink">
-                    {today.voice.usedMinutes}
-                    <span className="font-normal text-dim"> / {today.voice.includedMinutes} min</span>
-                  </p>
-                </div>
-                <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-fill">
-                  <div
-                    className={`h-full rounded-full transition-[width] duration-700 ${
-                      voiceRatio >= 0.9 ? 'bg-risk' : voiceRatio >= 0.7 ? 'bg-warn' : 'bg-teal'
-                    }`}
-                    style={{ width: `${Math.min(100, voiceRatio * 100)}%` }}
+      <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[1.55fr_1fr] lg:items-start lg:gap-9">
+        <div className="flex flex-col gap-7">
+          {primaryBlock && primaryBlock.lessonContractId && (
+            <div className="rise rise-1">
+              <StartLessonButton
+                locale={locale}
+                programCode={programCode}
+                enrollmentId={enrollment.id}
+                lessonContractId={primaryBlock.lessonContractId}
+                label={primaryBlock.title}
+                sublabel={`${primaryBlock.description} · ${primaryBlock.estimatedMinutes} min`}
+              />
+            </div>
+          )}
+
+          <section className="rise rise-2">
+            <SectionHeader>Misiones de hoy</SectionHeader>
+            <Group>
+              {voiceBlock && (
+                <Link
+                  href={`/${locale}/learn/${programCode}/voice`}
+                  className="block transition-colors hover:bg-mist/60"
+                >
+                  <Row
+                    icon="mic"
+                    iconColor="bg-teal"
+                    title={voiceBlock.title}
+                    subtitle={voiceBlock.description}
+                    trailing={`${voiceBlock.estimatedMinutes} min`}
+                    chevron
                   />
-                </div>
+                </Link>
+              )}
+              {reviewBlock && (
+                <Link
+                  href={`/${locale}/learn/${programCode}/review`}
+                  className="block transition-colors hover:bg-mist/60"
+                >
+                  <Row
+                    icon="review"
+                    iconColor="bg-gold"
+                    title="Repasos pendientes"
+                    subtitle={reviewBlock.description}
+                    trailing={`${reviewBlock.dueCount ?? ''}`}
+                    chevron
+                  />
+                </Link>
+              )}
+              <Link
+                href={`/${locale}/learn/${programCode}/path`}
+                className="block transition-colors hover:bg-mist/60"
+              >
+                <Row
+                  icon="route"
+                  iconColor="bg-blue"
+                  title="Tu siguiente hito"
+                  subtitle={today.nextMilestone}
+                  chevron
+                />
+              </Link>
+            </Group>
+            {today.blocks.length === 0 && (
+              <p className="mt-3 px-5 text-[13px] text-dim">
+                Estás al día. La constancia vale más que la maratón.
+              </p>
+            )}
+          </section>
+        </div>
+
+        <section className="rise rise-3">
+          <SectionHeader>Esta semana</SectionHeader>
+          <Group>
+            <div className="flex items-center gap-4 px-4 py-4">
+              <Ring
+                value={voiceRatio}
+                size={72}
+                strokeWidth={8}
+                color={voiceRatio >= 0.9 ? '#ff453a' : '#17b8cd'}
+                colorTo={voiceRatio >= 0.9 ? undefined : '#5e5ce6'}
+              >
+                <span className="text-[15px] font-extrabold tabular-nums text-ink">
+                  {Math.round(voiceRatio * 100)}%
+                </span>
+              </Ring>
+              <div className="min-w-0 flex-1">
+                <p className="text-[16px] font-semibold text-ink">Voz con tu Mentor</p>
+                <p className="text-[14px] tabular-nums text-dim">
+                  {today.voice.usedMinutes} de {today.voice.includedMinutes} min
+                </p>
                 {today.voice.alertLevel !== null && (
-                  <p className="mt-1.5 text-[12px] text-gold-deep">
-                    Aviso del {Math.round(today.voice.alertLevel * 100)}% enviado también a tu apoderado.
+                  <p className="mt-1 text-[12px] text-gold-deep">
+                    Aviso del {Math.round(today.voice.alertLevel * 100)}% enviado también a tu
+                    apoderado.
                   </p>
                 )}
               </div>
+              <IconTile name="mic" color="bg-teal" />
             </div>
-          </div>
-          <Row
-            icon="check"
-            iconColor="bg-ok"
-            title="Estado de trayectoria"
-            trailing={
-              <span className={`font-semibold ${today.trajectoryStatus === 'on_track' ? 'text-ok-deep' : 'text-gold-deep'}`}>
-                {today.trajectoryStatus === 'on_track' ? 'En ruta' : 'En riesgo'}
-              </span>
-            }
-          />
-        </Group>
-      </section>
+            <Row
+              icon="today"
+              iconColor="bg-primary"
+              title="Meta semanal"
+              trailing={<span className="font-semibold text-ink">{today.weeklyGoalHours} h</span>}
+            />
+            <Row
+              icon="check"
+              iconColor="bg-ok"
+              title="Estado de trayectoria"
+              trailing={
+                <span
+                  className={`font-semibold ${today.trajectoryStatus === 'on_track' ? 'text-ok-deep' : 'text-gold-deep'}`}
+                >
+                  {today.trajectoryStatus === 'on_track' ? 'En ruta' : 'En riesgo'}
+                </span>
+              }
+            />
+          </Group>
+        </section>
+      </div>
     </div>
   );
 }

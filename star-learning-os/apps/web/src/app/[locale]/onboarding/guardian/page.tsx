@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { InvitationResponse, OnboardingStatus } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
 import { Card, Group, Icon, Row } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -60,7 +61,8 @@ export default function OnboardingGuardianPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <header className="rise">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-dim">
           Paso 1 de 2 · Tu apoderado
@@ -156,7 +158,7 @@ export default function OnboardingGuardianPage({
         onClick={() =>
           router.push(status.hasAssent ? `/${locale}/enroll` : `/${locale}/onboarding/assent`)
         }
-        className="rise rise-3 mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
+        className="btn-gradient rise rise-3 mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
       >
         Continuar <Icon name="arrow" className="size-4.5" />
       </button>
@@ -166,6 +168,7 @@ export default function OnboardingGuardianPage({
           {error}
         </div>
       )}
-    </main>
+      </main>
+    </PublicShell>
   );
 }

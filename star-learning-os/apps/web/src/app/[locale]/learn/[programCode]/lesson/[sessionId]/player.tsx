@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { ActivityDto, SessionResponse, SubmissionResult } from '@star/contracts';
+import type { SessionResponse, SubmissionResult } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Card, Chip, Group, Icon, LoadingStack } from '@/components/ui';
+import { Chip, Icon, LoadingStack } from '@/components/ui';
+import { ActivityForm, CtaBar, CtaButton } from './activity-form';
+import { VictoryScreen, type SessionStats } from './victory-screen';
 
 const STATE_LABELS: Record<string, string> = {
   developing: 'En desarrollo',
@@ -34,6 +36,9 @@ export function LessonPlayer({
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [victory, setVictory] = useState(false);
+  const [stats, setStats] = useState<SessionStats>({ answered: 0, correct: 0, bestCombo: 0, xp: 0 });
+  const comboRef = useRef(0);
 
   useEffect(() => {
     clientApi<SessionResponse>(`/sessions/${sessionId}`)
@@ -58,8 +63,14 @@ export function LessonPlayer({
     return <LoadingStack label="Cargando tu lección" />;
   }
 
+  if (victory) {
+    return <VictoryScreen stats={stats} onContinue={finish} />;
+  }
+
   const activity = activities[index];
   const isLast = index + 1 >= activities.length;
+  const home = `/${locale}/learn/${programCode}/${reviewItemId ? 'review' : 'today'}`;
+  const gainedXp = result?.correct === true ? 10 + (comboRef.current >= 3 ? 5 : 0) : 0;
 
   async function submit(response: Record<string, unknown>) {
     setBusy(true);
@@ -76,6 +87,19 @@ export function LessonPlayer({
           }),
         },
       );
+      if (submission.correct === true) {
+        comboRef.current += 1;
+        const bonus = comboRef.current >= 3 ? 5 : 0;
+        setStats((current) => ({
+          answered: current.answered + 1,
+          correct: current.correct + 1,
+          bestCombo: Math.max(current.bestCombo, comboRef.current),
+          xp: current.xp + 10 + bonus,
+        }));
+      } else {
+        if (submission.correct === false) comboRef.current = 0;
+        setStats((current) => ({ ...current, answered: current.answered + 1 }));
+      }
       setResult(submission);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo enviar tu respuesta');
@@ -84,35 +108,55 @@ export function LessonPlayer({
     }
   }
 
-  async function next() {
+  function next() {
     setResult(null);
     if (isLast) {
-      await clientApi(`/sessions/${sessionId}/complete`, { method: 'POST' }).catch(() => undefined);
-      router.push(`/${locale}/learn/${programCode}/${reviewItemId ? 'review' : 'today'}`);
+      setVictory(true);
       return;
     }
     setIndex(index + 1);
   }
 
+  async function finish() {
+    await clientApi(`/sessions/${sessionId}/complete`, { method: 'POST' }).catch(() => undefined);
+    router.push(home);
+  }
+
+  const correct = result?.correct !== false;
+
   return (
     <div className="flex flex-col gap-6">
       <header className="rise">
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-dim">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => router.push(home)}
+            aria-label="Salir de la sesión"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-dim transition-colors hover:bg-mist hover:text-ink"
+          >
+            <Icon name="exit" className="size-5" />
+          </button>
+          <div className="flex flex-1 items-center gap-1.5" aria-label={`Actividad ${index + 1} de ${activities.length}`}>
+            {activities.map((item, itemIndex) => (
+              <span
+                key={item.id}
+                className={`h-[6px] flex-1 rounded-full transition-colors duration-500 ${
+                  itemIndex < index || (itemIndex === index && result)
+                    ? 'bg-ok'
+                    : itemIndex === index
+                      ? 'bg-primary'
+                      : 'bg-fill'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+        <p className="mt-5 text-[13px] font-semibold uppercase tracking-wide text-dim">
           {reviewItemId ? 'Repaso' : 'Sesión de práctica'}
         </p>
         <h1 className="mt-0.5 text-[24px] font-extrabold leading-tight tracking-tight text-ink">
           {session.lessonContract.objective}
         </h1>
-        <div className="mt-4 flex items-center gap-1.5">
-          {activities.map((item, itemIndex) => (
-            <span
-              key={item.id}
-              className={`h-[5px] flex-1 rounded-full transition-colors ${
-                itemIndex < index ? 'bg-ok' : itemIndex === index ? 'bg-primary' : 'bg-fill'
-              }`}
-            />
-          ))}
-        </div>
       </header>
 
       {!result && (
@@ -120,202 +164,66 @@ export function LessonPlayer({
       )}
 
       {result && (
-        <Card className="rise flex flex-col gap-4 px-5 py-6">
-          <div className="flex flex-col items-center gap-2 text-center">
+        <>
+          <div className="rise relative flex flex-col items-center gap-2 px-2 pt-4 text-center">
+            {result.correct === true && (
+              <span
+                key={`xp-${index}`}
+                className="xp-pop pointer-events-none absolute -top-2 text-[17px] font-extrabold text-ok"
+              >
+                +{gainedXp} XP
+              </span>
+            )}
             <span
-              className={`flex size-14 items-center justify-center rounded-full ${
-                result.correct === false ? 'bg-warn-soft' : 'bg-ok-soft'
+              className={`flex size-16 items-center justify-center rounded-full ${
+                correct ? 'bg-ok-soft' : 'bg-warn-soft'
               }`}
             >
               <Icon
-                name={result.correct === false ? 'review' : 'check'}
-                className={`size-7 ${result.correct === false ? 'text-gold-deep' : 'text-ok'}`}
+                name={correct ? 'check' : 'review'}
+                className={`size-8 ${correct ? 'text-ok' : 'text-gold-deep'}`}
               />
             </span>
-            <p className="text-[24px] font-extrabold tracking-tight text-ink">
-              {result.correct === true ? 'Correcto' : result.correct === false ? 'Aún no' : 'Recibido'}
+            <p className="text-[26px] font-extrabold tracking-tight text-ink">
+              {result.correct === true ? 'Correcto' : 'Aún no'}
             </p>
-            <p className="max-w-[38ch] text-[15px] leading-relaxed text-dim">{result.feedback}</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-line pt-4">
-            <Chip tone={result.competencyState === 'mastered' ? 'ok' : 'primary'}>
-              {STATE_LABELS[result.competencyState] ?? result.competencyState}
-            </Chip>
-            <Chip>{Math.round(result.score * 100)}%</Chip>
-            {result.nextReviewAt && (
-              <Chip>
-                Repaso:{' '}
-                {new Date(result.nextReviewAt).toLocaleDateString('es-PE', {
-                  day: 'numeric',
-                  month: 'short',
-                })}
-              </Chip>
+            {result.correct === true && comboRef.current >= 2 && (
+              <p
+                key={`combo-${index}-${comboRef.current}`}
+                className="combo-pop flex items-center gap-1.5 rounded-full bg-gold-soft px-3 py-1 text-[14px] font-bold text-gold-deep"
+              >
+                <Icon name="flame" className="size-4" />
+                ¡Racha de {comboRef.current}!
+              </p>
             )}
-            {result.humanReviewCreated && <Chip tone="warn">En revisión humana</Chip>}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <Chip tone={result.competencyState === 'mastered' ? 'ok' : 'primary'}>
+                {STATE_LABELS[result.competencyState] ?? result.competencyState}
+              </Chip>
+              <Chip>{Math.round(result.score * 100)}%</Chip>
+              {result.nextReviewAt && (
+                <Chip>
+                  Repaso:{' '}
+                  {new Date(result.nextReviewAt).toLocaleDateString('es-PE', {
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </Chip>
+              )}
+              {result.humanReviewCreated && <Chip tone="warn">En revisión humana</Chip>}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={next}
-            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            {isLast ? 'Terminar sesión' : 'Continuar'}
-          </button>
-        </Card>
+          <CtaBar tone={correct ? 'ok' : 'warn'}>
+            <p className="mb-3 text-[14px] leading-relaxed text-ink">{result.feedback}</p>
+            <CtaButton onClick={next}>{isLast ? 'Ver mi resultado' : 'Continuar'}</CtaButton>
+          </CtaBar>
+        </>
       )}
 
       {error && (
         <div className="rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
           {error}
         </div>
-      )}
-    </div>
-  );
-}
-
-function ActivityForm({
-  activity,
-  busy,
-  onSubmit,
-}: {
-  activity: ActivityDto;
-  busy: boolean;
-  onSubmit: (response: Record<string, unknown>) => void;
-}) {
-  const prompt = activity.prompt as {
-    instructions?: string;
-    transcript?: string;
-    stem?: string;
-    options?: string[];
-    text?: string;
-    gaps?: number;
-    hints?: string[];
-    scenario?: string;
-    minWords?: number;
-  };
-  const [selected, setSelected] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [text, setText] = useState('');
-
-  const wordCount = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
-
-  return (
-    <div className="rise rise-1 flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2 px-1">
-        <Chip tone="primary">
-          {activity.skill === 'language_use' ? 'Uso del idioma' : activity.skill}
-        </Chip>
-        {activity.isTransferVariant && <Chip tone="gold">Transferencia · contexto nuevo</Chip>}
-      </div>
-
-      {(prompt.instructions || prompt.transcript) && (
-        <Card className="px-5 py-4">
-          {prompt.instructions && (
-            <p className="text-[14px] leading-relaxed text-dim">{prompt.instructions}</p>
-          )}
-          {prompt.transcript && (
-            <p className="mt-3 rounded-xl bg-mist px-4 py-3 text-[15px] leading-relaxed text-ink">
-              {prompt.transcript}
-            </p>
-          )}
-        </Card>
-      )}
-
-      {activity.kind === 'mcq' && (
-        <>
-          <p className="px-1 text-[17px] font-semibold leading-snug text-ink">{prompt.stem}</p>
-          <Group>
-            {(prompt.options ?? []).map((option, optionIndex) => (
-              <button
-                key={option}
-                type="button"
-                role="radio"
-                aria-checked={selected === optionIndex}
-                onClick={() => setSelected(optionIndex)}
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-mist/60"
-              >
-                <span className="flex-1 text-[16px] text-ink">{option}</span>
-                {selected === optionIndex && <Icon name="check" className="size-5 text-primary" />}
-              </button>
-            ))}
-          </Group>
-          <button
-            type="button"
-            disabled={selected === null || busy}
-            onClick={() => onSubmit({ kind: 'mcq', selectedIndex: selected })}
-            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
-          >
-            {busy ? 'Enviando…' : 'Responder'}
-          </button>
-        </>
-      )}
-
-      {activity.kind === 'gap_fill' && (
-        <>
-          <Card className="px-5 py-5">
-            <p className="text-[17px] leading-loose text-ink">
-              {(prompt.text ?? '').split('____').map((part, partIndex, parts) => (
-                <span key={partIndex}>
-                  {part}
-                  {partIndex < parts.length - 1 && (
-                    <input
-                      aria-label={`Espacio ${partIndex + 1}`}
-                      className="mx-1 inline-block w-32 rounded-lg bg-mist px-2 py-1 text-center text-[15px] font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      value={answers[partIndex] ?? ''}
-                      onChange={(event) => {
-                        const next = [...answers];
-                        next[partIndex] = event.target.value;
-                        setAnswers(next);
-                      }}
-                    />
-                  )}
-                </span>
-              ))}
-            </p>
-            {prompt.hints && (
-              <p className="mt-3 text-[13px] text-dim">Pistas: {prompt.hints.join(' · ')}</p>
-            )}
-          </Card>
-          <button
-            type="button"
-            disabled={busy || answers.filter((a) => a?.trim()).length < (prompt.gaps ?? 1)}
-            onClick={() => onSubmit({ kind: 'gap_fill', answers })}
-            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
-          >
-            {busy ? 'Enviando…' : 'Responder'}
-          </button>
-        </>
-      )}
-
-      {activity.kind === 'writing_prompt' && (
-        <>
-          {prompt.scenario && (
-            <p className="px-1 text-[15px] leading-relaxed text-ink">{prompt.scenario}</p>
-          )}
-          <Card className="p-2">
-            <textarea
-              aria-label="Tu texto"
-              rows={9}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="Escribe tu correo aquí…"
-              className="w-full resize-none rounded-xl px-3 py-2.5 text-[16px] leading-relaxed text-ink placeholder:text-dim/60 focus:outline-none"
-            />
-          </Card>
-          <div className="flex items-center justify-between px-1 text-[12px] text-dim">
-            <span className="tabular-nums">
-              {wordCount} palabras{prompt.minWords ? ` · mínimo ${prompt.minWords}` : ''}
-            </span>
-            <span>Con revisión humana si es crítica</span>
-          </div>
-          <button
-            type="button"
-            disabled={busy || wordCount < 10}
-            onClick={() => onSubmit({ kind: 'writing_prompt', text })}
-            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
-          >
-            {busy ? 'Enviando…' : 'Entregar'}
-          </button>
-        </>
       )}
     </div>
   );

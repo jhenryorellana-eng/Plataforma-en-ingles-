@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { MeResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
 import { AppIcon, Card } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 45 }, (_, i) => CURRENT_YEAR - 12 - i);
@@ -44,7 +45,8 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
         <AppIcon className="size-14" />
         <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight text-ink">
@@ -116,7 +118,7 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
         type="button"
         disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
         onClick={submit}
-        className="rise rise-2 mt-5 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
+        className="btn-gradient rise rise-2 mt-5 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
       >
         {busy ? 'Creando tu cuenta…' : 'Continuar'}
       </button>
@@ -131,6 +133,7 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
         Entras de inmediato, sin esperar correos de confirmación. Usa un correo real: es tu única
         vía para recuperar la contraseña.
       </p>
-    </main>
+      </main>
+    </PublicShell>
   );
 }

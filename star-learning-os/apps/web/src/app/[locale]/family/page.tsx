@@ -37,12 +37,12 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
   return (
     <div className="min-h-dvh">
       <header className="material-bar sticky top-0 z-40 border-b border-line">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5 lg:max-w-5xl">
           <Wordmark />
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
+      <main className="mx-auto max-w-2xl px-4 pb-16 pt-6 lg:max-w-5xl">
         <div className="rise mb-6">
           <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Familia</h1>
           <p className="mt-1 text-[15px] leading-relaxed text-dim">
@@ -55,7 +55,7 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
           <AcceptInvitationCard />
         </div>
 
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start">
           {summary.learners.map((learner, index) => (
             <section key={learner.learnerId} className={`rise rise-${index + 1}`}>
               <div className="mb-3 flex items-center gap-3 px-1">

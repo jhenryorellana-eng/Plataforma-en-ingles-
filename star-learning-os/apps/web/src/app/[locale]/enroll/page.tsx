@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
 import { AppIcon, Group, Row } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 export default function EnrollPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -46,7 +47,8 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
         <AppIcon className="size-16" />
         <h1 className="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-ink">
@@ -85,7 +87,7 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
         type="button"
         disabled={busy}
         onClick={enroll}
-        className="rise rise-2 mt-6 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+        className="btn-gradient rise rise-2 mt-6 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
       >
         {busy ? 'Creando tu inscripción…' : 'Empezar con el diagnóstico'}
       </button>
@@ -95,6 +97,7 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
           {error}
         </div>
       )}
-    </main>
+      </main>
+    </PublicShell>
   );
 }

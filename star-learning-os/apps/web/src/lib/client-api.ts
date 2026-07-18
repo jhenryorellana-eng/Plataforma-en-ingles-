@@ -19,15 +19,21 @@ interface ErrorBody {
 
 /** Fetch de cliente: la cookie httpOnly viaja con credentials: 'include'. */
 export async function clientApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}/v1${path}`, {
-    ...init,
-    credentials: 'include',
-    // Content-Type solo con cuerpo: Fastify rechaza JSON declarado con body vacío.
-    headers: {
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/v1${path}`, {
+      ...init,
+      credentials: 'include',
+      // Content-Type solo con cuerpo: Fastify rechaza JSON declarado con body vacío.
+      headers: {
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    // Fallo de red (API inalcanzable, sin internet): mensaje humano, no "Failed to fetch".
+    throw new ClientApiError(0, 'NETWORK', 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+  }
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ErrorBody;
     throw new ClientApiError(

@@ -460,3 +460,51 @@ export const zHumanReviewDecisionRequest = z.object({
   correctedValue: z.record(z.string(), z.unknown()).optional(),
 });
 export type HumanReviewDecisionRequest = z.infer<typeof zHumanReviewDecisionRequest>;
+
+// ---------- Economía: Novas, avatar y tienda ----------
+
+const zHexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Color en formato #rrggbb');
+
+export const zAvatarConfig = z.object({
+  species: z.enum(['human', 'alien']),
+  skin: zHexColor,
+  hairStyle: z.enum(['none', 'short', 'spiky', 'long', 'curly', 'buns']),
+  hairColor: zHexColor,
+  faceShape: z.enum(['round', 'oval', 'square']),
+  eyes: z.enum(['normal', 'happy', 'big', 'alien']),
+  mouth: z.enum(['smile', 'grin', 'calm']),
+  outfit: z.enum(['hoodie', 'tee', 'space']),
+  /** Ids de shop items equipados; el servidor los filtra contra el inventario real. */
+  accessories: z.array(z.string()).max(12),
+});
+export type AvatarConfig = z.infer<typeof zAvatarConfig>;
+
+export const zEconomyShopItem = z.object({
+  id: z.string(),
+  slot: z.string(),
+  name: z.string(),
+  price: z.number().int(),
+});
+export type EconomyShopItem = z.infer<typeof zEconomyShopItem>;
+
+export const zEconomyState = z.object({
+  balance: z.number().int(),
+  earnedTotal: z.number().int(),
+  streakDays: z.number().int(),
+  avatar: zAvatarConfig.nullable(),
+  inventory: z.array(z.string()),
+  equipped: z.array(z.string()),
+  shop: z.array(zEconomyShopItem),
+});
+export type EconomyState = z.infer<typeof zEconomyState>;
+
+export const zPurchaseRequest = z.object({
+  itemId: z.string().min(1),
+});
+export type PurchaseRequest = z.infer<typeof zPurchaseRequest>;
+
+export const zEquipRequest = z.object({
+  itemId: z.string().min(1),
+  equipped: z.boolean(),
+});
+export type EquipRequest = z.infer<typeof zEquipRequest>;

@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { clientApi } from '@/lib/client-api';
 import { Group, Icon, Row } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 export default function AssentPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -26,7 +27,8 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <header className="rise">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-dim">
           Paso 2 de 2 · Antes de empezar
@@ -105,7 +107,7 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
         type="button"
         disabled={busy || !understandsAi || !understandsControls}
         onClick={assent}
-        className="rise rise-3 mt-6 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
+        className="btn-gradient rise rise-3 mt-6 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
       >
         {busy ? 'Registrando…' : 'Doy mi asentimiento'}
       </button>
@@ -115,6 +117,7 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
           {error}
         </div>
       )}
-    </main>
+      </main>
+    </PublicShell>
   );
 }

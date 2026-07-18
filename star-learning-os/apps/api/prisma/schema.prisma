@@ -12,7 +12,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity", "family", "catalog", "curriculum", "learning", "assessment", "ai", "safety", "audit"]
+  schemas  = ["identity", "family", "catalog", "curriculum", "learning", "assessment", "ai", "safety", "audit", "economy"]
 }
 
 // ---------------- identity ----------------
@@ -53,6 +53,10 @@ model User {
   safetySignals      SafetySignal[]
   humanReviews       HumanReview[]         @relation("ReviewSubject")
   decidedReviews     HumanReview[]         @relation("ReviewDecider")
+  avatarConfig       AvatarConfig?
+  wallet             Wallet?
+  xpEvents           XpEvent[]
+  inventoryItems     InventoryItem[]
 
   @@map("users")
   @@schema("identity")
@@ -948,4 +952,73 @@ model IdempotencyRecord {
   @@id([key, route])
   @@map("idempotency_records")
   @@schema("audit")
+}
+
+// ---------------- economy ----------------
+// Avatar SVG por capas + moneda "Novas" (solo ganada aprendiendo, jamás comprada)
+// + tienda de cosméticos. La racha se deriva de los días con XpEvent.
+
+model AvatarConfig {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config    Json
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("avatar_configs")
+  @@schema("economy")
+}
+
+model Wallet {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0)
+  earned    Int      @default(0)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("wallets")
+  @@schema("economy")
+}
+
+model XpEvent {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  amount    Int
+  /// Idempotencia: evidencia/sesión de origen. Único cuando no es null.
+  refId     String?  @unique @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([userId, createdAt])
+  @@map("xp_events")
+  @@schema("economy")
+}
+
+model ShopItem {
+  id        String          @id
+  slot      String
+  name      String
+  price     Int
+  sort      Int             @default(0)
+  inventory InventoryItem[]
+
+  @@map("shop_items")
+  @@schema("economy")
+}
+
+model InventoryItem {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       ShopItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  equipped   Boolean  @default(false)
+  acquiredAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([userId, itemId])
+  @@map("inventory_items")
+  @@schema("economy")
 }

@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { AppIcon, Group, Icon, IconTile } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 export default async function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
         <AppIcon className="size-16" />
         <h1 className="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-ink">
@@ -41,6 +43,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
           Ya tengo cuenta
         </Link>
       </p>
-    </main>
+      </main>
+    </PublicShell>
   );
 }

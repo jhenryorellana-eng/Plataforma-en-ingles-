@@ -6,6 +6,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
+import { EconomyModule } from './modules/economy/economy.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { FamilyModule } from './modules/family/family.module';
 import { LearningModule } from './modules/learning/learning.module';
@@ -26,6 +27,7 @@ import { VoiceModule } from './modules/voice/voice.module';
     DiagnosticModule,
     LearningModule,
     VoiceModule,
+    EconomyModule,
     SafetyModule,
     ReviewModule,
     PreviewModule,

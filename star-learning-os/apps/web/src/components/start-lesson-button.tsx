@@ -83,7 +83,7 @@ export function StartLessonButton({
         <StarMark className="pointer-events-none absolute right-16 top-10 size-5 text-white/25" />
         <span className="absolute left-6 top-5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white/90 backdrop-blur">
           <StarMark className="size-3 text-white" />
-          {loading ? 'Preparando…' : 'Continúa donde ibas'}
+          {loading ? 'Preparando…' : 'Sigue tu misión'}
         </span>
         <span className="relative block max-w-[26rem] pr-12 text-[27px] font-extrabold leading-[1.12] tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">
           {label}

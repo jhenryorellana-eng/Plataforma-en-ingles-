@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { clientApi } from '@/lib/client-api';
 import { AppIcon, Card } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 export default function RegisterGuardianPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -31,7 +32,8 @@ export default function RegisterGuardianPage({ params }: { params: Promise<{ loc
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
         <AppIcon className="size-14" />
         <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight text-ink">
@@ -90,7 +92,7 @@ export default function RegisterGuardianPage({ params }: { params: Promise<{ loc
         type="button"
         disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
         onClick={submit}
-        className="rise rise-2 mt-5 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
+        className="btn-gradient rise rise-2 mt-5 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
       >
         {busy ? 'Creando tu cuenta…' : 'Continuar'}
       </button>
@@ -100,6 +102,7 @@ export default function RegisterGuardianPage({ params }: { params: Promise<{ loc
           {error}
         </div>
       )}
-    </main>
+      </main>
+    </PublicShell>
   );
 }

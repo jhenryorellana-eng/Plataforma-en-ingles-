@@ -1,8 +1,9 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReviewQueueResponse } from '@star/contracts';
 import { apiFetch } from '@/lib/api';
 import { resolveEnrollment } from '@/lib/enrollment';
-import { Card, Group, IconTile, SectionHeader } from '@/components/ui';
+import { Card, EmptyState, Group, Icon, IconTile, SectionHeader } from '@/components/ui';
 import { StartLessonButton } from '@/components/start-lesson-button';
 
 export default async function ReviewPage({
@@ -22,16 +23,30 @@ export default async function ReviewPage({
       <header className="rise">
         <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Repasar</h1>
         <p className="mt-1 text-[15px] leading-relaxed text-dim">
-          Recuperar lo aprendido en el momento justo — a 1, 3, 7, 14 y 30 días — convierte la
-          práctica en dominio.
+          Recupera lo aprendido justo cuando tu memoria lo necesita — cada repaso lo vuelve
+          dominio.
         </p>
       </header>
 
       <section className="rise rise-1">
         <SectionHeader>Pendientes de hoy</SectionHeader>
         {queue.dueItems.length === 0 ? (
-          <Card className="px-5 py-8 text-center text-[15px] text-dim">
-            Nada vencido por ahora. Los repasos aparecerán aquí cuando toque recuperarlos.
+          <Card>
+            <EmptyState
+              icon="review"
+              iconColor="bg-gold"
+              title="Nada vencido por ahora"
+              body="Tus repasos aparecerán aquí en el momento justo: a 1, 3, 7, 14 y 30 días de cada aprendizaje."
+              action={
+                <Link
+                  href={`/${locale}/learn/${programCode}/today`}
+                  className="btn-gradient inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-[15px] font-semibold text-white"
+                >
+                  Volver a Inicio
+                  <Icon name="arrow" className="size-4 text-white" />
+                </Link>
+              }
+            />
           </Card>
         ) : (
           <Group>

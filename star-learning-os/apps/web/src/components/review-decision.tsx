@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { clientApi } from '@/lib/client-api';
+import { Icon } from './ui';
 
 export function ReviewDecisionButtons({ reviewId }: { reviewId: string }) {
   const router = useRouter();
@@ -31,26 +32,28 @@ export function ReviewDecisionButtons({ reviewId }: { reviewId: string }) {
   }
 
   return (
-    <div className="mt-2.5">
-      <div className="flex gap-5">
+    <div className="mt-4">
+      <div className="flex gap-3">
         <button
           type="button"
           disabled={busy}
           onClick={() => decide('confirmed')}
-          className="text-[15px] font-semibold text-ok-deep transition-opacity hover:opacity-70 disabled:opacity-40"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ok px-4 py-2.5 text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(47,191,95,0.35)] transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-40"
         >
+          <Icon name="check" className="size-4.5" />
           Confirmar
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={() => decide('invalidated')}
-          className="text-[15px] font-semibold text-risk transition-opacity hover:opacity-70 disabled:opacity-40"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-risk/25 bg-risk-soft px-4 py-2.5 text-[15px] font-semibold text-risk transition-all hover:brightness-95 active:scale-[0.99] disabled:opacity-40"
         >
+          <Icon name="exit" className="size-4.5" />
           Invalidar
         </button>
       </div>
-      {error && <p className="mt-1 text-[12px] text-risk">{error}</p>}
+      {error && <p className="mt-2 text-[12px] text-risk">{error}</p>}
     </div>
   );
 }

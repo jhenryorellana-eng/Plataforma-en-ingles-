@@ -24,3 +24,8 @@
 **Error**: Expectativa de pasar a producción el mismo día con solo documentación.
 **Root cause**: "Producción" significaba cosas distintas: congelar documentos vs desplegar software.
 **Regla**: Ante una meta ambiciosa de plazo, traducirla a los gates que los propios documentos definen y mostrar qué es posible hoy de forma honesta (corte vertical local → piloto → producción).
+
+## 2026-07-17: Rediseño responsive total (mobile → desktop + dark mode)
+**Contexto**: Auditoría UX/UI pedida por Henry ("que parezca una app de 1M$ en mobile, tablet y desktop"). Se mantuvo intacto el lenguaje v4 (Apple HIG) y se corrigió LA ESTRUCTURA: `LearnShell` (rail lateral ≥lg, dock solo <lg, nada en `/lesson/` — `components/nav.tsx`), `PublicShell` (split-screen de marca ≥lg en login/register/preview/enroll/onboarding — `components/public-shell.tsx`), grids ≥lg en Hoy/Progreso/Familia/Staff, player de lección con CTA fijo (`CtaBar` en `activity-form.tsx`), `EmptyState` compartido, consola staff sin JSON crudo, dark mode por intercambio de tokens en `globals.css` (sin `dark:` en componentes) y `color-scheme` nativo.
+**Trampa encontrada**: `position:fixed` dentro de un contenedor con animación que retiene `transform` (`.rise` con fill `both`) se posiciona respecto a ese contenedor, no al viewport — la barra CTA del player quedaba "pegada" en flujo. Regla: animaciones de entrada con fill **`backwards`** (estado final = estilos naturales, sin transform residual).
+**Regla de build**: `NEXT_PUBLIC_*` se inyecta en BUILD time en Next; cambiar `NEXT_PUBLIC_API_URL` exige rebuild (no basta pasarlo al `next start`).

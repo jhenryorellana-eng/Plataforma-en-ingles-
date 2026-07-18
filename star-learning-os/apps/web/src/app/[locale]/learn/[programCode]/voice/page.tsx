@@ -1,10 +1,11 @@
 'use client';
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse, TodayResponse, VoiceSessionResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { Card, Group, Icon, LoadingStack, Row, SectionHeader, StarMark, type IconName } from '@/components/ui';
+import { Card, EmptyState, Group, Icon, IconTile, LoadingStack, Row, SectionHeader, StarMark, type IconName } from '@/components/ui';
 import { MicTest } from '@/components/mic-test';
 
 type Phase = 'loading' | 'preview' | 'live' | 'ended' | 'blocked';
@@ -28,6 +29,7 @@ export default function VoicePage({
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
   const [lessonContractId, setLessonContractId] = useState<string | null>(null);
   const [missionTitle, setMissionTitle] = useState('');
+  const [missionMinutes, setMissionMinutes] = useState<number | null>(null);
   const [voice, setVoice] = useState<VoiceSessionResponse | null>(null);
   const [blockedMessage, setBlockedMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export default function VoicePage({
         if (voiceBlock?.lessonContractId) {
           setLessonContractId(voiceBlock.lessonContractId);
           setMissionTitle(voiceBlock.description);
+          setMissionMinutes(voiceBlock.estimatedMinutes);
         }
         setPhase('preview');
       } catch (err) {
@@ -262,60 +265,96 @@ export default function VoicePage({
   }
 
   if (phase === 'preview') {
+    if (!lessonContractId) {
+      return (
+        <Card className="rise mt-6">
+          <EmptyState
+            icon="mic"
+            iconColor="bg-teal"
+            title="Sin misiones de voz por ahora"
+            body="Tu próxima conversación con el Mentor aparecerá aquí cuando tu plan del día la incluya. Mientras tanto, sigue avanzando en tu ruta."
+            action={
+              <Link
+                href={`/${locale}/learn/${programCode}/today`}
+                className="btn-gradient inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-[15px] font-semibold text-white"
+              >
+                Ir a Inicio
+                <Icon name="arrow" className="size-4 text-white" />
+              </Link>
+            }
+          />
+        </Card>
+      );
+    }
     return (
       <div className="flex flex-col gap-7">
         <header className="rise flex flex-col items-center pt-4 text-center">
-          <span className="mentor-avatar mentor-avatar-paused flex size-24 items-center justify-center rounded-full">
-            <StarMark className="size-10 text-white" />
+          <span className="relative inline-flex items-center justify-center">
+            <span className="halo-ring absolute -inset-4 rounded-full" aria-hidden />
+            <span className="mentor-avatar mentor-avatar-paused flex size-24 items-center justify-center rounded-full">
+              <StarMark className="size-10 text-white" />
+            </span>
           </span>
-          <h1 className="mt-5 text-[28px] font-extrabold tracking-tight text-ink">Mentor STAR</h1>
-          <p className="mt-1 max-w-[34ch] text-[15px] leading-relaxed text-dim">
-            {missionTitle || 'Sin misiones de voz pendientes por ahora.'}
-          </p>
+          <h1 className="mt-6 text-[28px] font-extrabold tracking-tight text-ink">Mentor STAR</h1>
         </header>
 
-        {lessonContractId && (
-          <div className="rise rise-1">
-            <SectionHeader>Antes de empezar</SectionHeader>
-            <Group>
-              <Row
-                icon="shield"
-                iconColor="bg-ok"
-                title="Es una IA educativa"
-                subtitle="Siempre se presenta como tal; puedes pausar, reportar o salir cuando quieras"
-              />
-              <Row
-                icon="mic"
-                iconColor="bg-teal"
-                title="Tu audio no se guarda"
-                subtitle="Solo queda la evidencia pedagógica mínima de tu práctica"
-              />
-            </Group>
-
-            <div className="mt-4">
-              <MicTest
-                onDone={(micOk) => {
-                  setTechCheckDone(true);
-                  setMicWorks(micOk);
-                }}
-              />
+        <Card className="rise rise-1 px-5 py-4">
+          <div className="flex items-start gap-3.5">
+            <IconTile name="mic" color="bg-teal" className="size-10 rounded-xl [&>svg]:size-5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-bold uppercase tracking-wide text-dim">
+                Tu misión de hoy
+              </p>
+              <p className="mt-0.5 text-[16px] font-semibold leading-snug text-ink">
+                {missionTitle}
+              </p>
+              {missionMinutes !== null && (
+                <p className="mt-1 text-[13px] text-dim">~{missionMinutes} min de conversación</p>
+              )}
             </div>
-
-            <button
-              type="button"
-              disabled={!techCheckDone}
-              onClick={startMission}
-              className="mt-5 w-full rounded-2xl bg-ok py-3.5 text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(52,199,89,0.3)] transition-opacity hover:opacity-90 disabled:opacity-35"
-            >
-              {techCheckDone
-                ? micWorks
-                  ? 'Comenzar misión'
-                  : 'Comenzar en modo texto'
-                : 'Completa la prueba técnica'}
-            </button>
-            {error && <p className="mt-2 text-center text-[14px] text-risk">{error}</p>}
           </div>
-        )}
+        </Card>
+
+        <div className="rise rise-2">
+          <SectionHeader>Antes de empezar</SectionHeader>
+          <Group>
+            <Row
+              icon="shield"
+              iconColor="bg-ok"
+              title="Es una IA educativa"
+              subtitle="Siempre se presenta como tal; puedes pausar, reportar o salir cuando quieras"
+            />
+            <Row
+              icon="mic"
+              iconColor="bg-teal"
+              title="Tu audio no se guarda"
+              subtitle="Solo queda la evidencia pedagógica mínima de tu práctica"
+            />
+          </Group>
+
+          <div className="mt-4">
+            <MicTest
+              onDone={(micOk) => {
+                setTechCheckDone(true);
+                setMicWorks(micOk);
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            disabled={!techCheckDone}
+            onClick={startMission}
+            className="btn-gradient mt-5 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
+          >
+            {techCheckDone
+              ? micWorks
+                ? 'Comenzar misión'
+                : 'Comenzar en modo texto'
+              : 'Completa la prueba técnica'}
+          </button>
+          {error && <p className="mt-2 text-center text-[14px] text-risk">{error}</p>}
+        </div>
       </div>
     );
   }

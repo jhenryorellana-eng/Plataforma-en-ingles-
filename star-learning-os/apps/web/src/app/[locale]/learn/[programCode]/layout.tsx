@@ -1,4 +1,4 @@
-import { BottomNav, TopBar } from '@/components/nav';
+import { LearnShell } from '@/components/nav';
 
 export default async function LearnLayout({
   children,
@@ -9,10 +9,8 @@ export default async function LearnLayout({
 }) {
   const { locale, programCode } = await params;
   return (
-    <div className="min-h-dvh">
-      <TopBar locale={locale} />
-      <main className="mx-auto max-w-2xl px-4 pb-36 pt-6">{children}</main>
-      <BottomNav locale={locale} programCode={programCode} />
-    </div>
+    <LearnShell locale={locale} programCode={programCode}>
+      {children}
+    </LearnShell>
   );
 }

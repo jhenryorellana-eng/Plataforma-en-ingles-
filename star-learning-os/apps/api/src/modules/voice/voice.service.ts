@@ -9,6 +9,7 @@ import type { SessionUser } from '../../common/session';
 import { loadConfig } from '../../config/config';
 import { AuditService } from '../audit/audit.service';
 import { OutboxService } from '../audit/outbox.service';
+import { EconomyService } from '../economy/economy.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { composeMentorInstructions, POLICY_VERSION, PROMPT_VERSION, type MissionSpec } from './prompt-composer';
 import { MockVoiceProvider, OpenAiRealtimeProvider } from './openai-realtime.provider';
@@ -28,6 +29,7 @@ const DENY_STATUS: Record<VoiceDenyReason, { code: ErrorCode; message: string }>
 };
 
 const HEARTBEAT_MAX_DELTA_SECONDS = 60;
+const VOICE_SESSION_NOVAS = 30;
 
 @Injectable()
 export class VoiceService {
@@ -37,6 +39,7 @@ export class VoiceService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly auditService: AuditService,
+    private readonly economyService: EconomyService,
   ) {
     const config = loadConfig();
     this.provider = config.openaiApiKey
@@ -280,6 +283,15 @@ export class VoiceService {
           } as Prisma.InputJsonObject,
         },
       });
+      if (finalActiveSeconds > 0) {
+        // Recompensa idempotente: refId = voiceSessionId, cerrar dos veces no duplica.
+        await this.economyService.grantNovasInTx(tx, {
+          userId: actor.id,
+          kind: 'voice_session',
+          amount: VOICE_SESSION_NOVAS,
+          refId: session.id,
+        });
+      }
       await this.outboxService.emitInTx(tx, {
         aggregateType: 'voice_session',
         aggregateId: session.id,

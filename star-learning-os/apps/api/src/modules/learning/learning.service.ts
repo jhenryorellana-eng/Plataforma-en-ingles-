@@ -20,6 +20,7 @@ import { AppError, notFound } from '../../common/errors';
 import type { SessionUser } from '../../common/session';
 import { AuditService } from '../audit/audit.service';
 import { OutboxService } from '../audit/outbox.service';
+import { EconomyService } from '../economy/economy.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { weeklyVoiceMinutesUsed } from '../voice/voice-usage';
 
@@ -27,6 +28,10 @@ const DETERMINISTIC_CONFIDENCE = 0.95;
 const LOW_CONFIDENCE_REVIEW_THRESHOLD = 0.5;
 const MINUTES_PER_REVIEW = 2;
 const AT_RISK_OVERDUE_REVIEWS = 10;
+const SUBMISSION_CORRECT_NOVAS = 10;
+const COMBO_STREAK_MIN = 3;
+const COMBO_BONUS_NOVAS = 5;
+const LESSON_COMPLETE_NOVAS = 25;
 
 interface ScoreOutcome {
   score: number;
@@ -43,6 +48,7 @@ export class LearningService {
     private readonly accessService: AccessService,
     private readonly outboxService: OutboxService,
     private readonly auditService: AuditService,
+    private readonly economyService: EconomyService,
   ) {}
 
   // ---------------- Hoy ----------------
@@ -217,9 +223,18 @@ export class LearningService {
   async completeSession(actor: SessionUser, sessionId: string): Promise<{ ok: true }> {
     const session = await this.getSessionForActor(actor, sessionId);
     if (session.status === 'active') {
-      await this.prisma.learningSession.update({
-        where: { id: sessionId },
-        data: { status: 'completed', endedAt: new Date() },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.learningSession.update({
+          where: { id: sessionId },
+          data: { status: 'completed', endedAt: new Date() },
+        });
+        // Recompensa idempotente: refId = sessionId, repetir no duplica Novas.
+        await this.economyService.grantNovasInTx(tx, {
+          userId: actor.id,
+          kind: 'lesson_complete',
+          amount: LESSON_COMPLETE_NOVAS,
+          refId: sessionId,
+        });
       });
     }
     return { ok: true };
@@ -362,6 +377,10 @@ export class LearningService {
         },
       });
 
+      if (!duplicate && outcome.score >= competency.globalThreshold) {
+        await this.rewardSubmissionInTx(tx, actor, session.id, evidenceId as string);
+      }
+
       let humanReviewCreated = false;
       if (
         activity.kind === 'writing_prompt' &&
@@ -462,6 +481,38 @@ export class LearningService {
   }
 
   // ---------------- Helpers ----------------
+
+  /** Premio en Novas por submission correcta: 10 base + 5 de combo si la sesión encadena ≥3 correctas. */
+  private async rewardSubmissionInTx(
+    tx: Prisma.TransactionClient,
+    actor: SessionUser,
+    sessionId: string,
+    evidenceId: string,
+  ): Promise<void> {
+    const streak = await this.sessionCorrectStreak(tx, sessionId);
+    const comboBonus = streak >= COMBO_STREAK_MIN ? COMBO_BONUS_NOVAS : 0;
+    await this.economyService.grantNovasInTx(tx, {
+      userId: actor.id,
+      kind: 'submission_correct',
+      amount: SUBMISSION_CORRECT_NOVAS + comboBonus,
+      refId: evidenceId,
+    });
+  }
+
+  /** Evidencias correctas consecutivas de la sesión (score ≥ umbral de su competencia), incluyendo la actual. */
+  private async sessionCorrectStreak(tx: Prisma.TransactionClient, sessionId: string): Promise<number> {
+    const evidences = await tx.evidence.findMany({
+      where: { learningSessionId: sessionId },
+      orderBy: { createdAt: 'desc' },
+      select: { score: true, competency: { select: { globalThreshold: true } } },
+    });
+    let streak = 0;
+    for (const item of evidences) {
+      if (item.score < item.competency.globalThreshold) break;
+      streak += 1;
+    }
+    return streak;
+  }
 
   private scoreActivity(activity: Activity & { competency: Competency }, request: SubmissionRequest): ScoreOutcome {
     const answerKey = activity.answerKey as Record<string, unknown>;

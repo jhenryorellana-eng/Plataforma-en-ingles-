@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { PreviewEstimateResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
 import { AppIcon, Card, Chip, Group, Icon } from '@/components/ui';
+import { PublicShell } from '@/components/public-shell';
 
 interface PreviewItem {
   code: string;
@@ -50,7 +51,8 @@ export default function PreviewPage({ params }: { params: Promise<{ locale: stri
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-12">
+    <PublicShell>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
       <div className="rise flex flex-col items-center text-center">
         <AppIcon className="size-14" />
         <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight text-ink">
@@ -100,7 +102,7 @@ export default function PreviewPage({ params }: { params: Promise<{ locale: stri
             type="button"
             disabled={selected === null}
             onClick={next}
-            className="w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-35"
+            className="btn-gradient w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
           >
             {index + 1 === items.length ? 'Ver mi resultado' : 'Siguiente'}
           </button>
@@ -122,7 +124,7 @@ export default function PreviewPage({ params }: { params: Promise<{ locale: stri
           <p className="max-w-[36ch] text-[13px] leading-relaxed text-dim">{result.message}</p>
           <Link
             href={`/${locale}/register/learner`}
-            className="mt-2 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-white transition-opacity hover:opacity-90"
+            className="btn-gradient mt-2 w-full rounded-2xl py-3.5 text-center text-[17px] font-semibold text-white"
           >
             Crear mi cuenta y empezar
           </Link>
@@ -134,6 +136,7 @@ export default function PreviewPage({ params }: { params: Promise<{ locale: stri
           Ya tengo cuenta
         </Link>
       </p>
-    </main>
+      </main>
+    </PublicShell>
   );
 }
