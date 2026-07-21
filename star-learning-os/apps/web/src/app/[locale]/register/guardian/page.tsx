@@ -1,108 +1,167 @@
 'use client';
 
+import Link from 'next/link';
 import { use, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import type { RegisterGuardianResponse } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { AppIcon, Card } from '@/components/ui';
-import { PublicShell } from '@/components/public-shell';
+import {
+  MissionIntro,
+  MissionShell,
+  missionStyles,
+} from '@/components/registration/mission-shell';
 
 export default function RegisterGuardianPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
-  const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingVerification, setPendingVerification] = useState(false);
 
   async function submit() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      await clientApi('/auth/register-guardian', {
+      const response = await clientApi<RegisterGuardianResponse>('/auth/register-guardian', {
         method: 'POST',
         body: JSON.stringify({ displayName, email, password }),
       });
-      router.push(`/${locale}/family`);
+      if (response.status === 'pendingVerification') setPendingVerification(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear tu cuenta');
       setBusy(false);
     }
   }
 
+  if (pendingVerification) {
+    return (
+      <MissionShell locale={locale} step={3}>
+        <main className={missionStyles.successCard}>
+          <div className="mx-auto flex size-16 items-center justify-center rounded-[22px_22px_22px_8px] border border-[#ffd35a]/25 bg-[#ffd35a]/10 shadow-[0_6px_0_#040d18]">
+            <span className="text-3xl" aria-hidden>
+              ✦
+            </span>
+          </div>
+          <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#ffd35a]">
+            Señal enviada
+          </p>
+          <h1 className="mt-2 text-[clamp(2rem,4vw,2.8rem)] font-extrabold leading-none tracking-[-0.05em] text-white">
+            Revisa tu correo
+          </h1>
+          <p className="mx-auto mt-4 max-w-[43ch] text-[13px] leading-relaxed text-[#9eb1c7]">
+            Enviamos un enlace de verificación a <strong className="text-slate-100">{email}</strong>.
+            Confirma tu correo y luego entra al control de misión para aceptar invitaciones.
+          </p>
+          <Link href={`/${locale}/login`} className={`${missionStyles.primaryButton} mt-7 no-underline`}>
+            Ir a iniciar sesión <span aria-hidden>→</span>
+          </Link>
+        </main>
+      </MissionShell>
+    );
+  }
+
   return (
-    <PublicShell>
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
-      <div className="rise flex flex-col items-center text-center">
-        <AppIcon className="size-14" />
-        <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight text-ink">
-          Tu cuenta de apoderado/a
-        </h1>
-        <p className="mt-1.5 max-w-[34ch] text-[14px] leading-relaxed text-dim">
-          Desde tu portal autorizas el servicio, gestionas permisos por finalidad y ves el progreso
-          — nunca las conversaciones completas.
+    <MissionShell locale={locale} step={2}>
+      <main>
+        <Link href={`/${locale}/register`} className={missionStyles.backLink}>
+          <span aria-hidden>←</span> Cambiar tipo de cuenta
+        </Link>
+
+        <MissionIntro
+          image="/brand/registration/role-guardian.webp"
+          imageAlt="Apoderado acompañando una ruta desde el control de misión"
+          eyebrow="Control de misión familiar"
+          title="Prepara tu acceso de apoderado"
+          description="Tendrás visibilidad del progreso y control de permisos, respetando siempre el espacio del estudiante."
+        />
+
+        <form
+          className={missionStyles.formCard}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <div className={missionStyles.formGrid}>
+            <label className={`${missionStyles.field} ${missionStyles.fieldWide}`}>
+              <span className={missionStyles.label}>Tu nombre</span>
+              <input
+                name="name"
+                autoComplete="name"
+                required
+                minLength={2}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="Nombre y apellido"
+                className={missionStyles.input}
+              />
+            </label>
+
+            <label className={`${missionStyles.field} ${missionStyles.fieldWide}`}>
+              <span className={missionStyles.label}>Correo de acceso</span>
+              <input
+                name="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="tu@correo.com"
+                className={missionStyles.input}
+              />
+            </label>
+
+            <label className={`${missionStyles.field} ${missionStyles.fieldWide}`}>
+              <span className={missionStyles.label}>Crea una contraseña</span>
+              <span className={missionStyles.passwordWrap}>
+                <input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  className={missionStyles.input}
+                />
+                <button
+                  type="button"
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((current) => !current)}
+                  className={missionStyles.passwordToggle}
+                >
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
+            className={missionStyles.primaryButton}
+          >
+            {busy ? 'Creando control de misión…' : 'Crear mi acceso y verificar correo'}
+            {!busy && <span aria-hidden>→</span>}
+          </button>
+        </form>
+
+        {error && (
+          <div className={missionStyles.errorAlert} role="alert" aria-live="polite">
+            {error}
+          </div>
+        )}
+
+        <p className={missionStyles.formHint}>
+          Nunca mostramos conversaciones completas. Solo verás progreso, permisos y señales necesarias
+          para acompañar de forma segura.
         </p>
-      </div>
-
-      <Card className="rise rise-1 mt-7 flex flex-col gap-4 px-5 py-5">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Tu nombre</span>
-          <input
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            placeholder="Nombre y apellido"
-            className="rounded-xl bg-mist px-4 py-3 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Tu correo</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="tu@correo.com"
-            className="rounded-xl bg-mist px-4 py-3 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Tu contraseña</span>
-          <span className="relative block">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              className="w-full rounded-xl bg-mist px-4 py-3 pr-20 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-primary"
-            >
-              {showPassword ? 'Ocultar' : 'Mostrar'}
-            </button>
-          </span>
-        </label>
-      </Card>
-
-      <button
-        type="button"
-        disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
-        onClick={submit}
-        className="btn-gradient rise rise-2 mt-5 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
-      >
-        {busy ? 'Creando tu cuenta…' : 'Continuar'}
-      </button>
-
-      {error && (
-        <div className="rise mt-4 rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
-          {error}
-        </div>
-      )}
       </main>
-    </PublicShell>
+    </MissionShell>
   );
 }

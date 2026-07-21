@@ -39,6 +39,7 @@ export class LearningController {
   ): Promise<SessionResponse> {
     const request = parse(zStartSessionRequest, body);
     const enrollment = await this.accessService.assertEnrollmentAccess(user, id);
+    await this.accessService.assertLearnerSelf(user, enrollment);
     return this.learningService.startSession(enrollment, request.lessonContractId);
   }
 

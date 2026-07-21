@@ -172,7 +172,12 @@ export function Meter({
   );
 }
 
-let ringGradientCounter = 0;
+/** Id estable derivado de props (SSR-seguro, sin contadores ni hooks). */
+function svgIdFromProps(prefix: string, ...parts: Array<string | undefined>): string {
+  const raw = parts.filter(Boolean).join('-');
+  const safe = raw.replace(/[^a-zA-Z0-9]+/g, '');
+  return `${prefix}-${safe || 'x'}`;
+}
 
 /** Anillo de progreso estilo Actividad de Apple, con trazo degradado opcional. */
 export function Ring({
@@ -196,7 +201,8 @@ export function Ring({
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(1, Math.max(0, value ?? 0));
   const offset = circumference * (1 - clamped);
-  const gradientId = colorTo ? `ring-grad-${(ringGradientCounter += 1)}` : null;
+  // Dos anillos con los mismos colores comparten id y definición idéntica: inofensivo.
+  const gradientId = colorTo ? svgIdFromProps('ring-grad', color, colorTo) : null;
   return (
     <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg

@@ -1,14 +1,18 @@
 'use client';
 
+import Link from 'next/link';
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MeResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { AppIcon, Card } from '@/components/ui';
-import { PublicShell } from '@/components/public-shell';
+import {
+  MissionIntro,
+  MissionShell,
+  missionStyles,
+} from '@/components/registration/mission-shell';
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 45 }, (_, i) => CURRENT_YEAR - 12 - i);
+const YEARS = Array.from({ length: 45 }, (_, index) => CURRENT_YEAR - 12 - index);
 
 export default function RegisterLearnerPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -22,6 +26,7 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -45,95 +50,122 @@ export default function RegisterLearnerPage({ params }: { params: Promise<{ loca
   }
 
   return (
-    <PublicShell>
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
-      <div className="rise flex flex-col items-center text-center">
-        <AppIcon className="size-14" />
-        <h1 className="mt-4 text-[26px] font-extrabold leading-tight tracking-tight text-ink">
-          Tu cuenta de estudiante
-        </h1>
-        <p className="mt-1.5 text-[14px] leading-relaxed text-dim">
-          Tu edad define tu experiencia y tus protecciones — por eso la pedimos primero.
-        </p>
-      </div>
+    <MissionShell locale={locale} step={2}>
+      <main>
+        <Link href={`/${locale}/register`} className={missionStyles.backLink}>
+          <span aria-hidden>←</span> Cambiar tipo de cuenta
+        </Link>
 
-      <Card className="rise rise-1 mt-7 flex flex-col gap-4 px-5 py-5">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Tu nombre</span>
-          <input
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            placeholder="Nombre y apellido"
-            className="rounded-xl bg-mist px-4 py-3 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Tu correo</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="tu@correo.com"
-            className="rounded-xl bg-mist px-4 py-3 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Tu contraseña</span>
-          <span className="relative block">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              className="w-full rounded-xl bg-mist px-4 py-3 pr-20 text-[16px] text-ink placeholder:text-dim/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-primary"
-            >
-              {showPassword ? 'Ocultar' : 'Mostrar'}
-            </button>
-          </span>
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-dim">Año de nacimiento</span>
-          <select
-            value={birthYear}
-            onChange={(event) => setBirthYear(Number(event.target.value))}
-            className="rounded-xl bg-mist px-4 py-3 text-[16px] text-ink focus:outline-none focus:ring-2 focus:ring-primary/50"
+        <MissionIntro
+          image="/brand/registration/role-learner.webp"
+          imageAlt="Estudiante exploradora junto a Nova"
+          eyebrow="Ruta de estudiante"
+          title="Crea tu perfil de misión"
+          description="Con estos datos preparamos una experiencia segura y calculamos el punto correcto para empezar."
+        />
+
+        <form
+          className={missionStyles.formCard}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <div className={missionStyles.formGrid}>
+            <label className={missionStyles.field}>
+              <span className={missionStyles.label}>¿Cómo te llamamos?</span>
+              <input
+                name="name"
+                autoComplete="name"
+                required
+                minLength={2}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="Tu nombre"
+                className={missionStyles.input}
+              />
+            </label>
+
+            <label className={missionStyles.field}>
+              <span className={missionStyles.label}>Año de nacimiento</span>
+              <select
+                name="bday-year"
+                autoComplete="bday-year"
+                required
+                value={birthYear}
+                onChange={(event) => setBirthYear(Number(event.target.value))}
+                className={missionStyles.select}
+              >
+                {YEARS.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={`${missionStyles.field} ${missionStyles.fieldWide}`}>
+              <span className={missionStyles.label}>Tu correo de acceso</span>
+              <input
+                name="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="tu@correo.com"
+                className={missionStyles.input}
+              />
+            </label>
+
+            <label className={`${missionStyles.field} ${missionStyles.fieldWide}`}>
+              <span className={missionStyles.label}>Crea una contraseña</span>
+              <span className={missionStyles.passwordWrap}>
+                <input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  className={missionStyles.input}
+                />
+                <button
+                  type="button"
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((current) => !current)}
+                  className={missionStyles.passwordToggle}
+                >
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
+            className={missionStyles.primaryButton}
           >
-            {YEARS.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </label>
-      </Card>
+            {busy ? 'Preparando tu perfil…' : 'Crear mi perfil y continuar'}
+            {!busy && <span aria-hidden>→</span>}
+          </button>
+        </form>
 
-      <button
-        type="button"
-        disabled={busy || displayName.trim().length < 2 || !email.includes('@') || password.length < 8}
-        onClick={submit}
-        className="btn-gradient rise rise-2 mt-5 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-35"
-      >
-        {busy ? 'Creando tu cuenta…' : 'Continuar'}
-      </button>
+        {error && (
+          <div className={missionStyles.errorAlert} role="alert" aria-live="polite">
+            {error}
+          </div>
+        )}
 
-      {error && (
-        <div className="rise mt-4 rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
-          {error}
-        </div>
-      )}
-
-      <p className="mt-5 px-5 text-center text-[12px] leading-relaxed text-dim">
-        Entras de inmediato, sin esperar correos de confirmación. Usa un correo real: es tu única
-        vía para recuperar la contraseña.
-      </p>
+        <p className={missionStyles.formHint}>
+          Tu edad define las protecciones de la experiencia. Si eres menor, el siguiente paso será
+          invitar a tu apoderado. Usa un correo real para poder recuperar tu acceso.
+        </p>
       </main>
-    </PublicShell>
+    </MissionShell>
   );
 }

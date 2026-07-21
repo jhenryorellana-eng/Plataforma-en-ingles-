@@ -1,6 +1,11 @@
 'use client';
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+/**
+ * El navegador siempre usa el mismo origen (`/v1`). Next/Vercel actúa como
+ * proxy hacia la API, así la cookie httpOnly no depende de cookies third-party.
+ * NEXT_PUBLIC_API_URL queda como escape hatch para builds móviles nativos.
+ */
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export class ClientApiError extends Error {
   constructor(

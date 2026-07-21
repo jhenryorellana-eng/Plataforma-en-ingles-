@@ -39,13 +39,38 @@ export const zForgotPasswordRequest = z.object({
 });
 export type ForgotPasswordRequest = z.infer<typeof zForgotPasswordRequest>;
 
+export const zResetPasswordRequest = z.object({
+  accessToken: z.string().min(32).max(8192),
+  type: z.literal('recovery'),
+  password: zPassword,
+});
+export type ResetPasswordRequest = z.infer<typeof zResetPasswordRequest>;
+
+export const zResetPasswordResponse = z.object({ ok: z.literal(true) });
+export type ResetPasswordResponse = z.infer<typeof zResetPasswordResponse>;
+
+export const zStaffCapability = z.enum([
+  'curriculum_author',
+  'curriculum_publisher',
+  'academic_reviewer',
+  'safeguarding',
+  'operations',
+]);
+export type StaffCapability = z.infer<typeof zStaffCapability>;
+
 export const zMeResponse = z.object({
   id: z.string().uuid(),
   displayName: z.string(),
   role: zUserRole,
   ageBand: zAgeBand.nullable(),
+  capabilities: z.array(zStaffCapability),
 });
 export type MeResponse = z.infer<typeof zMeResponse>;
+
+export const zUpdateStaffCapabilitiesRequest = z.object({
+  capabilities: z.array(zStaffCapability).min(1),
+});
+export type UpdateStaffCapabilitiesRequest = z.infer<typeof zUpdateStaffCapabilitiesRequest>;
 
 // ---------- Registro y onboarding familiar (Stack §5.2–5.3) ----------
 
@@ -64,20 +89,26 @@ export const zRegisterGuardianRequest = z.object({
 });
 export type RegisterGuardianRequest = z.infer<typeof zRegisterGuardianRequest>;
 
+export const zRegisterGuardianResponse = z.object({
+  status: z.literal('pendingVerification'),
+});
+export type RegisterGuardianResponse = z.infer<typeof zRegisterGuardianResponse>;
+
 export const zCreateInvitationRequest = z.object({
   guardianEmail: z.string().email(),
 });
 export type CreateInvitationRequest = z.infer<typeof zCreateInvitationRequest>;
 
 export const zInvitationResponse = z.object({
-  code: z.string(),
+  code: z.string().length(8).nullable(),
   guardianEmail: z.string(),
   status: z.enum(['pending', 'accepted', 'expired']),
+  expiresAt: z.string().datetime(),
 });
 export type InvitationResponse = z.infer<typeof zInvitationResponse>;
 
 export const zAcceptInvitationRequest = z.object({
-  code: z.string().min(4).max(12),
+  code: z.string().length(8),
 });
 export type AcceptInvitationRequest = z.infer<typeof zAcceptInvitationRequest>;
 
@@ -103,14 +134,19 @@ export type RevokeConsentRequest = z.infer<typeof zRevokeConsentRequest>;
 export const zGrantConsentsRequest = z.object({
   learnerId: z.string().uuid(),
   purposes: z.array(zConsentPurpose).min(1),
-  noticeVersion: z.string().default('2026-07'),
+  /** Deprecated compatibility input; the server always chooses the active version. */
+  noticeVersion: z.string().optional(),
 });
 export type GrantConsentsRequest = z.infer<typeof zGrantConsentsRequest>;
 
 export const zRecordAssentRequest = z.object({
-  noticeVersion: z.string().default('2026-07'),
+  /** Deprecated compatibility input; the server always chooses the active version. */
+  noticeVersion: z.string().optional(),
 });
 export type RecordAssentRequest = z.infer<typeof zRecordAssentRequest>;
+
+export const zRevokeFamilyLinkRequest = z.object({ learnerId: z.string().uuid() });
+export type RevokeFamilyLinkRequest = z.infer<typeof zRevokeFamilyLinkRequest>;
 
 // ---------- Catálogo e inscripción ----------
 
@@ -451,6 +487,22 @@ export const zSafetyReportRequest = z.object({
   voiceSessionId: z.string().uuid().optional(),
 });
 export type SafetyReportRequest = z.infer<typeof zSafetyReportRequest>;
+
+export const zSafetyCaseUpdateRequest = z
+  .object({
+    status: z.enum(['triaged', 'resolved']),
+    resolution: z.string().trim().min(3).max(2000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === 'resolved' && !value.resolution) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['resolution'],
+        message: 'Resolver un caso exige documentar la resolución',
+      });
+    }
+  });
+export type SafetyCaseUpdateRequest = z.infer<typeof zSafetyCaseUpdateRequest>;
 
 // ---------- Revisión humana ----------
 

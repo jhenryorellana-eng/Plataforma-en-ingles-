@@ -5,7 +5,6 @@ import {
   type DiagnosticAttemptResponse,
   type DiagnosticNextResponse,
 } from '@star/contracts';
-import { AccessService } from '../../common/access.service';
 import { CurrentUser } from '../../common/decorators';
 import type { SessionUser } from '../../common/session';
 import { parse } from '../../common/validate';
@@ -16,14 +15,12 @@ import { DiagnosticService } from './diagnostic.service';
 export class DiagnosticController {
   constructor(
     private readonly diagnosticService: DiagnosticService,
-    private readonly accessService: AccessService,
     private readonly enrollmentService: EnrollmentService,
   ) {}
 
   @Post('enrollments/:id/diagnostic-attempts')
   async start(@CurrentUser() user: SessionUser, @Param('id') id: string): Promise<DiagnosticAttemptResponse> {
-    const enrollment = await this.accessService.assertEnrollmentAccess(user, id);
-    return this.diagnosticService.startOrResume(enrollment);
+    return this.diagnosticService.startOrResume(user, id);
   }
 
   @Post('diagnostic-attempts/:id/responses')

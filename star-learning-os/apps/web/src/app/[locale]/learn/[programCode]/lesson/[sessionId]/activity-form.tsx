@@ -13,9 +13,9 @@ export function CtaBar({
   tone?: 'default' | 'ok' | 'warn';
 }) {
   const tones: Record<string, string> = {
-    default: 'border-line bg-paper/85',
-    ok: 'border-ok/25 bg-ok-soft',
-    warn: 'border-gold/25 bg-warn-soft',
+    default: 'border-line bg-surface/94',
+    ok: 'border-ok/25 bg-surface/96',
+    warn: 'border-gold/25 bg-surface/96',
   };
   return (
     <div className={`fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-xl ${tones[tone]}`}>
@@ -41,7 +41,7 @@ export function CtaButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="btn-gradient w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
+      className="tactile-button w-full rounded-2xl py-3.5 text-[16px] font-extrabold text-white disabled:opacity-45"
     >
       {children}
     </button>
@@ -51,10 +51,12 @@ export function CtaButton({
 export function ActivityForm({
   activity,
   busy,
+  locked = false,
   onSubmit,
 }: {
   activity: ActivityDto;
   busy: boolean;
+  locked?: boolean;
   onSubmit: (response: Record<string, unknown>) => void;
 }) {
   const prompt = activity.prompt as {
@@ -71,8 +73,14 @@ export function ActivityForm({
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<string[]>([]);
   const [text, setText] = useState('');
+  const questionId = `activity-${activity.id}-prompt`;
 
   const wordCount = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
+  // Los huecos reales del texto mandan: nunca el `gaps` declarado, que puede no coincidir.
+  const gapCount = (prompt.text ?? '').split('____').length - 1;
+  const filledGaps = Array.from({ length: gapCount }, (_, gapIndex) => answers[gapIndex]?.trim() ?? '').filter(
+    (answer) => answer.length > 0,
+  ).length;
 
   return (
     <div className="rise rise-1 flex flex-col gap-4">
@@ -98,25 +106,30 @@ export function ActivityForm({
 
       {activity.kind === 'mcq' && (
         <>
-          <p className="px-1 text-[19px] font-bold leading-snug tracking-tight text-ink">
+          <p id={questionId} className="px-1 text-[19px] font-bold leading-snug tracking-tight text-ink">
             {prompt.stem}
           </p>
-          <div role="radiogroup" className="flex flex-col gap-2.5">
+          <div role="radiogroup" aria-labelledby={questionId} className="flex flex-col gap-2.5">
             {(prompt.options ?? []).map((option, optionIndex) => {
               const active = selected === optionIndex;
               return (
-                <button
+                <label
                   key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setSelected(optionIndex)}
-                  className={`flex w-full items-center gap-3.5 rounded-2xl border-2 px-4 py-3.5 text-left transition-all ${
+                  className={`mission-choice flex w-full items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/60 ${
                     active
-                      ? 'border-primary bg-primary-soft shadow-[0_6px_18px_rgba(94,92,230,0.18)]'
-                      : 'border-line bg-surface hover:border-primary/40 hover:bg-mist/60'
-                  }`}
+                      ? 'border-primary bg-primary-soft shadow-[0_4px_0_#3443b3]'
+                      : ''
+                  } ${locked ? 'cursor-default' : 'cursor-pointer'}`}
                 >
+                  <input
+                    type="radio"
+                    name={`activity-${activity.id}`}
+                    value={optionIndex}
+                    checked={active}
+                    disabled={locked}
+                    onChange={() => setSelected(optionIndex)}
+                    className="sr-only"
+                  />
                   <span
                     aria-hidden
                     className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
@@ -128,18 +141,18 @@ export function ActivityForm({
                   <span className={`flex-1 text-[16px] leading-snug ${active ? 'font-semibold text-ink' : 'text-ink'}`}>
                     {option}
                   </span>
-                </button>
+                </label>
               );
             })}
           </div>
-          <CtaBar>
+          {!locked && <CtaBar>
             <CtaButton
               disabled={selected === null || busy}
               onClick={() => onSubmit({ kind: 'mcq', selectedIndex: selected })}
             >
               {busy ? 'Enviando…' : 'Responder'}
             </CtaButton>
-          </CtaBar>
+          </CtaBar>}
         </>
       )}
 
@@ -153,6 +166,7 @@ export function ActivityForm({
                   {partIndex < parts.length - 1 && (
                     <input
                       aria-label={`Espacio ${partIndex + 1}`}
+                      disabled={locked}
                       className="mx-1 inline-block w-32 rounded-lg bg-mist px-2 py-1 text-center text-[15px] font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
                       value={answers[partIndex] ?? ''}
                       onChange={(event) => {
@@ -169,14 +183,19 @@ export function ActivityForm({
               <p className="mt-3 text-[13px] text-dim">Pistas: {prompt.hints.join(' · ')}</p>
             )}
           </Card>
-          <CtaBar>
+          {!locked && <CtaBar>
             <CtaButton
-              disabled={busy || answers.filter((a) => a?.trim()).length < (prompt.gaps ?? 1)}
-              onClick={() => onSubmit({ kind: 'gap_fill', answers })}
+              disabled={busy || filledGaps < gapCount}
+              onClick={() =>
+                onSubmit({
+                  kind: 'gap_fill',
+                  answers: Array.from({ length: gapCount }, (_, gapIndex) => answers[gapIndex]?.trim() ?? ''),
+                })
+              }
             >
               {busy ? 'Enviando…' : 'Responder'}
             </CtaButton>
-          </CtaBar>
+          </CtaBar>}
         </>
       )}
 
@@ -189,6 +208,7 @@ export function ActivityForm({
             <textarea
               aria-label="Tu texto"
               rows={9}
+              disabled={locked}
               value={text}
               onChange={(event) => setText(event.target.value)}
               placeholder="Escribe tu correo aquí…"
@@ -201,11 +221,11 @@ export function ActivityForm({
             </span>
             <span>Con revisión humana si es crítica</span>
           </div>
-          <CtaBar>
-            <CtaButton disabled={busy || wordCount < 10} onClick={() => onSubmit({ kind: 'writing_prompt', text })}>
+          {!locked && <CtaBar>
+            <CtaButton disabled={busy || wordCount < (prompt.minWords ?? 10)} onClick={() => onSubmit({ kind: 'writing_prompt', text })}>
               {busy ? 'Enviando…' : 'Entregar'}
             </CtaButton>
-          </CtaBar>
+          </CtaBar>}
         </>
       )}
     </div>

@@ -32,7 +32,7 @@ export interface VoicePolicyResult {
   remainingMinutes: number;
 }
 
-const MINOR_REQUIRED_CONSENTS: ConsentPurpose[] = ['service', 'ai_voice'];
+const MINOR_REQUIRED_CONSENTS: ConsentPurpose[] = ['ai_voice', 'international_transfer'];
 
 /**
  * Autorización de sesión de voz (Stack §8.3): la política es un bloqueo técnico,

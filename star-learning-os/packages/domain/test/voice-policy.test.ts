@@ -6,7 +6,7 @@ function baseInput(overrides: Partial<VoicePolicyInput>): VoicePolicyInput {
     ageBand: 't14_17',
     enrollmentStatus: 'active',
     hasActiveGuardianLink: true,
-    consents: ['service', 'ai_voice'],
+    consents: ['ai_voice', 'international_transfer'],
     hasAssent: true,
     zdrVerified: false,
     weeklyMinutesIncluded: 150,
@@ -39,7 +39,7 @@ describe('evaluateVoicePolicy — gates de voz juvenil (Stack §8.3, Especificac
   });
 
   it('bloquea a un menor sin consentimiento de voz', () => {
-    const result = evaluateVoicePolicy(baseInput({ consents: ['service'] }));
+    const result = evaluateVoicePolicy(baseInput({ consents: ['ai_voice'] }));
     expect(result.denyReasons).toContain('CONSENT_REQUIRED');
   });
 

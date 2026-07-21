@@ -149,7 +149,7 @@ export default function StudioPage({ params }: { params: Promise<{ locale: strin
             </h1>
             <p className="mt-1 max-w-[52ch] text-[15px] leading-relaxed text-dim">
               Tú pones el tema; la IA redacta la clase completa con la Metodología STAR. Nada llega
-              al alumno sin tu publicación.
+              al alumno sin revisión y publicación de otra persona autorizada.
             </p>
           </div>
           <Chip tone={overview?.authoringProvider === 'template-authoring' ? 'warn' : 'ok'}>

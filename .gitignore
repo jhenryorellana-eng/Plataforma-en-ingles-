@@ -1,5 +1,6 @@
 # Dependencias
 node_modules/
+.pnpm-store/
 
 # Builds
 dist/
@@ -7,6 +8,7 @@ dist/
 .turbo/
 out/
 coverage/
+*.tsbuildinfo
 
 # Entorno y secretos — NUNCA commitear claves
 .env
@@ -21,5 +23,6 @@ coverage/
 .DS_Store
 Thumbs.db
 .playwright-mcp/
+.shots/
 
 .vercel

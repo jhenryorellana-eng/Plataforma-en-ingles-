@@ -15,6 +15,8 @@ import { composeMentorInstructions, POLICY_VERSION, PROMPT_VERSION, type Mission
 import { MockVoiceProvider, OpenAiRealtimeProvider } from './openai-realtime.provider';
 import type { VoiceProvider } from './voice-provider';
 import { weeklyVoiceMinutesUsed, weeklyVoiceSecondsUsed } from './voice-usage';
+import { ACTIVE_ASSENT_NOTICE_VERSION, ACTIVE_CONSENT_NOTICE_VERSION, REQUIRED_LEARNING_CONSENTS, REQUIRED_VOICE_CONSENTS } from '../family/family-policy';
+import { lockLearnerDailyReward, lockLearnerPolicy } from '../../common/learner-policy-lock';
 
 const DENY_STATUS: Record<VoiceDenyReason, { code: ErrorCode; message: string }> = {
   ENROLLMENT_NOT_ACTIVE: { code: 'ENROLLMENT_NOT_ACTIVE', message: 'Tu inscripción no está activa' },
@@ -30,6 +32,10 @@ const DENY_STATUS: Record<VoiceDenyReason, { code: ErrorCode; message: string }>
 
 const HEARTBEAT_MAX_DELTA_SECONDS = 60;
 const VOICE_SESSION_NOVAS = 30;
+/** Mínimo de conversación real para ganar Novas: entrar y salir no recompensa. */
+const VOICE_MIN_ACTIVE_SECONDS_FOR_NOVAS = 60;
+/** Tope diario de premios de voz: backstop anti-farming además de la cuota semanal. */
+const VOICE_DAILY_NOVA_GRANTS_CAP = 5;
 
 @Injectable()
 export class VoiceService {
@@ -54,23 +60,34 @@ export class VoiceService {
   ): Promise<VoiceSessionResponse> {
     const config = loadConfig();
     const learner = enrollment.learner;
+    // La sesión de voz es escritura académica del propio alumno (evidencia y
+    // recompensas son suyas): ni apoderado ni staff la inician en su nombre.
+    if (actor.id !== learner.id) {
+      throw new AppError('FORBIDDEN', 403, 'Solo el propio alumno puede iniciar su misión de voz');
+    }
+    if (!learner.ageBand) {
+      throw new AppError('AGE_NOT_ALLOWED', 403, 'Tu cuenta necesita una banda de edad verificada');
+    }
+    const learnerAgeBand = learner.ageBand;
 
     const [link, consents, assent, entitlement, usedMinutes] = await Promise.all([
       this.prisma.guardianLearnerLink.findFirst({
         where: { learnerId: learner.id, status: 'active' },
       }),
       this.prisma.consentGrant.findMany({
-        where: { learnerId: learner.id, status: 'granted' },
+        where: { learnerId: learner.id, status: 'granted', noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
         select: { purpose: true },
       }),
-      this.prisma.youthAssent.findFirst({ where: { learnerId: learner.id } }),
+      this.prisma.youthAssent.findFirst({
+        where: { learnerId: learner.id, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION, revokedAt: null },
+      }),
       this.prisma.entitlement.findUnique({ where: { enrollmentId: enrollment.id } }),
       weeklyVoiceMinutesUsed(this.prisma, enrollment.id),
     ]);
 
     // Bloqueo técnico, no política (Stack §1.1): la política juvenil decide en dominio puro.
     const policy = evaluateVoicePolicy({
-      ageBand: learner.ageBand ?? 'a18_plus',
+      ageBand: learnerAgeBand,
       enrollmentStatus: enrollment.status,
       hasActiveGuardianLink: link !== null,
       consents: consents.map((c) => c.purpose),
@@ -142,7 +159,51 @@ export class VoiceService {
     });
 
     const mode = this.provider.name === 'mock' ? 'mock' : 'realtime';
-    const voiceSession = await this.prisma.$transaction(async (tx) => {
+    const sessionStartedAt = new Date();
+    const creation = await this.prisma.$transaction(async (tx) => {
+      // The provider call deliberately happens before this lock. Once an
+      // ephemeral credential exists, authorization is re-read under the same
+      // learner lock used by every family-policy revocation. A denied result is
+      // committed only as audit evidence; no DB session or secret is returned.
+      await lockLearnerPolicy(tx, learner.id);
+      const [currentEnrollment, currentLink, currentConsents, currentAssent, currentEntitlement, currentUsedMinutes] = await Promise.all([
+        tx.enrollment.findUniqueOrThrow({ where: { id: enrollment.id } }),
+        tx.guardianLearnerLink.findFirst({ where: { learnerId: learner.id, status: 'active' } }),
+        tx.consentGrant.findMany({
+          where: { learnerId: learner.id, status: 'granted', noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
+          select: { purpose: true },
+        }),
+        tx.youthAssent.findFirst({
+          where: { learnerId: learner.id, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION, revokedAt: null },
+        }),
+        tx.entitlement.findUnique({ where: { enrollmentId: enrollment.id } }),
+        weeklyVoiceMinutesUsed(tx, enrollment.id),
+      ]);
+      const currentPolicy = evaluateVoicePolicy({
+        ageBand: learnerAgeBand,
+        enrollmentStatus: currentEnrollment.status,
+        hasActiveGuardianLink: currentLink !== null,
+        consents: currentConsents.map((consent) => consent.purpose),
+        hasAssent: currentAssent !== null,
+        zdrVerified: config.zdrVerified,
+        weeklyMinutesIncluded: currentEntitlement?.weeklyVoiceMinutes ?? 0,
+        weeklyMinutesUsed: currentUsedMinutes,
+      });
+      if (!currentPolicy.allowed) {
+        await this.auditService.recordInTx(tx, {
+          actorId: actor.id,
+          action: 'voice.session_denied',
+          objectType: 'enrollment',
+          objectId: enrollment.id,
+          metadata: { reasons: currentPolicy.denyReasons, phase: 'post_provider_revalidation' },
+        });
+        return {
+          voiceSession: null,
+          denyReasons: currentPolicy.denyReasons,
+          entitlement: currentEntitlement,
+          usedMinutes: currentUsedMinutes,
+        };
+      }
       const created = await tx.voiceSession.create({
         data: {
           enrollmentId: enrollment.id,
@@ -158,7 +219,8 @@ export class VoiceService {
           targetVariety: enrollment.targetVariety,
           immersionRatio: lesson.immersionRatio,
           status: 'created',
-          startedAt: new Date(),
+          startedAt: sessionStartedAt,
+          lastHeartbeatAt: sessionStartedAt,
         },
       });
       await this.outboxService.emitInTx(tx, {
@@ -174,8 +236,19 @@ export class VoiceService {
         objectId: created.id,
         metadata: { mode },
       });
-      return created;
+      return {
+        voiceSession: created,
+        denyReasons: null,
+        entitlement: currentEntitlement,
+        usedMinutes: currentUsedMinutes,
+      };
     });
+    if (!creation.voiceSession) {
+      const reason = creation.denyReasons[0];
+      const deny = DENY_STATUS[reason];
+      throw new AppError(deny.code, 403, deny.message, { reasons: creation.denyReasons });
+    }
+    const voiceSession = creation.voiceSession;
 
     return {
       voiceSessionId: voiceSession.id,
@@ -202,8 +275,8 @@ export class VoiceService {
           : {}),
       },
       usage: {
-        includedMinutes: entitlement?.weeklyVoiceMinutes ?? 0,
-        usedMinutes,
+        includedMinutes: creation.entitlement?.weeklyVoiceMinutes ?? 0,
+        usedMinutes: creation.usedMinutes,
       },
     };
   }
@@ -214,14 +287,63 @@ export class VoiceService {
     activeSecondsDelta: number,
   ): Promise<{ shouldEnd: boolean; reason: string | null; usedMinutes: number }> {
     const session = await this.getForActor(actor, voiceSessionId);
-    if (session.status === 'completed' || session.status === 'terminated') {
+    if (session.status !== 'created' && session.status !== 'connected') {
       return { shouldEnd: true, reason: 'session_closed', usedMinutes: 0 };
     }
-    const delta = Math.min(Math.max(0, Math.floor(activeSecondsDelta)), HEARTBEAT_MAX_DELTA_SECONDS);
-    const updated = await this.prisma.voiceSession.update({
-      where: { id: session.id },
-      data: { status: 'connected', activeSeconds: { increment: delta } },
-    });
+    if (!actor.ageBand) {
+      await this.terminateUnauthorizedHeartbeat(actor, session.id);
+      return { shouldEnd: true, reason: 'authorization_revoked', usedMinutes: 0 };
+    }
+    if (actor.ageBand !== 'a18_plus') {
+      const requiredConsents = [...REQUIRED_LEARNING_CONSENTS, ...REQUIRED_VOICE_CONSENTS];
+      const [link, consents, assent] = await Promise.all([
+        this.prisma.guardianLearnerLink.findFirst({ where: { learnerId: actor.id, status: 'active' } }),
+        this.prisma.consentGrant.findMany({
+          where: {
+            learnerId: actor.id, status: 'granted', noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION,
+            purpose: { in: requiredConsents },
+          },
+          select: { purpose: true },
+        }),
+        this.prisma.youthAssent.findFirst({
+          where: { learnerId: actor.id, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION, revokedAt: null },
+        }),
+      ]);
+      const purposes = new Set(consents.map((consent) => consent.purpose));
+      const authorized = link !== null && assent !== null && requiredConsents.every((purpose) => purposes.has(purpose));
+      if (!authorized) {
+        await this.terminateUnauthorizedHeartbeat(actor, session.id);
+        return { shouldEnd: true, reason: 'authorization_revoked', usedMinutes: 0 };
+      }
+    }
+    const now = new Date();
+    const heartbeatBase = session.lastHeartbeatAt ?? session.startedAt ?? now;
+    const elapsedSeconds = Math.max(0, Math.ceil((now.getTime() - heartbeatBase.getTime()) / 1000));
+    // El navegador declara cuánto estuvo activo, pero nunca puede acreditar más
+    // tiempo que el realmente transcurrido desde el heartbeat anterior.
+    const delta = Math.min(
+      Math.max(0, Math.floor(activeSecondsDelta)),
+      HEARTBEAT_MAX_DELTA_SECONDS,
+      elapsedSeconds,
+    );
+    let updatedActiveSeconds = session.activeSeconds;
+    if (delta > 0) {
+      // A zero delta is a liveness probe only: it must not transition the
+      // session to connected nor create a wall-clock tail to bill later.
+      const touched = await this.prisma.voiceSession.updateMany({
+        where: {
+          id: session.id,
+          status: { in: ['created', 'connected'] },
+          lastHeartbeatAt: session.lastHeartbeatAt,
+        },
+        data: { status: 'connected', activeSeconds: { increment: delta }, lastHeartbeatAt: now },
+      });
+      const updated = await this.prisma.voiceSession.findUniqueOrThrow({ where: { id: session.id } });
+      if (touched.count === 0 && updated.status !== 'created' && updated.status !== 'connected') {
+        return { shouldEnd: true, reason: 'session_closed', usedMinutes: 0 };
+      }
+      updatedActiveSeconds = updated.activeSeconds;
+    }
 
     const [entitlement, weeklySeconds, lesson] = await Promise.all([
       this.prisma.entitlement.findUnique({ where: { enrollmentId: session.enrollmentId } }),
@@ -230,7 +352,7 @@ export class VoiceService {
     ]);
     const includedSeconds = (entitlement?.weeklyVoiceMinutes ?? 0) * 60;
 
-    if (updated.activeSeconds >= lesson.timeboxSeconds) {
+    if (updatedActiveSeconds >= lesson.timeboxSeconds) {
       return { shouldEnd: true, reason: 'timebox_reached', usedMinutes: Math.ceil(weeklySeconds / 60) };
     }
     if (weeklySeconds >= includedSeconds) {
@@ -254,22 +376,29 @@ export class VoiceService {
     const includedMinutes = entitlement?.weeklyVoiceMinutes ?? 0;
     const previousSeconds = await weeklyVoiceSecondsUsed(this.prisma, session.enrollmentId);
 
-    // COM-04: solo tiempo activo, acotado por el timebox del contrato.
-    const finalActiveSeconds = Math.min(
-      Math.max(session.activeSeconds, request.activeSeconds),
-      lesson.timeboxSeconds + 120,
-    );
+    // COM-04: only heartbeat deltas already bounded by elapsed wall time count.
+    // Ending a session never invents an unverified wall-clock tail.
+    const now = new Date();
+    const finalActiveSeconds = Math.min(session.activeSeconds, lesson.timeboxSeconds);
 
+    let novasAwarded = 0;
+    let lostRaceToClose = false;
     await this.prisma.$transaction(async (tx) => {
-      await tx.voiceSession.update({
-        where: { id: session.id },
+      // Cierre condicional: dos `end` concurrentes no duplican registro de coste
+      // ni eventos — el segundo descubre que la sesión ya estaba cerrada.
+      const closed = await tx.voiceSession.updateMany({
+        where: { id: session.id, status: { notIn: ['completed', 'terminated'] } },
         data: {
           status: request.reason === 'safety' ? 'terminated' : 'completed',
-          endedAt: new Date(),
+          endedAt: now,
           activeSeconds: finalActiveSeconds,
           endReason: request.reason,
         },
       });
+      if (closed.count === 0) {
+        lostRaceToClose = true;
+        return;
+      }
       await tx.aiUsageRecord.create({
         data: {
           enrollmentId: session.enrollmentId,
@@ -283,14 +412,29 @@ export class VoiceService {
           } as Prisma.InputJsonObject,
         },
       });
-      if (finalActiveSeconds > 0) {
-        // Recompensa idempotente: refId = voiceSessionId, cerrar dos veces no duplica.
-        await this.economyService.grantNovasInTx(tx, {
-          userId: actor.id,
-          kind: 'voice_session',
-          amount: VOICE_SESSION_NOVAS,
-          refId: session.id,
+      if (finalActiveSeconds >= VOICE_MIN_ACTIVE_SECONDS_FOR_NOVAS) {
+        // Recompensa idempotente (refId = voiceSessionId) y acotada: mínimo de
+        // conversación real + tope diario de premios. Siempre al alumno, jamás
+        // a quien opera la sesión (un staff no se lleva las Novas del menor).
+        const dayStart = new Date();
+        dayStart.setUTCHours(0, 0, 0, 0);
+        await lockLearnerDailyReward(tx, session.enrollment.learnerId, dayStart);
+        const grantsToday = await tx.xpEvent.count({
+          where: {
+            userId: session.enrollment.learnerId,
+            kind: 'voice_session',
+            createdAt: { gte: dayStart },
+          },
         });
+        if (grantsToday < VOICE_DAILY_NOVA_GRANTS_CAP) {
+          const granted = await this.economyService.grantNovasInTx(tx, {
+            userId: session.enrollment.learnerId,
+            kind: 'voice_session',
+            amount: VOICE_SESSION_NOVAS,
+            refId: session.id,
+          });
+          if (granted) novasAwarded = VOICE_SESSION_NOVAS;
+        }
       }
       await this.outboxService.emitInTx(tx, {
         aggregateType: 'voice_session',
@@ -315,11 +459,16 @@ export class VoiceService {
       }
     });
 
+    if (lostRaceToClose) {
+      return { ok: true, alreadyClosed: true };
+    }
+
     const usedMinutes = await weeklyVoiceMinutesUsed(this.prisma, session.enrollmentId);
     return {
       ok: true,
       usedMinutes,
       includedMinutes,
+      novasAwarded,
       alertLevel: usageAlertLevel(includedMinutes === 0 ? 1 : usedMinutes / includedMinutes),
     };
   }
@@ -339,13 +488,35 @@ export class VoiceService {
     };
   }
 
+  private async terminateUnauthorizedHeartbeat(actor: SessionUser, voiceSessionId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockLearnerPolicy(tx, actor.id);
+      const terminated = await tx.voiceSession.updateMany({
+        where: { id: voiceSessionId, status: { in: ['created', 'connected'] } },
+        data: { status: 'terminated', endedAt: new Date(), endReason: 'authorization_revoked' },
+      });
+      if (terminated.count > 0) {
+        await this.outboxService.emitInTx(tx, {
+          aggregateType: 'voice_session', aggregateId: voiceSessionId,
+          eventType: 'voice.session_terminated', payload: { reason: 'authorization_revoked' },
+        });
+        await this.auditService.recordInTx(tx, {
+          actorId: actor.id, action: 'voice.session_terminated', objectType: 'voice_session', objectId: voiceSessionId,
+          metadata: { reason: 'authorization_revoked' },
+        });
+      }
+    });
+  }
+
   private async getForActor(actor: SessionUser, voiceSessionId: string) {
     const session = await this.prisma.voiceSession.findUnique({
       where: { id: voiceSessionId },
       include: { enrollment: true },
     });
     if (!session) throw notFound('Sesión de voz no encontrada');
-    if (actor.role !== 'staff' && session.enrollment.learnerId !== actor.id) {
+    // Las acciones sobre la sesión (heartbeat/end) son escritura académica:
+    // solo el propio alumno — ni staff ni apoderado con acceso de lectura.
+    if (session.enrollment.learnerId !== actor.id) {
       throw new AppError('FORBIDDEN', 403, 'No tienes acceso a esta sesión de voz');
     }
     return session;

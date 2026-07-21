@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { apiFetchOrNull } from '@/lib/api';
-import { Chip, Group, IconTile, InitialsAvatar, Ring, Row, SectionHeader, Wordmark } from '@/components/ui';
+import { AuroraHero, AuroraSurface } from '@/components/aurora/aurora-hero';
+import { NovaGuide } from '@/components/aurora/nova-guide';
+import { Chip, Icon, IconTile, InitialsAvatar, Ring, Wordmark } from '@/components/ui';
 import { AcceptInvitationCard, ConsentToggles } from '@/components/family-manager';
 
 interface GuardianSummary {
@@ -35,34 +37,83 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
   if (!summary) redirect(`/${locale}/login`);
 
   return (
-    <div className="min-h-dvh">
-      <header className="material-bar sticky top-0 z-40 border-b border-line">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5 lg:max-w-5xl">
+    <div className="mission-shell min-h-dvh">
+      <header className="material-bar sticky top-0 z-40 border-b border-line/80">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Wordmark />
+          <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary">
+            Control familiar
+          </span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pb-16 pt-6 lg:max-w-5xl">
-        <div className="rise mb-6">
-          <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">Familia</h1>
-          <p className="mt-1 text-[15px] leading-relaxed text-dim">
-            Progreso, permisos y alertas — sin transcripciones de las conversaciones de tus hijos,
-            por diseño.
-          </p>
+      <main className="mx-auto max-w-6xl px-3.5 pb-16 pt-4 sm:px-6 sm:pt-7">
+        <AuroraHero
+          asset="family"
+          eyebrow="Centro de acompañamiento"
+          title="Acompaña su avance sin invadir su espacio."
+          body="Aquí ves progreso, permisos y alertas necesarias. Nunca mostramos transcripciones de sus conversaciones: esa privacidad es parte del diseño."
+          tone="gold"
+          priority
+          imageAlt="Apoderado acompañando la ruta educativa desde un centro de misión"
+          compact
+          badge={
+            <span className="rounded-full border border-white/20 bg-[#071525]/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-md">
+              {summary.learners.length === 1
+                ? '1 estudiante vinculado'
+                : `${summary.learners.length} estudiantes vinculados`}
+            </span>
+          }
+        />
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+          <div className="rise">
+            <AcceptInvitationCard />
+          </div>
+          <NovaGuide
+            state="idle"
+            eyebrow="Nova · acompañamiento responsable"
+            className="rise rise-1"
+          >
+            El progreso ayuda a conversar y acompañar. Las prácticas y conversaciones siguen
+            perteneciendo al espacio del estudiante.
+          </NovaGuide>
         </div>
 
-        <div className="rise rise-1 mb-7">
-          <AcceptInvitationCard />
-        </div>
+        {summary.learners.length === 0 && (
+          <AuroraSurface className="rise rise-2 mt-7 px-5 py-10 text-center" tone="neutral">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-[20px_20px_20px_7px] border border-primary/20 bg-primary-soft">
+              <Icon name="route" className="size-6 text-primary" />
+            </span>
+            <h2 className="mt-5 text-[22px] font-extrabold tracking-tight text-ink">
+              Tu red familiar aún está vacía
+            </h2>
+            <p className="mx-auto mt-2 max-w-[46ch] text-[13px] leading-relaxed text-dim">
+              Cuando aceptes un código de invitación, aquí aparecerán el progreso, los permisos y
+              las señales necesarias para acompañar.
+            </p>
+          </AuroraSurface>
+        )}
 
-        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start">
+        <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:items-start">
           {summary.learners.map((learner, index) => (
-            <section key={learner.learnerId} className={`rise rise-${index + 1}`}>
-              <div className="mb-3 flex items-center gap-3 px-1">
-                <InitialsAvatar name={learner.displayName} />
-                <div className="flex-1">
-                  <p className="text-[18px] font-bold tracking-tight text-ink">{learner.displayName}</p>
-                  <p className="text-[13px] text-dim">{AGE_LABELS[learner.ageBand ?? ''] ?? '—'}</p>
+            <section
+              key={learner.learnerId}
+              className={`rise rise-${Math.min(index + 1, 3)} min-w-0`}
+              aria-labelledby={`learner-${learner.learnerId}`}
+            >
+              <div className="mb-4 flex items-start gap-3 px-1">
+                <InitialsAvatar name={learner.displayName} className="size-12" />
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id={`learner-${learner.learnerId}`}
+                    className="truncate text-[20px] font-extrabold tracking-tight text-ink"
+                  >
+                    {learner.displayName}
+                  </h2>
+                  <p className="mt-0.5 text-[12px] text-dim">
+                    {AGE_LABELS[learner.ageBand ?? ''] ?? 'Edad no disponible'}
+                  </p>
                 </div>
                 {learner.openSafetyCases > 0 ? (
                   <Chip tone="warn">{learner.openSafetyCases} alerta(s)</Chip>
@@ -73,63 +124,118 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
 
               {learner.enrollments.map((enrollment) => {
                 const masteryRatio =
-                  enrollment.totalCount === 0 ? 0 : enrollment.masteredCount / enrollment.totalCount;
+                  enrollment.totalCount === 0
+                    ? 0
+                    : enrollment.masteredCount / enrollment.totalCount;
                 const voiceRatio =
                   enrollment.voice.includedMinutes === 0
                     ? 0
                     : enrollment.voice.usedMinutes / enrollment.voice.includedMinutes;
                 return (
-                  <Group key={enrollment.enrollmentId} className="mb-3">
-                    <div className="flex items-center gap-3.5 px-4 py-3">
-                      <Ring value={masteryRatio} size={40} strokeWidth={5} color="#5e5ce6" />
+                  <AuroraSurface
+                    key={enrollment.enrollmentId}
+                    className="mb-4 overflow-hidden"
+                    tone="blue"
+                  >
+                    <div className="flex items-center gap-3.5 border-b border-line px-4 py-4 sm:px-5">
+                      <span aria-hidden>
+                        <Ring
+                          value={masteryRatio}
+                          size={48}
+                          strokeWidth={6}
+                          color="#8292ff"
+                          colorTo="#4ce4f4"
+                        />
+                      </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[16px] text-ink">{enrollment.program}</p>
-                        <p className="text-[13px] text-dim">Plan {enrollment.paceCode}</p>
+                        <p className="truncate text-[16px] font-extrabold text-ink">
+                          {enrollment.program}
+                        </p>
+                        <p className="mt-0.5 text-[11.5px] text-dim">
+                          Plan {enrollment.paceCode} · {enrollment.status}
+                        </p>
                       </div>
-                      <span className="text-[15px] font-semibold tabular-nums text-ink">
-                        {enrollment.masteredCount} / {enrollment.totalCount}
+                      <span className="shrink-0 text-right">
+                        <span className="block text-[15px] font-extrabold tabular-nums text-ink">
+                          {enrollment.masteredCount}/{enrollment.totalCount}
+                        </span>
+                        <span className="block text-[9px] font-bold uppercase tracking-wide text-dim">
+                          dominios
+                        </span>
                       </span>
                     </div>
-                    <div className="flex items-center gap-3.5 px-4 py-3">
-                      <IconTile name="mic" color="bg-teal" />
+                    <div className="flex items-start gap-3.5 px-4 py-4 sm:px-5">
+                      <IconTile name="mic" color="bg-teal" className="mt-0.5" />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between">
-                          <p className="text-[16px] text-ink">Voz de la semana</p>
-                          <p className="text-[15px] font-semibold tabular-nums text-ink">
+                        <div className="flex flex-col gap-0.5 min-[390px]:flex-row min-[390px]:items-baseline min-[390px]:justify-between">
+                          <p className="text-[14px] font-bold text-ink">Voz de la semana</p>
+                          <p className="text-[12px] font-extrabold tabular-nums text-ink">
                             {enrollment.voice.usedMinutes}
-                            <span className="font-normal text-dim"> / {enrollment.voice.includedMinutes} min</span>
+                            <span className="font-medium text-dim">
+                              {' '}
+                              / {enrollment.voice.includedMinutes} min
+                            </span>
                           </p>
                         </div>
-                        <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-fill">
+                        <div
+                          className="mt-2 h-2 overflow-hidden rounded-full bg-fill"
+                          role="progressbar"
+                          aria-label="Minutos de voz utilizados esta semana"
+                          aria-valuemin={0}
+                          aria-valuemax={enrollment.voice.includedMinutes}
+                          aria-valuenow={enrollment.voice.usedMinutes}
+                        >
                           <div
                             className={`h-full rounded-full ${voiceRatio >= 0.9 ? 'bg-risk' : voiceRatio >= 0.7 ? 'bg-warn' : 'bg-teal'}`}
                             style={{ width: `${Math.min(100, voiceRatio * 100)}%` }}
                           />
                         </div>
-                        <p className="mt-1.5 text-[12px] text-dim">Recibirás avisos al 70, 90 y 100%.</p>
+                        <p className="mt-1.5 text-[10.5px] leading-relaxed text-dim">
+                          Recibirás avisos al 70, 90 y 100%.
+                        </p>
                       </div>
                     </div>
                     {learner.pendingReviews > 0 && (
-                      <Row
-                        icon="shield"
-                        iconColor="bg-primary"
-                        title="En revisión académica humana"
-                        subtitle="Decisiones significativas pendientes de una persona del equipo"
-                        trailing={<span className="font-semibold text-ink">{learner.pendingReviews}</span>}
-                      />
+                      <div className="flex items-start gap-3 border-t border-line bg-primary-soft/40 px-4 py-3.5 sm:px-5">
+                        <IconTile name="shield" color="bg-primary" className="mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-bold text-ink">
+                            Revisión académica humana
+                          </p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-dim">
+                            Hay decisiones significativas pendientes de una persona del equipo.
+                          </p>
+                        </div>
+                        <Chip tone="primary">{learner.pendingReviews}</Chip>
+                      </div>
                     )}
-                  </Group>
+                  </AuroraSurface>
                 );
               })}
               {learner.enrollments.length === 0 && (
-                <p className="mb-3 px-1 text-[14px] text-dim">Aún sin inscripciones activas.</p>
+                <AuroraSurface className="mb-4 flex items-center gap-3 px-4 py-4" tone="neutral">
+                  <IconTile name="route" color="bg-fill" />
+                  <div>
+                    <p className="text-[13px] font-bold text-ink">Aún sin inscripciones activas</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-dim">
+                      El progreso aparecerá aquí cuando inicie una ruta.
+                    </p>
+                  </div>
+                </AuroraSurface>
               )}
 
-              <SectionHeader className="mt-4">Permisos por finalidad</SectionHeader>
+              <div className="mb-3 mt-5 px-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-teal">
+                  Privacidad y funciones
+                </p>
+                <h3 className="mt-1 text-[17px] font-extrabold tracking-tight text-ink">
+                  Permisos por finalidad
+                </h3>
+              </div>
               <ConsentToggles learnerId={learner.learnerId} granted={learner.consents} />
-              <p className="mt-2 px-1 text-[12px] leading-relaxed text-dim">
+              <p className="mt-3 px-1 text-[11px] leading-relaxed text-dim">
                 Revocar &quot;Voz con IA&quot; impide crear nuevas sesiones de voz al instante. Cada
-                permiso es independiente (CNS-01).
+                permiso es independiente y puedes cambiarlo por separado.
               </p>
             </section>
           ))}

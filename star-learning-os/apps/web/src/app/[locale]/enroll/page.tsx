@@ -4,8 +4,9 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EnrollmentResponse } from '@star/contracts';
 import { ClientApiError, clientApi } from '@/lib/client-api';
-import { AppIcon, Group, Row } from '@/components/ui';
-import { PublicShell } from '@/components/public-shell';
+import { AuroraHero, AuroraSurface } from '@/components/aurora/aurora-hero';
+import { NovaGuide } from '@/components/aurora/nova-guide';
+import { IconTile, Wordmark } from '@/components/ui';
 
 export default function EnrollPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
@@ -47,57 +48,110 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
   }
 
   return (
-    <PublicShell>
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
-      <div className="rise flex flex-col items-center text-center">
-        <AppIcon className="size-16" />
-        <h1 className="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-ink">
-          English Path
-        </h1>
-        <p className="mt-2 max-w-[34ch] text-[15px] leading-relaxed text-dim">
-          Primero medimos tu nivel real con StarMap. Con tu resultado, elegirás el ritmo que mejor
-          encaje con tu semana.
-        </p>
-      </div>
-
-      <div className="rise rise-1 mt-8">
-        <Group>
-          <Row
-            icon="progress"
-            iconColor="bg-blue"
-            title="1 · Diagnóstico StarMap"
-            subtitle="Lectura, escucha y uso del idioma — tu nivel por habilidad"
-          />
-          <Row
-            icon="route"
-            iconColor="bg-primary"
-            title="2 · Elige tu ritmo"
-            subtitle="Flex, Accelerated o Sprint, con tu fecha estimada de llegada a B2"
-          />
-          <Row
-            icon="today"
-            iconColor="bg-teal"
-            title="3 · Empieza tu ruta"
-            subtitle="Plan diario con tu Mentor: mismas puertas de dominio en todo ritmo"
-          />
-        </Group>
-      </div>
-
-      <button
-        type="button"
-        disabled={busy}
-        onClick={enroll}
-        className="btn-gradient rise rise-2 mt-6 w-full rounded-2xl py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
-      >
-        {busy ? 'Creando tu inscripción…' : 'Empezar con el diagnóstico'}
-      </button>
-
-      {error && (
-        <div className="rise mt-4 rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
-          {error}
+    <div className="mission-shell min-h-dvh overflow-x-clip">
+      <header className="material-bar border-b border-line/80">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <Wordmark />
+          <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary">
+            Expedición Aurora
+          </span>
         </div>
-      )}
+      </header>
+
+      <main className="mx-auto min-w-0 max-w-5xl px-3.5 pb-14 pt-4 sm:px-6 sm:pt-7">
+        <AuroraHero
+          asset="starmap"
+          eyebrow="English Path · punto de partida"
+          title="Descubramos dónde comienza tu ruta."
+          body="StarMap mide tu nivel por habilidad. Con el resultado elegirás un ritmo realista para tu semana, sin perder las mismas metas de dominio."
+          tone="cyan"
+          priority
+          imageAlt="Ruta de aprendizaje StarMap proyectada como una constelación"
+          compact
+          badge={
+            <span className="rounded-full border border-white/20 bg-[#071525]/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-md">
+              Primera misión
+            </span>
+          }
+        />
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <NovaGuide state="thinking" className="rise">
+            No necesitas prepararte. Responde con calma: cada respuesta me ayuda a encontrar el
+            punto correcto para ti.
+          </NovaGuide>
+
+          <AuroraSurface className="rise rise-1 overflow-hidden" tone="cyan">
+            <div className="border-b border-line px-4 py-4 sm:px-5">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-teal">
+                Tu plan de vuelo
+              </p>
+              <h2 className="mt-1 text-[20px] font-extrabold tracking-tight text-ink">
+                Tres pasos, una ruta hecha para ti
+              </h2>
+            </div>
+
+            <ol className="divide-y divide-line">
+              <li className="flex gap-3.5 px-4 py-4 sm:px-5">
+                <IconTile name="progress" color="bg-blue" className="mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-ink">1. Diagnóstico StarMap</p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-dim">
+                    Lectura, escucha y uso del idioma para ubicar tu nivel por habilidad.
+                  </p>
+                </div>
+              </li>
+              <li className="flex gap-3.5 px-4 py-4 sm:px-5">
+                <IconTile name="route" color="bg-primary" className="mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-ink">2. Elige tu ritmo</p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-dim">
+                    Compara Flex, Accelerated o Sprint y su fecha estimada de llegada a B2.
+                  </p>
+                </div>
+              </li>
+              <li className="flex gap-3.5 px-4 py-4 sm:px-5">
+                <IconTile name="today" color="bg-teal" className="mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-ink">3. Empieza tu ruta</p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-dim">
+                    Recibe un plan diario con Nova y las mismas puertas de dominio en cualquier
+                    ritmo.
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </AuroraSurface>
+        </div>
+
+        <div className="rise rise-2 mx-auto mt-6 max-w-xl">
+          <button
+            type="button"
+            disabled={busy}
+            aria-describedby="enroll-action-hint"
+            onClick={enroll}
+            className="tactile-button flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[16px] font-extrabold text-white disabled:cursor-wait disabled:opacity-55"
+          >
+            {busy ? 'Preparando tu StarMap…' : 'Empezar mi diagnóstico'}
+          </button>
+          <p
+            id="enroll-action-hint"
+            className="mt-3 text-center text-[11.5px] leading-relaxed text-dim"
+          >
+            Podrás avanzar a tu ritmo. El diagnóstico se reanuda si necesitas salir.
+          </p>
+        </div>
+
+        {error && (
+          <div
+            className="mx-auto mt-4 max-w-xl rounded-2xl border border-risk/20 bg-risk-soft px-4 py-3 text-center text-[13px] font-medium text-risk"
+            role="alert"
+            aria-live="assertive"
+          >
+            {error}
+          </div>
+        )}
       </main>
-    </PublicShell>
+    </div>
   );
 }

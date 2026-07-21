@@ -3,10 +3,9 @@
 // la inscripción (enrollment) es la frontera de todo progreso.
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  provider      = "prisma-client-js"
   // native = esta máquina; rhel = runtime Linux de Vercel Functions.
-  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -21,6 +20,16 @@ enum UserRole {
   learner
   guardian
   staff
+
+  @@schema("identity")
+}
+
+enum StaffCapability {
+  curriculum_author
+  curriculum_publisher
+  academic_reviewer
+  safeguarding
+  operations
 
   @@schema("identity")
 }
@@ -41,24 +50,62 @@ model User {
   displayName String
   role        UserRole
   ageBand     AgeBand?
+  /// Barrera monotónica entre validaciones externas de credenciales y sesiones STAR.
+  credentialVersion Int @default(0)
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
 
-  guardianLinks      GuardianLearnerLink[] @relation("GuardianSide")
-  learnerLinks       GuardianLearnerLink[] @relation("LearnerSide")
-  invitations        GuardianInvitation[]  @relation("InvitationLearner")
-  consentsGranted    ConsentGrant[]        @relation("ConsentGrantedBy")
-  consentsAsSubject  ConsentGrant[]        @relation("ConsentSubject")
-  assents            YouthAssent[]
-  enrollments        Enrollment[]
-  safetySignals      SafetySignal[]
-  humanReviews       HumanReview[]         @relation("ReviewSubject")
-  decidedReviews     HumanReview[]         @relation("ReviewDecider")
-  avatarConfig       AvatarConfig?
-  wallet             Wallet?
-  xpEvents           XpEvent[]
-  inventoryItems     InventoryItem[]
+  guardianLinks       GuardianLearnerLink[] @relation("GuardianSide")
+  learnerLinks        GuardianLearnerLink[] @relation("LearnerSide")
+  invitations         GuardianInvitation[]  @relation("InvitationLearner")
+  consentsGranted     ConsentGrant[]        @relation("ConsentGrantedBy")
+  consentsAsSubject   ConsentGrant[]        @relation("ConsentSubject")
+  assents             YouthAssent[]
+  enrollments         Enrollment[]
+  safetySignals       SafetySignal[]
+  humanReviews        HumanReview[]         @relation("ReviewSubject")
+  decidedReviews      HumanReview[]         @relation("ReviewDecider")
+  avatarConfig        AvatarConfig?
+  wallet              Wallet?
+  xpEvents            XpEvent[]
+  inventoryItems      InventoryItem[]
+  authSessions        AuthSession[]
+  assignedSafetyCases SafetyCase[]          @relation("SafetyAssignee")
+  staffGrants         StaffGrant[]
 
   @@map("users")
+  @@schema("identity")
+}
+
+/// Sesión propia de STAR. La cookie contiene un token aleatorio; la BD guarda
+/// solo su hash para permitir revocación inmediata y evitar tokens reutilizables
+/// si esta tabla se expusiera accidentalmente.
+model AuthSession {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+  @@schema("identity")
+}
+
+model StaffGrant {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  userId     String          @db.Uuid
+  capability StaffCapability
+  createdAt  DateTime        @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, capability])
+  @@index([capability, userId])
+  @@map("staff_grants")
   @@schema("identity")
 }
 
@@ -123,6 +170,7 @@ model ConsentGrant {
   grantedBy User @relation("ConsentGrantedBy", fields: [grantedById], references: [id])
 
   @@index([learnerId, purpose, status])
+  @@index([grantedById])
   @@map("consent_grants")
   @@schema("family")
 }
@@ -141,9 +189,12 @@ model GuardianInvitation {
   id            String           @id @default(uuid(7)) @db.Uuid
   learnerId     String           @db.Uuid
   guardianEmail String
-  code          String           @unique
+  /// Legacy-only: new invitations never persist the plaintext code.
+  code          String?          @unique
+  codeHash      String?          @unique
   status        InvitationStatus @default(pending)
   createdAt     DateTime         @default(now()) @db.Timestamptz(6)
+  expiresAt     DateTime         @default(dbgenerated("(CURRENT_TIMESTAMP + '24 hours'::interval)")) @db.Timestamptz(6)
   acceptedAt    DateTime?        @db.Timestamptz(6)
 
   learner User @relation("InvitationLearner", fields: [learnerId], references: [id])
@@ -158,6 +209,7 @@ model YouthAssent {
   learnerId     String   @db.Uuid
   noticeVersion String
   recordedAt    DateTime @default(now()) @db.Timestamptz(6)
+  revokedAt     DateTime? @db.Timestamptz(6)
 
   learner User @relation(fields: [learnerId], references: [id])
 
@@ -321,6 +373,7 @@ model Unit {
   lessonContracts LessonContract[]
 
   @@unique([programVersionId, code])
+  @@index([stageId])
   @@map("units")
   @@schema("curriculum")
 }
@@ -341,15 +394,16 @@ model Competency {
   programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
   stage          Stage          @relation(fields: [stageId], references: [id])
 
-  outgoingEdges     CompetencyEdge[]        @relation("EdgeFrom")
-  incomingEdges     CompetencyEdge[]        @relation("EdgeTo")
+  outgoingEdges      CompetencyEdge[]        @relation("EdgeFrom")
+  incomingEdges      CompetencyEdge[]        @relation("EdgeTo")
   lessonCompetencies LessonCompetency[]
-  activities        Activity[]
-  evidence          Evidence[]
-  states            CompetencyStateRecord[]
-  reviewItems       ReviewItem[]
+  activities         Activity[]
+  evidence           Evidence[]
+  states             CompetencyStateRecord[]
+  reviewItems        ReviewItem[]
 
   @@unique([programVersionId, code])
+  @@index([stageId])
   @@map("competencies")
   @@schema("curriculum")
 }
@@ -364,6 +418,7 @@ model CompetencyEdge {
   toCompetency   Competency @relation("EdgeTo", fields: [toCompetencyId], references: [id])
 
   @@unique([fromCompetencyId, toCompetencyId, kind])
+  @@index([toCompetencyId])
   @@map("competency_edges")
   @@schema("curriculum")
 }
@@ -420,6 +475,7 @@ model LessonContract {
   voiceSessions      VoiceSession[]
 
   @@unique([programVersionId, code])
+  @@index([unitId])
   @@map("lesson_contracts")
   @@schema("curriculum")
 }
@@ -432,6 +488,7 @@ model LessonCompetency {
   competency     Competency     @relation(fields: [competencyId], references: [id])
 
   @@id([lessonContractId, competencyId])
+  @@index([competencyId])
   @@map("lesson_competencies")
   @@schema("curriculum")
 }
@@ -453,15 +510,17 @@ model Activity {
   /// Clave de respuesta y especificación de scoring. Solo servidor (PRF-08).
   answerKey         Json
 
-  programVersion ProgramVersion  @relation(fields: [programVersionId], references: [id])
-  lessonContract LessonContract  @relation(fields: [lessonContractId], references: [id])
-  competency     Competency      @relation(fields: [competencyId], references: [id])
-  rubricVersion  RubricVersion?  @relation(fields: [rubricVersionId], references: [id])
+  programVersion ProgramVersion @relation(fields: [programVersionId], references: [id])
+  lessonContract LessonContract @relation(fields: [lessonContractId], references: [id])
+  competency     Competency     @relation(fields: [competencyId], references: [id])
+  rubricVersion  RubricVersion? @relation(fields: [rubricVersionId], references: [id])
   evidence       Evidence[]
   reviewItems    ReviewItem[]
 
   @@unique([programVersionId, code])
   @@index([lessonContractId, orderIndex])
+  @@index([competencyId])
+  @@index([rubricVersionId])
   @@map("activities")
   @@schema("curriculum")
 }
@@ -550,8 +609,11 @@ model Enrollment {
   voiceSessions      VoiceSession[]
   humanReviews       HumanReview[]
   usageRecords       AiUsageRecord[]
+  safetySignals      SafetySignal[]
 
   @@index([learnerId, status, createdAt(sort: Desc)])
+  @@index([programId, programVersionId])
+  @@index([trackId])
   @@map("enrollments")
   @@schema("learning")
 }
@@ -581,6 +643,7 @@ model LearningSession {
   evidence       Evidence[]
 
   @@index([enrollmentId, status])
+  @@index([lessonContractId])
   @@map("learning_sessions")
   @@schema("learning")
 }
@@ -613,6 +676,10 @@ model Evidence {
 
   @@index([enrollmentId, createdAt(sort: Desc)])
   @@index([enrollmentId, competencyId, createdAt(sort: Desc)])
+  @@index([learningSessionId])
+  @@index([competencyId])
+  @@index([activityId])
+  @@index([rubricVersionId])
   @@map("evidence")
   @@schema("learning")
 }
@@ -635,6 +702,7 @@ model CompetencyStateRecord {
 
   @@unique([enrollmentId, competencyId])
   @@index([enrollmentId, state])
+  @@index([competencyId])
   @@map("competency_states")
   @@schema("learning")
 }
@@ -655,6 +723,8 @@ model ReviewItem {
   activity   Activity?  @relation(fields: [activityId], references: [id])
 
   @@index([enrollmentId, dueAt])
+  @@index([competencyId])
+  @@index([activityId])
   @@map("review_items")
   @@schema("learning")
 }
@@ -765,6 +835,9 @@ model HumanReview {
   decidedBy  User?       @relation("ReviewDecider", fields: [decidedById], references: [id])
 
   @@index([status, createdAt])
+  @@index([enrollmentId])
+  @@index([learnerId])
+  @@index([decidedById])
   @@map("human_reviews")
   @@schema("assessment")
 }
@@ -815,14 +888,17 @@ model VoiceSession {
   startedAt        DateTime?   @db.Timestamptz(6)
   endedAt          DateTime?   @db.Timestamptz(6)
   activeSeconds    Int         @default(0)
+  lastHeartbeatAt  DateTime?   @db.Timestamptz(6)
   endReason        String?
   createdAt        DateTime    @default(now()) @db.Timestamptz(6)
 
-  enrollment     Enrollment     @relation(fields: [enrollmentId], references: [id])
-  lessonContract LessonContract @relation(fields: [lessonContractId], references: [id])
+  enrollment     Enrollment      @relation(fields: [enrollmentId], references: [id])
+  lessonContract LessonContract  @relation(fields: [lessonContractId], references: [id])
   usageRecords   AiUsageRecord[]
+  safetySignals  SafetySignal[]
 
   @@index([enrollmentId, createdAt(sort: Desc)])
+  @@index([lessonContractId])
   @@map("voice_sessions")
   @@schema("ai")
 }
@@ -841,6 +917,7 @@ model AiUsageRecord {
   voiceSession VoiceSession? @relation(fields: [voiceSessionId], references: [id])
 
   @@index([enrollmentId, createdAt])
+  @@index([voiceSessionId])
   @@map("ai_usage_records")
   @@schema("ai")
 }
@@ -884,10 +961,15 @@ model SafetySignal {
   status          SafetyStatus   @default(open)
   createdAt       DateTime       @default(now()) @db.Timestamptz(6)
 
-  learner User        @relation(fields: [learnerId], references: [id])
-  case    SafetyCase?
+  learner      User          @relation(fields: [learnerId], references: [id])
+  enrollment   Enrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  voiceSession VoiceSession? @relation(fields: [voiceSessionId], references: [id], onDelete: SetNull)
+  case         SafetyCase?
 
   @@index([status, severity, createdAt])
+  @@index([learnerId])
+  @@index([enrollmentId])
+  @@index([voiceSessionId])
   @@map("safety_signals")
   @@schema("safety")
 }
@@ -901,8 +983,10 @@ model SafetyCase {
   resolvedAt DateTime?    @db.Timestamptz(6)
   createdAt  DateTime     @default(now()) @db.Timestamptz(6)
 
-  signal SafetySignal @relation(fields: [signalId], references: [id])
+  signal   SafetySignal @relation(fields: [signalId], references: [id])
+  assignee User?        @relation("SafetyAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
+  @@index([assigneeId, status])
   @@map("safety_cases")
   @@schema("safety")
 }
@@ -910,16 +994,21 @@ model SafetyCase {
 // ---------------- audit ----------------
 
 model OutboxEvent {
-  sequenceId    BigInt    @id @default(autoincrement())
-  eventId       String    @unique @db.Uuid
-  aggregateType String
-  aggregateId   String
-  eventType     String
-  schemaVersion Int       @default(1)
-  payload       Json
-  occurredAt    DateTime  @db.Timestamptz(6)
-  publishedAt   DateTime? @db.Timestamptz(6)
-  attempts      Int       @default(0)
+  sequenceId      BigInt    @id @default(autoincrement())
+  eventId         String    @unique @db.Uuid
+  aggregateType   String
+  aggregateId     String
+  eventType       String
+  schemaVersion   Int       @default(1)
+  payload         Json
+  occurredAt      DateTime  @db.Timestamptz(6)
+  publishedAt     DateTime? @db.Timestamptz(6)
+  attempts        Int       @default(0)
+  nextAttemptAt   DateTime  @default(now()) @db.Timestamptz(6)
+  leaseOwner      String?
+  leaseUntil      DateTime? @db.Timestamptz(6)
+  deadLetteredAt  DateTime? @db.Timestamptz(6)
+  lastErrorCode   String?
 
   @@index([publishedAt, sequenceId])
   @@map("outbox_events")
@@ -964,7 +1053,7 @@ model AvatarConfig {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   config    Json
   createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("avatar_configs")
   @@schema("economy")
@@ -976,7 +1065,7 @@ model Wallet {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   balance   Int      @default(0)
   earned    Int      @default(0)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("wallets")
   @@schema("economy")
@@ -1019,6 +1108,7 @@ model InventoryItem {
   acquiredAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([userId, itemId])
+  @@index([itemId])
   @@map("inventory_items")
   @@schema("economy")
 }

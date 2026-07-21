@@ -6,14 +6,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { clientApi } from '@/lib/client-api';
 import { EconomyBadge } from './economy-badge';
-import { Icon, Wordmark } from './ui';
+import { Icon, StarMark, Wordmark } from './ui';
+import styles from './nav.module.css';
 
 const TABS = [
-  { slug: 'today', label: 'Inicio', icon: 'today' },
-  { slug: 'path', label: 'Ruta', icon: 'route' },
-  { slug: 'voice', label: 'Hablar', icon: 'mic' },
-  { slug: 'review', label: 'Repasar', icon: 'review' },
-  { slug: 'progress', label: 'Progreso', icon: 'progress' },
+  { slug: 'today', label: 'Hoy', caption: 'Misión diaria', icon: 'today' },
+  { slug: 'path', label: 'Ruta', caption: 'Constelaciones', icon: 'route' },
+  { slug: 'voice', label: 'Mentor', caption: 'Nova en línea', icon: 'mic' },
+  { slug: 'review', label: 'Repasar', caption: 'Memoria activa', icon: 'review' },
+  { slug: 'progress', label: 'Progreso', caption: 'Tu evidencia', icon: 'progress' },
 ] as const;
 
 /** La lección es inmersiva: sin navegación que compita por atención. */
@@ -21,7 +22,7 @@ function isImmersive(pathname: string): boolean {
   return pathname.includes('/lesson/');
 }
 
-/** Marco del área de aprendizaje: rail en escritorio, dock en móvil, nada en la lección. */
+/** Marco del área de aprendizaje: control de misión en escritorio y dock táctil en móvil. */
 export function LearnShell({
   locale,
   programCode,
@@ -34,14 +35,14 @@ export function LearnShell({
   const pathname = usePathname();
   const immersive = isImmersive(pathname);
   return (
-    <div className={`min-h-dvh ${immersive ? '' : 'lg:pl-64'}`}>
+    <div className={`${styles.learnShell} mission-shell min-h-dvh ${immersive ? '' : 'lg:pl-64'}`}>
       {!immersive && <TopBar locale={locale} programCode={programCode} />}
       <SideNav locale={locale} programCode={programCode} />
       <main
         className={
           immersive
             ? 'mx-auto w-full max-w-2xl px-4 pb-44 pt-6 lg:pt-10'
-            : 'mx-auto w-full max-w-2xl px-4 pb-36 pt-6 lg:max-w-4xl lg:px-10 lg:pb-20 lg:pt-10 xl:max-w-5xl'
+            : 'mx-auto w-full max-w-2xl px-4 pb-32 pt-5 sm:px-5 lg:max-w-4xl lg:px-10 lg:pb-20 lg:pt-9 xl:max-w-5xl'
         }
       >
         {children}
@@ -51,35 +52,33 @@ export function LearnShell({
   );
 }
 
-/** Dock flotante de cristal con tinte de acento en la pestaña activa (solo móvil/tablet). */
+/** Dock móvil: las cuatro áreas rodean a Nova, que funciona como botón protagonista. */
 export function BottomNav({ locale, programCode }: { locale: string; programCode: string }) {
   const pathname = usePathname();
   if (isImmersive(pathname)) return null;
   return (
-    <nav
-      aria-label="Navegación principal"
-      className="fixed inset-x-4 bottom-[max(env(safe-area-inset-bottom),12px)] z-40 mx-auto max-w-md lg:hidden"
-    >
-      <div className="glass-dock flex items-stretch justify-between rounded-[26px] px-2 py-1.5">
+    <nav aria-label="Navegación principal" className={styles.bottomNav}>
+      <div className={styles.bottomDock}>
         {TABS.map((tab) => {
           const href = `/${locale}/learn/${programCode}/${tab.slug}`;
           const active = pathname.startsWith(href);
+          const isNova = tab.slug === 'voice';
           return (
             <Link
               key={tab.slug}
               href={href}
-              className={`flex min-w-14 flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold transition-colors ${
-                active ? 'text-primary' : 'text-[#9a9aae] hover:text-dim'
-              }`}
+              aria-current={active ? 'page' : undefined}
+              aria-label={isNova ? 'Hablar con Nova, tu Mentor' : tab.label}
+              className={styles.bottomTab}
+              data-active={active}
+              data-nova={isNova}
             >
-              <span
-                className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                  active ? 'bg-primary-soft' : ''
-                }`}
-              >
-                <Icon name={tab.icon} className="size-[22px]" />
+              <span className={styles.bottomIcon}>
+                {isNova && <span className={styles.novaSignal} aria-hidden />}
+                <Icon name={tab.icon} className={isNova ? 'size-6' : 'size-[21px]'} />
               </span>
-              {tab.label}
+              <span className={styles.bottomLabel}>{tab.label}</span>
+              <span className={styles.activeSignal} aria-hidden />
             </Link>
           );
         })}
@@ -88,49 +87,72 @@ export function BottomNav({ locale, programCode }: { locale: string; programCode
   );
 }
 
-/** Rail lateral de escritorio: marca arriba, pestañas, sesión abajo. */
+/** Rail de escritorio: identidad, destinos de la expedición y estado del explorador. */
 export function SideNav({ locale, programCode }: { locale: string; programCode: string }) {
   const pathname = usePathname();
   const router = useRouter();
   if (isImmersive(pathname)) return null;
   return (
-    <nav
-      aria-label="Navegación principal"
-      className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-line bg-surface/70 px-4 py-6 backdrop-blur-xl lg:flex"
-    >
-      <Wordmark className="px-2" />
-      <div className="mt-9 flex flex-col gap-1">
+    <nav aria-label="Navegación principal" className={styles.sideNav}>
+      <div className={styles.sideHeader}>
+        <Wordmark className={styles.sideBrand} />
+        <span className={styles.expeditionLabel}>
+          <StarMark className="size-3 text-gold" />
+          Expedición Aurora
+        </span>
+      </div>
+
+      <div className={styles.sideList}>
+        <p className={styles.sideListLabel}>Control de misión</p>
         {TABS.map((tab) => {
           const href = `/${locale}/learn/${programCode}/${tab.slug}`;
           const active = pathname.startsWith(href);
+          const isNova = tab.slug === 'voice';
           return (
             <Link
               key={tab.slug}
               href={href}
               aria-current={active ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold transition-colors ${
-                active ? 'bg-primary-soft text-primary' : 'text-dim hover:bg-mist hover:text-ink'
-              }`}
+              className={styles.sideLink}
+              data-active={active}
+              data-nova={isNova}
             >
-              <Icon name={tab.icon} className="size-[22px]" />
-              {tab.label}
+              <span className={styles.sideIcon}>
+                {isNova && <span className={styles.novaSignal} aria-hidden />}
+                <Icon name={tab.icon} className="size-[21px]" />
+              </span>
+              <span className={styles.sideCopy}>
+                <strong>{tab.label}</strong>
+                <small>{tab.caption}</small>
+              </span>
+              <span className={styles.sideStatus} aria-hidden>
+                {active ? <StarMark className="size-3" /> : <span />}
+              </span>
             </Link>
           );
         })}
       </div>
-      <div className="mt-auto flex flex-col gap-1">
-        <EconomyBadge locale={locale} programCode={programCode} />
-        <div className="flex items-center gap-1">
+
+      <div className={styles.sideFooter}>
+        <div className={styles.profilePanel}>
+          <span className={styles.profileLabel}>Tu cabina</span>
+          <EconomyBadge locale={locale} programCode={programCode} />
+        </div>
+        <div className={styles.sideControls}>
           <ThemeToggle />
           <button
             type="button"
             onClick={async () => {
-              await clientApi('/auth/logout', { method: 'POST' });
-              router.push(`/${locale}/login`);
+              // Salir SIEMPRE navega: si la API es inalcanzable, la cookie local expira igual.
+              try {
+                await clientApi('/auth/logout', { method: 'POST' });
+              } finally {
+                router.push(`/${locale}/login`);
+              }
             }}
-            className="flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-dim transition-colors hover:bg-mist hover:text-ink"
+            className={styles.logoutButton}
           >
-            <Icon name="logout" className="size-[22px]" />
+            <Icon name="logout" className="size-5" />
             Salir
           </button>
         </div>
@@ -150,6 +172,10 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
   function toggle() {
     const next = dark ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute(
+      'content',
+      next === 'dark' ? '#07111f' : '#eef4f8',
+    );
     try {
       localStorage.setItem('star-theme', next);
     } catch {
@@ -163,32 +189,37 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       type="button"
       onClick={toggle}
       aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      className={`flex size-9 items-center justify-center rounded-full text-dim transition-colors hover:bg-mist hover:text-ink ${className}`}
+      className={`${styles.controlButton} ${className}`}
     >
       <Icon name={dark ? 'sun' : 'moon'} className="size-5" />
     </button>
   );
 }
 
-/** Barra superior traslúcida mínima: marca a la izquierda, acciones a la derecha. */
+/** Cabecera móvil compacta con marca, economía y controles de sesión. */
 export function TopBar({ locale, programCode }: { locale: string; programCode: string; subtitle?: string }) {
   const router = useRouter();
   return (
-    <header className="material-bar sticky top-0 z-40 border-b border-line lg:hidden">
-      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
-        <Wordmark />
-        <div className="flex items-center gap-1.5">
+    <header className={styles.topBar}>
+      <div className={styles.topBarInner}>
+        <Wordmark className={styles.topBrand} />
+        <div className={styles.topActions}>
           <EconomyBadge locale={locale} programCode={programCode} compact />
           <ThemeToggle />
           <button
             type="button"
-            className="text-[15px] font-medium text-primary transition-opacity hover:opacity-70"
+            aria-label="Cerrar sesión"
+            className={`${styles.controlButton} ${styles.logoutControl}`}
             onClick={async () => {
-              await clientApi('/auth/logout', { method: 'POST' });
-              router.push(`/${locale}/login`);
+              // Salir SIEMPRE navega: si la API es inalcanzable, la cookie local expira igual.
+              try {
+                await clientApi('/auth/logout', { method: 'POST' });
+              } finally {
+                router.push(`/${locale}/login`);
+              }
             }}
           >
-            Salir
+            <Icon name="logout" className="size-5" />
           </button>
         </div>
       </div>

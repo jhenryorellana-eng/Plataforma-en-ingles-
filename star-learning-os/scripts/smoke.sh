@@ -27,28 +27,43 @@ req() { # req <cookiejar> <método> <ruta> [json] -> guarda cuerpo en $TMP/last.
 
 field() { jsonget "$TMP/last.json" x "$1"; }
 
+check "health live" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/health/live")"
+check "health ready" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/health/ready")"
+
 echo "=== 0. Onboarding completo: registro → invitación → vínculo → permisos → asentimiento ==="
 TS=$(date +%s)
 SMOKE_PW="Sm0keTest-$TS"
+# Nico nace siempre con 13 garantizados (banda 12-13) para que los gates duren años.
+NICO_BY=$(($(date +%Y) - 14))
 NICO="$TMP/nico.jar"; rm -f "$NICO"
-check "registro alumno con age gate (14 años)" 201 "$(req "$NICO" POST /auth/register-learner "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2012}")"
+check "registro alumno con age gate (13 garantizados)" 201 "$(req "$NICO" POST /auth/register-learner "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$NICO_BY}")"
 check "menor de 12 rechazado" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Peque\",\"email\":\"peque-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2020}" "$API/auth/register-learner")"
-check "registro duplicado rechazado (409)" 409 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Nico Clon\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2012}" "$API/auth/register-learner")"
+check "año que puede ser 11 también se rechaza (edad garantizada)" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Limite\",\"email\":\"limite-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$(($(date +%Y) - 12))}" "$API/auth/register-learner")"
+check "registro duplicado rechazado (409)" 409 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Nico Clon\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$NICO_BY}" "$API/auth/register-learner")"
 NICO2="$TMP/nico2.jar"; rm -f "$NICO2"
 check "login con contraseña correcta" 201 "$(req "$NICO2" POST /auth/login "{\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
 check "login con contraseña incorrecta (401)" 401 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"email\":\"nico-$TS@demo.pe\",\"password\":\"incorrecta-123\"}" "$API/auth/login")"
 check "recuperación no revela existencia" 201 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"no-existe@demo.pe"}' "$API/auth/forgot-password")"
 check "inscripción bloqueada sin apoderado" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
-check "crear invitación al apoderado" 201 "$(req "$NICO" POST /family-invitations "{\"guardianEmail\":\"madre-$TS@demo.pe\"}")"
+check "crear invitación al apoderado" 201 "$(req "$NICO" POST /family-invitations "{\"guardianEmail\":\"ana@demo.starbiz.pe\"}")"
 ICODE=$(field "d['code']")
+PENDING="$TMP/pending.jar"; rm -f "$PENDING"
+check "registro apoderado queda pendiente" 201 "$(req "$PENDING" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
+check "respuesta exige verificar correo" pendingVerification "$(field "d['status']")"
+check "registro pendiente NO abre sesión STAR" 401 "$(req "$PENDING" GET /auth/me)"
 PADRE="$TMP/padre.jar"; rm -f "$PADRE"
-check "registro apoderado" 201 "$(req "$PADRE" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
+check "apoderada CI entra solo por dev-login" 201 "$(req "$PADRE" POST /auth/dev-login '{"profile":"guardian"}')"
+OTRA="$TMP/otra.jar"; rm -f "$OTRA"
+check "crear apoderada ajena solo en CI" 201 "$(req "$OTRA" POST /auth/dev-login '{"displayName":"Otra Madre","role":"guardian"}')"
+check "código NO vale para otro correo (anti-vínculo indebido)" 403 "$(req "$OTRA" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
 check "aceptar invitación con código" 201 "$(req "$PADRE" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
 NICOID=$(req "$NICO" GET /auth/me >/dev/null; field "d['id']")
-check "apoderado otorga consentimientos" 201 "$(req "$PADRE" POST /consents "{\"learnerId\":\"$NICOID\",\"purposes\":[\"service\",\"ai_voice\"]}")"
+check "apoderado otorga consentimientos" 201 "$(req "$PADRE" POST /consents "{\"learnerId\":\"$NICOID\",\"purposes\":[\"service\",\"storage\",\"ai_voice\",\"international_transfer\"]}")"
 check "inscripción bloqueada sin asentimiento (CNS-02)" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
 check "asentimiento del alumno" 201 "$(req "$NICO" POST /assents '{}')"
 check "onboarding listo para inscribir" "True" "$(req "$NICO" GET /onboarding/status >/dev/null; field "d['readyToEnroll']")"
+check "Nico (2012) clasifica 12-13 por edad garantizada" y12_13 "$(req "$NICO" GET /auth/me >/dev/null; field "d['ageBand']")"
+check "sprint bloqueado en el ALTA para 12-13 (D04)" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path","paceCode":"sprint"}')"
 check "ahora sí puede inscribirse" 201 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
 NICOENR=$(field "d['id']")
 check "revocar voz con IA (apoderado)" 201 "$(req "$PADRE" POST /consents/revoke "{\"learnerId\":\"$NICOID\",\"purpose\":\"ai_voice\"}")"
@@ -68,6 +83,33 @@ check "enviar muestra de writing" 201 "$(req "$NICO" POST "/diagnostic-attempts/
 check "completar diagnóstico multietapa" 201 "$(req "$NICO" POST "/diagnostic-attempts/$NATT/complete")"
 check "perfil incluye writing" "True" "$(jsonget "$TMP/last.json" x "'writing' in d['placement']['perSkill']")"
 check "preview público sin sesión" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/preview/items")"
+
+echo "=== 0c. Economía anti-farming + escritura solo-alumno (usuario fresco) ==="
+check "sprint bloqueado al CAMBIAR ritmo para 12-13 (D04)" 403 "$(req "$NICO" PATCH "/enrollments/$NICOENR/pace" '{"paceCode":"sprint"}')"
+check "confirmar ritmo Accelerated" 200 "$(req "$NICO" PATCH "/enrollments/$NICOENR/pace" '{"paceCode":"accelerated"}')"
+check "plan del día del nuevo alumno" 200 "$(req "$NICO" GET "/enrollments/$NICOENR/today")"
+NLESSON=$(jsonget "$TMP/last.json" x "[b for b in d['blocks'] if b['kind']=='lesson'][0]['lessonContractId']")
+check "crear sesión de lección" 201 "$(req "$NICO" POST "/enrollments/$NICOENR/sessions" "{\"lessonContractId\":\"$NLESSON\"}")"
+NSES=$(field "d['id']")
+NACT=$(jsonget "$TMP/last.json" x "d['activities'][0]['id']")
+req "$NICO" GET /economy/state >/dev/null; NBAL0=$(field "d['balance']")
+check "responder mcq correcta (con premio)" 201 "$(req "$NICO" POST "/sessions/$NSES/activities/$NACT/submissions" '{"response":{"kind":"mcq","selectedIndex":1},"usedAids":false}')"
+req "$NICO" GET /economy/state >/dev/null; NBAL1=$(field "d['balance']")
+check "primer acierto otorga 10 Novas" 10 "$((NBAL1 - NBAL0))"
+check "misma respuesta otra vez (duplicada)" 201 "$(req "$NICO" POST "/sessions/$NSES/activities/$NACT/submissions" '{"response":{"kind":"mcq","selectedIndex":1},"usedAids":false}')"
+req "$NICO" GET /economy/state >/dev/null; NBAL2=$(field "d['balance']")
+check "duplicado suma +0 Novas" 0 "$((NBAL2 - NBAL1))"
+check "completar sesión con trabajo real" 201 "$(req "$NICO" POST "/sessions/$NSES/complete")"
+req "$NICO" GET /economy/state >/dev/null; NBAL3=$(field "d['balance']")
+check "lección con evidencia otorga 25 Novas" 25 "$((NBAL3 - NBAL2))"
+check "segunda sesión de la misma lección" 201 "$(req "$NICO" POST "/enrollments/$NICOENR/sessions" "{\"lessonContractId\":\"$NLESSON\"}")"
+NSES2=$(field "d['id']")
+check "responder mal (evidencia sin acierto)" 201 "$(req "$NICO" POST "/sessions/$NSES2/activities/$NACT/submissions" '{"response":{"kind":"mcq","selectedIndex":0},"usedAids":false}')"
+check "completar la sesión repetida" 201 "$(req "$NICO" POST "/sessions/$NSES2/complete")"
+req "$NICO" GET /economy/state >/dev/null; NBAL4=$(field "d['balance']")
+check "repetir la lección no vuelve a otorgar Novas" 0 "$((NBAL4 - NBAL3))"
+check "apoderada NO inicia sesión del alumno" 403 "$(req "$PADRE" POST "/enrollments/$NICOENR/sessions" "{\"lessonContractId\":\"$NLESSON\"}")"
+check "apoderada NO inicia voz del alumno" 403 "$(req "$PADRE" POST "/enrollments/$NICOENR/voice-sessions" "{\"lessonContractId\":\"$NLESSON\"}")"
 
 echo "=== 1. Diego (14-17): login, inscripción y diagnóstico ==="
 DIEGO="$TMP/diego.jar"; rm -f "$DIEGO"
@@ -151,15 +193,61 @@ ZREASON=$(field "d['error']['code']")
 check "voz Lucía denegada (403)" 403 "$ZCODE"
 check "motivo exacto: ZDR_REQUIRED (gate D17)" ZDR_REQUIRED "$ZREASON"
 
+echo "=== 3b. Economía de voz con alumna fresca 14-17 (repetible) ==="
+SARA="$TMP/sara.jar"; rm -f "$SARA"
+SARA_BY=$(($(date +%Y) - 15))
+check "registro Sara (14 garantizados)" 201 "$(req "$SARA" POST /auth/register-learner "{\"displayName\":\"Sara Prueba\",\"email\":\"sara-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$SARA_BY}")"
+check "Sara clasifica 14-17 (edad garantizada)" t14_17 "$(req "$SARA" GET /auth/me >/dev/null; field "d['ageBand']")"
+check "invitación al apoderado de Sara" 201 "$(req "$SARA" POST /family-invitations "{\"guardianEmail\":\"ana@demo.starbiz.pe\"}")"
+SCODE=$(field "d['code']")
+SMADRE="$TMP/smadre.jar"; rm -f "$SMADRE"
+check "apoderada de Sara entra solo por dev-login CI" 201 "$(req "$SMADRE" POST /auth/dev-login '{"profile":"guardian"}')"
+check "vínculo de Sara" 201 "$(req "$SMADRE" POST /family-invitations/accept "{\"code\":\"$SCODE\"}")"
+SARAID=$(req "$SARA" GET /auth/me >/dev/null; field "d['id']")
+check "consentimientos de Sara (servicio + voz)" 201 "$(req "$SMADRE" POST /consents "{\"learnerId\":\"$SARAID\",\"purposes\":[\"service\",\"storage\",\"ai_voice\",\"international_transfer\"]}")"
+check "asentimiento de Sara" 201 "$(req "$SARA" POST /assents '{}')"
+check "inscripción de Sara" 201 "$(req "$SARA" POST /enrollments '{"programCode":"english-path"}')"
+SENR=$(field "d['id']")
+req "$SARA" POST "/enrollments/$SENR/diagnostic-attempts" >/dev/null
+SATT=$(field "d['id']")
+for stage in 1 2; do
+  req "$SARA" GET "/diagnostic-attempts/$SATT/next-items" >/dev/null
+  for c in $(jsonget "$TMP/last.json" x "' '.join(i['code'] for i in d['items'])"); do
+    req "$SARA" POST "/diagnostic-attempts/$SATT/responses" "{\"itemCode\":\"$c\",\"selectedIndex\":1}" >/dev/null
+  done
+done
+req "$SARA" GET "/diagnostic-attempts/$SATT/next-items" >/dev/null
+SWCODE=$(jsonget "$TMP/last.json" x "d['items'][0]['code']")
+req "$SARA" POST "/diagnostic-attempts/$SATT/writing" "{\"itemCode\":\"$SWCODE\",\"text\":\"My name is Sara and I study English every day after school because I want to apply for a scholarship at a university in the United States and speak confidently with my future classmates and professors there.\"}" >/dev/null
+check "diagnóstico de Sara completo" 201 "$(req "$SARA" POST "/diagnostic-attempts/$SATT/complete")"
+check "ritmo de Sara confirmado" 200 "$(req "$SARA" PATCH "/enrollments/$SENR/pace" '{"paceCode":"accelerated"}')"
+req "$SARA" GET "/enrollments/$SENR/today" >/dev/null
+SVLESSON=$(jsonget "$TMP/last.json" x "[b for b in d['blocks'] if b['kind']=='voice_mission'][0]['lessonContractId']")
+check "sesión de voz anti-falsificación" 201 "$(req "$SARA" POST "/enrollments/$SENR/voice-sessions" "{\"lessonContractId\":\"$SVLESSON\"}")"
+SVFAKE=$(field "d['voiceSessionId']")
+check "el cliente NO puede inventar 60 s al cerrar" 0 "$(req "$SARA" POST "/voice-sessions/$SVFAKE/end" '{"activeSeconds":60,"reason":"completed"}' >/dev/null; field "d['novasAwarded']")"
+check "sesión de voz de Sara con tiempo real" 201 "$(req "$SARA" POST "/enrollments/$SENR/voice-sessions" "{\"lessonContractId\":\"$SVLESSON\"}")"
+SVS=$(field "d['voiceSessionId']")
+for _tick in 1 2 3 4 5 6; do
+  sleep 10
+  req "$SARA" POST "/voice-sessions/$SVS/heartbeat" '{"activeSecondsDelta":10}' >/dev/null
+done
+check "60 s verificados por heartbeat otorgan 30 Novas" 30 "$(req "$SARA" POST "/voice-sessions/$SVS/end" '{"activeSeconds":999,"reason":"completed"}' >/dev/null; field "d['novasAwarded']")"
+check "sesión corta de Sara" 201 "$(req "$SARA" POST "/enrollments/$SENR/voice-sessions" "{\"lessonContractId\":\"$SVLESSON\"}")"
+SVS2=$(field "d['voiceSessionId']")
+check "5 s declarados sin tiempo real NO otorgan Novas" 0 "$(req "$SARA" POST "/voice-sessions/$SVS2/end" '{"activeSeconds":5,"reason":"user_exit"}' >/dev/null; field "d['novasAwarded']")"
+
 echo "=== 4. Apoderada y staff ==="
 ANA="$TMP/ana.jar"; rm -f "$ANA"
 check "login Ana" 201 "$(req "$ANA" POST /auth/dev-login '{"profile":"guardian"}')"
 check "resumen familiar" 200 "$(req "$ANA" GET /guardian/learners)"
 NLEARNERS=$(jsonget "$TMP/last.json" x "len(d['learners'])")
-check "dos alumnos vinculados" 2 "$NLEARNERS"
+check "al menos dos alumnos vinculados" True "$([ "$NLEARNERS" -ge 2 ] 2>/dev/null && echo True || echo False)"
 
 STAFF="$TMP/staff.jar"; rm -f "$STAFF"
 check "login staff" 201 "$(req "$STAFF" POST /auth/dev-login '{"profile":"staff"}')"
+STAFF2="$TMP/staff2.jar"; rm -f "$STAFF2"
+check "crear segundo staff revisor" 201 "$(req "$STAFF2" POST /auth/dev-login '{"displayName":"Prof. Mendoza","role":"staff"}')"
 check "cola de revisión humana" 200 "$(req "$STAFF" GET '/human-reviews?status=pending')"
 NPEND=$(jsonget "$TMP/last.json" x "len(d)")
 echo "INFO  casos pendientes: $NPEND"
@@ -170,7 +258,10 @@ if [ "$NPEND" -ge 1 ] 2>/dev/null; then
   check "placement ya no provisional" "False" "$(field "d['placement']['provisional']")"
 fi
 check "reporte de seguridad (alumno)" 201 "$(req "$DIEGO" POST /safety/report '{"category":"technical","comment":"El audio se cortó"}')"
+SCASE=$(field "d['caseId']")
 check "staff ve casos de safety" 200 "$(req "$STAFF" GET /admin/safety/cases)"
+check "staff tria caso de safety" 200 "$(req "$STAFF" PATCH "/admin/safety/cases/$SCASE" '{"status":"triaged"}')"
+check "staff resuelve caso con motivo" 200 "$(req "$STAFF" PATCH "/admin/safety/cases/$SCASE" '{"status":"resolved","resolution":"Incidente técnico revisado; sin riesgo para el alumno."}')"
 
 echo "=== 4b. Estudio de contenido: tema → borrador IA → revisión docente → publicar (§8.1) ==="
 check "overview del estudio" 200 "$(req "$STAFF" GET /studio/overview)"
@@ -178,12 +269,19 @@ check "generar borrador desde tema" 201 "$(req "$STAFF" POST /studio/lesson-draf
 DRAFT=$(field "d['id']")
 check "borrador en estado draft" draft "$(field "d['status']")"
 check "borrador INVISIBLE para el alumno" 404 "$(req "$DIEGO" POST "/enrollments/$ENR/sessions" "{\"lessonContractId\":\"$DRAFT\"}")"
-check "publicar tras revisión docente" 201 "$(req "$STAFF" POST "/studio/lessons/$DRAFT/decision" '{"action":"publish"}')"
+check "autor NO publica su propio borrador" 403 "$(req "$STAFF" POST "/studio/lessons/$DRAFT/decision" '{"action":"publish"}')"
+check "segundo staff publica tras revisión" 201 "$(req "$STAFF2" POST "/studio/lessons/$DRAFT/decision" '{"action":"publish"}')"
 check "estado published" published "$(field "d['status']")"
 check "publicada: el alumno ya puede estudiarla" 201 "$(req "$DIEGO" POST "/enrollments/$ENR/sessions" "{\"lessonContractId\":\"$DRAFT\"}")"
 
 echo "=== 5. Aislamiento: Lucía no puede ver la inscripción de Diego ==="
 check "acceso cruzado denegado" 403 "$(req "$LUCIA" GET "/enrollments/$ENR")"
+
+LOGOUT="$TMP/logout.jar"; rm -f "$LOGOUT"
+check "crear sesión para revocación" 201 "$(req "$LOGOUT" POST /auth/dev-login '{"profile":"learner_teen"}')"
+check "sesión activa antes de logout" 200 "$(req "$LOGOUT" GET /auth/me)"
+check "logout revoca sesión server-side" 201 "$(req "$LOGOUT" POST /auth/logout)"
+check "cookie revocada ya no autentica" 401 "$(req "$LOGOUT" GET /auth/me)"
 
 echo ""
 echo "RESULTADO: $PASS PASS · $FAIL FAIL"

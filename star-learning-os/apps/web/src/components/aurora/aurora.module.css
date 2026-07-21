@@ -1,0 +1,277 @@
+.art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.artImage {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: var(--aurora-position, center);
+}
+
+.hero {
+  --hero-accent: #8292ff;
+  --hero-accent-soft: rgba(82, 115, 255, 0.25);
+  position: relative;
+  min-height: 350px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(139, 178, 224, 0.28);
+  border-radius: 31px;
+  background: #071525;
+  box-shadow:
+    0 8px 0 rgba(2, 10, 22, 0.92),
+    0 24px 62px rgba(1, 7, 18, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.hero[data-tone='cyan'] {
+  --hero-accent: #4ce4f4;
+  --hero-accent-soft: rgba(38, 217, 245, 0.23);
+}
+
+.hero[data-tone='gold'] {
+  --hero-accent: #ffd35a;
+  --hero-accent-soft: rgba(255, 211, 90, 0.2);
+}
+
+.hero[data-tone='coral'] {
+  --hero-accent: #ff8793;
+  --hero-accent-soft: rgba(255, 113, 128, 0.2);
+}
+
+.heroCompact {
+  min-height: 292px;
+}
+
+.heroTint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(4, 13, 29, 0.96) 0%, rgba(4, 13, 29, 0.84) 36%, rgba(4, 13, 29, 0.18) 68%, rgba(4, 13, 29, 0.04) 100%),
+    linear-gradient(0deg, rgba(4, 13, 29, 0.54), transparent 45%);
+}
+
+.heroOrbit {
+  position: absolute;
+  z-index: 2;
+  right: -104px;
+  bottom: -154px;
+  width: 330px;
+  height: 330px;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--hero-accent) 45%, transparent);
+  border-radius: 999px;
+  box-shadow: inset 0 0 70px var(--hero-accent-soft), 0 0 54px var(--hero-accent-soft);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 3;
+  width: min(57%, 560px);
+  min-height: inherit;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(28px, 4vw, 52px);
+}
+
+.heroEyebrow {
+  margin: 0;
+  color: var(--hero-accent);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  max-width: 13ch;
+  margin: 10px 0 0;
+  color: #fff;
+  font-size: clamp(2rem, 4.2vw, 3.6rem);
+  font-weight: 850;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+  text-shadow: 0 3px 24px rgba(0, 0, 0, 0.38);
+}
+
+.heroBody {
+  max-width: 44ch;
+  margin-top: 14px;
+  color: rgba(227, 238, 250, 0.82);
+  font-size: 13.5px;
+  font-weight: 550;
+  line-height: 1.55;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.heroBadge {
+  position: absolute;
+  z-index: 4;
+  top: 22px;
+  right: 22px;
+}
+
+.surface {
+  position: relative;
+  border: 1px solid rgba(126, 164, 205, 0.2);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 45%),
+    color-mix(in srgb, var(--color-surface) 95%, transparent);
+  box-shadow:
+    0 5px 0 color-mix(in srgb, var(--color-fill) 70%, #06111f),
+    0 20px 48px -34px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.surface[data-tone='cyan'] { border-color: rgba(38, 217, 245, 0.23); }
+.surface[data-tone='gold'] { border-color: rgba(255, 211, 90, 0.23); }
+.surface[data-tone='coral'] { border-color: rgba(255, 113, 128, 0.23); }
+.surface[data-tone='neutral'] { border-color: var(--color-line); }
+
+.surfaceInteractive {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.novaGuide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.novaBubble {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(124, 171, 219, 0.2);
+  border-radius: 20px 20px 20px 7px;
+  padding: 13px 15px;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--color-fill) 72%, #06111f);
+}
+
+.novaBubble::before {
+  position: absolute;
+  top: 20px;
+  left: -6px;
+  width: 11px;
+  height: 11px;
+  content: '';
+  border-bottom: 1px solid rgba(124, 171, 219, 0.2);
+  border-left: 1px solid rgba(124, 171, 219, 0.2);
+  background: var(--color-surface);
+  transform: rotate(45deg);
+}
+
+.novaEyebrow {
+  margin: 0;
+  color: var(--color-teal);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.novaMessage {
+  margin-top: 3px;
+  color: var(--color-ink);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.novaGuideCompact {
+  gap: 9px;
+}
+
+.novaGuideCompact .novaBubble {
+  border-radius: 17px 17px 17px 6px;
+  padding: 10px 12px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .surfaceInteractive:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-line));
+    box-shadow:
+      0 8px 0 color-mix(in srgb, var(--color-fill) 70%, #06111f),
+      0 26px 56px -34px rgba(0, 0, 0, 0.78),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-3px);
+  }
+}
+
+@media (max-width: 767px) {
+  .artImage {
+    object-position: var(--aurora-mobile-position, center);
+  }
+
+  .hero {
+    min-height: 318px;
+    border-radius: 25px;
+  }
+
+  .heroCompact {
+    min-height: 278px;
+  }
+
+  .heroTint {
+    background:
+      linear-gradient(90deg, rgba(4, 13, 29, 0.97) 0%, rgba(4, 13, 29, 0.82) 43%, rgba(4, 13, 29, 0.16) 82%),
+      linear-gradient(0deg, rgba(4, 13, 29, 0.64), transparent 54%);
+  }
+
+  .heroContent {
+    width: min(66%, 280px);
+    padding: 22px 19px;
+  }
+
+  .heroTitle {
+    font-size: clamp(1.7rem, 8.2vw, 2.35rem);
+  }
+
+  .heroBody {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 10px;
+    font-size: 11.5px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .heroActions {
+    margin-top: 16px;
+  }
+
+  .heroBadge {
+    top: 14px;
+    right: 14px;
+  }
+
+  .novaGuide {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surfaceInteractive {
+    transition: none;
+  }
+}

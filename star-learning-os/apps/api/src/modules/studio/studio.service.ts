@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, Skill } from '@prisma/client';
 import { uuidv7 } from '@star/contracts';
-import { AppError, notFound } from '../../common/errors';
+import { AppError, forbidden, notFound } from '../../common/errors';
 import type { SessionUser } from '../../common/session';
 import { loadConfig } from '../../config/config';
 import { AuditService } from '../audit/audit.service';
@@ -147,7 +147,7 @@ export class StudioService {
           timeboxSeconds: generated.timeboxSeconds,
           orderIndex: lessonCount + 1,
           status: 'draft',
-          createdBy: `ai:${this.provider.name}`,
+          createdBy: `staff:${actor.id};ai:${this.provider.name}`,
           sourceTopic: input.topic,
           evidenceRequirements: { minimumActivities: 2 } as Prisma.InputJsonObject,
         },
@@ -185,7 +185,9 @@ export class StudioService {
         aggregateType: 'lesson_contract',
         aggregateId: lesson.id,
         eventType: 'content.draft_created',
-        payload: { topic: input.topic, provider: this.provider.name },
+        // El tema es texto libre y puede contener PII; el outbox externo solo
+        // recibe metadatos contractuales mínimos.
+        payload: { provider: this.provider.name },
       });
       await this.auditService.recordInTx(tx, {
         actorId: actor.id,
@@ -243,6 +245,9 @@ export class StudioService {
     if (!lesson) throw notFound('Lección no encontrada');
     if (action === 'publish' && lesson.status !== 'draft') {
       throw new AppError('VALIDATION_FAILED', 409, 'Solo un borrador puede publicarse');
+    }
+    if (action === 'publish' && lesson.createdBy.startsWith(`staff:${actor.id};`)) {
+      throw forbidden('Quien crea un borrador no puede publicar su propio contenido');
     }
 
     const status = action === 'publish' ? 'published' : 'retired';

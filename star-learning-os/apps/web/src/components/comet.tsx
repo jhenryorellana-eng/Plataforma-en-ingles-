@@ -1,6 +1,12 @@
 import type { CSSProperties } from 'react';
 
-let cometCounter = 0;
+/**
+ * Id estable por color (SSR-seguro, sin contador de módulo): dos cometas del
+ * mismo color comparten id y definición idéntica de gradiente — inofensivo.
+ */
+function cometUid(color: string): string {
+  return `comet-${color.replace(/[^a-zA-Z0-9]+/g, '') || 'x'}`;
+}
 
 /** Destellos fijos en la estela (deterministas para SSR). */
 const TAIL_SPARKS = [
@@ -90,7 +96,7 @@ export function Comet({
   className?: string;
   style?: CSSProperties;
 }) {
-  const uid = `comet-${(cometCounter += 1)}`;
+  const uid = cometUid(color);
   return (
     <svg viewBox="0 0 280 90" aria-hidden className={className} style={style}>
       <CometShapes uid={uid} color={color} />
@@ -100,7 +106,7 @@ export function Comet({
 
 /** Cometa como grupo dentro de otro SVG (emblema). */
 export function CometBody({ color = '#7df9ff' }: { color?: string }) {
-  const uid = `comet-${(cometCounter += 1)}`;
+  const uid = cometUid(color);
   return (
     <g>
       <CometShapes uid={uid} color={color} />

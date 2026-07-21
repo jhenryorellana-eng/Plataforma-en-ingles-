@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { z } from 'zod';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { Capabilities, CurrentUser, Roles } from '../../common/decorators';
 import type { SessionUser } from '../../common/session';
 import { parse } from '../../common/validate';
 import { StudioService } from './studio.service';
@@ -22,22 +22,26 @@ export class StudioController {
   constructor(private readonly studioService: StudioService) {}
 
   @Get('overview')
+  @Capabilities('curriculum_author')
   async overview(): Promise<unknown> {
     return this.studioService.overview();
   }
 
   @Post('lesson-drafts')
+  @Capabilities('curriculum_author')
   async createDraft(@CurrentUser() user: SessionUser, @Body() body: unknown): Promise<unknown> {
     const request = parse(zCreateDraftRequest, body);
     return this.studioService.createDraft(user, request);
   }
 
   @Get('lessons/:id')
+  @Capabilities('curriculum_author')
   async lessonDetail(@Param('id') id: string): Promise<unknown> {
     return this.studioService.lessonDetail(id);
   }
 
   @Post('lessons/:id/decision')
+  @Capabilities('curriculum_publisher')
   async decide(
     @CurrentUser() user: SessionUser,
     @Param('id') id: string,

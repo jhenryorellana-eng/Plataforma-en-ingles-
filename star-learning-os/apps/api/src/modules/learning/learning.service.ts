@@ -222,19 +222,32 @@ export class LearningService {
 
   async completeSession(actor: SessionUser, sessionId: string): Promise<{ ok: true }> {
     const session = await this.getSessionForActor(actor, sessionId);
+    await this.accessService.assertLearnerSelf(actor, session.enrollment);
     if (session.status === 'active') {
       await this.prisma.$transaction(async (tx) => {
         await tx.learningSession.update({
           where: { id: sessionId },
           data: { status: 'completed', endedAt: new Date() },
         });
-        // Recompensa idempotente: refId = sessionId, repetir no duplica Novas.
-        await this.economyService.grantNovasInTx(tx, {
-          userId: actor.id,
-          kind: 'lesson_complete',
-          amount: LESSON_COMPLETE_NOVAS,
-          refId: sessionId,
-        });
+        // El premio exige trabajo real en ESTA sesión (cerrar en vacío no da Novas)
+        // y es una sola vez por lección: repetirla no vuelve a otorgar.
+        const sessionEvidence = await tx.evidence.count({ where: { learningSessionId: sessionId } });
+        const alreadyGrantedForLesson =
+          sessionEvidence > 0 &&
+          (await this.economyService.hasGrantForLessonInTx(
+            tx,
+            session.enrollment.learnerId,
+            'lesson_complete',
+            session.lessonContractId,
+          ));
+        if (sessionEvidence > 0 && !alreadyGrantedForLesson) {
+          await this.economyService.grantNovasInTx(tx, {
+            userId: session.enrollment.learnerId,
+            kind: 'lesson_complete',
+            amount: LESSON_COMPLETE_NOVAS,
+            refId: sessionId,
+          });
+        }
       });
     }
     return { ok: true };
@@ -249,6 +262,7 @@ export class LearningService {
     request: SubmissionRequest,
   ): Promise<SubmissionResult> {
     const session = await this.getSessionForActor(actor, sessionId);
+    await this.accessService.assertLearnerSelf(actor, session.enrollment);
     if (session.status !== 'active') {
       throw new AppError('VOICE_SESSION_INVALID_STATE', 409, 'La sesión ya fue cerrada');
     }
@@ -269,8 +283,10 @@ export class LearningService {
 
     const outcome = this.scoreActivity(activity, request);
     const usedAids = request.usedAids || activity.supportLevel === 'guided';
+    // Dedup alineado con el scorer: lo que puntúa igual, deduplica igual
+    // ("Hello" / "hello" / "  hello " son la misma respuesta, no tres premios).
     const inputHash = createHash('sha256')
-      .update(activityId + JSON.stringify(request.response))
+      .update(activityId + canonicalResponseForHash(request.response))
       .digest('hex');
 
     const now = new Date();
@@ -290,7 +306,9 @@ export class LearningService {
         isDelayedRetrieval: false,
         reviewItemId: null,
       };
-      if (request.reviewItemId) {
+      // Solo una entrega NUEVA cierra el repaso: un reintento (timeout tras commit)
+      // cae en duplicado y recibe respuesta normal en vez de un 400.
+      if (request.reviewItemId && !duplicate) {
         reviewInfo = await this.resolveReviewItem(tx, session.enrollmentId, request.reviewItemId, activity, outcome.score, now);
       }
 
@@ -378,7 +396,20 @@ export class LearningService {
       });
 
       if (!duplicate && outcome.score >= competency.globalThreshold) {
-        await this.rewardSubmissionInTx(tx, actor, session.id, evidenceId as string);
+        // Solo el PRIMER acierto por actividad otorga Novas: reintentos con
+        // variantes de la misma respuesta no son una fuente infinita.
+        const priorSuccess = await tx.evidence.findFirst({
+          where: {
+            enrollmentId: session.enrollmentId,
+            activityId,
+            id: { not: evidenceId as string },
+            score: { gte: competency.globalThreshold },
+          },
+          select: { id: true },
+        });
+        if (!priorSuccess) {
+          await this.rewardSubmissionInTx(tx, session.enrollment.learnerId, session.id, evidenceId as string);
+        }
       }
 
       let humanReviewCreated = false;
@@ -485,14 +516,14 @@ export class LearningService {
   /** Premio en Novas por submission correcta: 10 base + 5 de combo si la sesión encadena ≥3 correctas. */
   private async rewardSubmissionInTx(
     tx: Prisma.TransactionClient,
-    actor: SessionUser,
+    learnerId: string,
     sessionId: string,
     evidenceId: string,
   ): Promise<void> {
     const streak = await this.sessionCorrectStreak(tx, sessionId);
     const comboBonus = streak >= COMBO_STREAK_MIN ? COMBO_BONUS_NOVAS : 0;
     await this.economyService.grantNovasInTx(tx, {
-      userId: actor.id,
+      userId: learnerId,
       kind: 'submission_correct',
       amount: SUBMISSION_CORRECT_NOVAS + comboBonus,
       refId: evidenceId,
@@ -580,10 +611,14 @@ export class LearningService {
       throw new AppError('VALIDATION_FAILED', 400, 'El repaso no corresponde a esta actividad');
     }
     const pass = score >= 0.8;
-    await tx.reviewItem.update({
-      where: { id: item.id },
+    // Cierre condicional: dos submits concurrentes no crean dos cadenas de repaso.
+    const closed = await tx.reviewItem.updateMany({
+      where: { id: item.id, completedAt: null },
       data: { completedAt: now, lapses: pass ? item.lapses : item.lapses + 1 },
     });
+    if (closed.count === 0) {
+      throw new AppError('VALIDATION_FAILED', 400, 'El repaso ya fue resuelto');
+    }
     const nextInterval = nextReviewIntervalDays(item.intervalDays, pass ? 'pass' : 'fail');
     await tx.reviewItem.create({
       data: {
@@ -633,4 +668,20 @@ export class LearningService {
     });
     return item.dueAt;
   }
+}
+
+/**
+ * Forma canónica de la respuesta para el hash de dedup, alineada con el
+ * scorer: gap_fill compara en minúsculas y sin espacios extra; el writing se
+ * compara colapsando blancos. Lo que puntúa igual, deduplica igual.
+ */
+function canonicalResponseForHash(response: SubmissionRequest['response']): string {
+  const collapse = (value: string) => value.trim().replace(/\s+/g, ' ');
+  if (response.kind === 'gap_fill') {
+    return JSON.stringify({ kind: response.kind, answers: response.answers.map((answer) => collapse(answer).toLowerCase()) });
+  }
+  if (response.kind === 'writing_prompt') {
+    return JSON.stringify({ kind: response.kind, text: collapse(response.text) });
+  }
+  return JSON.stringify(response);
 }

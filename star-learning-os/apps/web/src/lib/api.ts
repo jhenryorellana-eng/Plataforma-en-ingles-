@@ -1,6 +1,11 @@
 import { cookies } from 'next/headers';
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+/** URL privada para Server Components; no se publica en el bundle del navegador. */
+export const API_URL = (
+  process.env.API_INTERNAL_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:4000'
+).replace(/\/$/, '');
 
 export class ApiError extends Error {
   constructor(
@@ -20,11 +25,16 @@ interface ErrorBody {
 /** Fetch de servidor (Server Components): reenvía la cookie de sesión a la API. */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('star_session');
   const response = await fetch(`${API_URL}/v1${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      cookie: cookieStore.toString(),
+      // El proxy interno solo necesita la sesión de STAR. No reenvía al API
+      // cookies de analítica, plataforma o futuras integraciones de la web.
+      ...(sessionCookie
+        ? { cookie: `${sessionCookie.name}=${encodeURIComponent(sessionCookie.value)}` }
+        : {}),
       ...init?.headers,
     },
     cache: 'no-store',

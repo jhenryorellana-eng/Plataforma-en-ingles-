@@ -1,49 +1,73 @@
 import Link from 'next/link';
-import { AppIcon, Group, Icon, IconTile } from '@/components/ui';
-import { PublicShell } from '@/components/public-shell';
+import { NovaFace } from '@/components/nova';
+import {
+  MissionShell,
+  RoleChoiceCard,
+} from '@/components/registration/mission-shell';
 
 export default async function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+
   return (
-    <PublicShell>
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12">
-      <div className="rise flex flex-col items-center text-center">
-        <AppIcon className="size-16" />
-        <h1 className="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-ink">
-          Crear cuenta
-        </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-dim">¿Quién eres?</p>
-      </div>
+    <MissionShell locale={locale} step={1}>
+      <main>
+        <div className="flex items-start gap-3.5">
+          <NovaFace state="idle" className="mt-0.5 size-16 shrink-0 sm:size-[72px]" />
+          <div className="relative min-w-0 rounded-[22px_22px_22px_7px] border border-white/10 bg-white/[0.055] px-4 py-3.5 shadow-[0_5px_0_#040d18] backdrop-blur-sm">
+            <span className="absolute -left-1.5 top-5 size-3 rotate-45 border-b border-l border-white/10 bg-[#0e2137]" aria-hidden />
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-cyan-300">
+              Nova · guía de misión
+            </p>
+            <p className="mt-1 text-[13px] font-semibold leading-snug text-slate-200">
+              Antes de despegar, dime cómo quieres entrar a esta aventura.
+            </p>
+          </div>
+        </div>
 
-      <Group className="rise rise-1 mt-8">
-        <Link href={`/${locale}/register/learner`} className="flex items-center gap-3.5 px-4 py-4 transition-colors hover:bg-mist/60">
-          <IconTile name="today" color="bg-primary" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-semibold text-ink">Soy estudiante</span>
-            <span className="block text-[13px] text-dim">
-              Desde los 12 años. Si eres menor, invitarás a tu apoderado.
-            </span>
-          </span>
-          <Icon name="chevron" className="size-4 text-[#c7c7cc]" />
-        </Link>
-        <Link href={`/${locale}/register/guardian`} className="flex items-center gap-3.5 px-4 py-4 transition-colors hover:bg-mist/60">
-          <IconTile name="shield" color="bg-teal" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-semibold text-ink">Soy apoderado/a</span>
-            <span className="block text-[13px] text-dim">
-              Autorizas el servicio, gestionas permisos y ves el progreso.
-            </span>
-          </span>
-          <Icon name="chevron" className="size-4 text-[#c7c7cc]" />
-        </Link>
-      </Group>
+        <div className="mt-7">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.13em] text-[#ffd35a]">
+            Elige tu punto de partida
+          </p>
+          <h1 className="mt-2 max-w-[15ch] text-[clamp(2rem,4.2vw,3.25rem)] font-extrabold leading-[0.98] tracking-[-0.055em] text-white text-balance">
+            ¿Cómo empieza tu misión?
+          </h1>
+          <p className="mt-3 max-w-[54ch] text-[13.5px] leading-relaxed text-[#9eb1c7]">
+            Cada ruta tiene herramientas distintas. Selecciona la que te representa para preparar
+            una experiencia hecha para ti.
+          </p>
+        </div>
 
-      <p className="mt-6 text-center">
-        <Link href={`/${locale}/login`} className="text-[14px] font-medium text-primary">
-          Ya tengo cuenta
-        </Link>
-      </p>
+        <div className="mt-7 grid gap-5 sm:grid-cols-2">
+          <RoleChoiceCard
+            href={`/${locale}/register/learner`}
+            image="/brand/registration/role-learner.webp"
+            imageAlt="Estudiante exploradora junto a Nova y una ruta de estrellas"
+            eyebrow="Quiero aprender"
+            title="Soy estudiante"
+            description="Desde los 12 años: descubre tu nivel, crea tu avatar y avanza por misiones hechas para ti."
+            accent="learner"
+          />
+          <RoleChoiceCard
+            href={`/${locale}/register/guardian`}
+            image="/brand/registration/role-guardian.webp"
+            imageAlt="Apoderado acompañando una ruta de aprendizaje desde el control de misión"
+            eyebrow="Quiero acompañar"
+            title="Soy apoderado/a"
+            description="Autoriza el servicio, gestiona permisos y sigue el progreso sin invadir su espacio."
+            accent="guardian"
+          />
+        </div>
+
+        <p className="mt-8 text-center text-[12.5px] text-[#8198b1]">
+          ¿Ya tienes una cuenta?{' '}
+          <Link
+            href={`/${locale}/login`}
+            className="rounded-md font-extrabold text-[#8fa5ff] underline-offset-4 hover:text-[#b7c2ff] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffd35a]"
+          >
+            Inicia sesión
+          </Link>
+        </p>
       </main>
-    </PublicShell>
+    </MissionShell>
   );
 }

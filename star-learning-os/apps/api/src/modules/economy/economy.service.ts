@@ -66,16 +66,18 @@ export class EconomyService {
         where: { userId_itemId: { userId, itemId } },
       });
       if (owned) throw new AppError('ALREADY_OWNED', 409, 'Ya tienes este objeto');
-      const wallet = await tx.wallet.findUnique({ where: { userId } });
-      if ((wallet?.balance ?? 0) < item.price) {
-        throw new AppError('INSUFFICIENT_NOVAS', 402, 'No tienes Novas suficientes: sigue aprendiendo para ganar más');
-      }
-      const updated = await tx.wallet.update({
-        where: { userId },
+      // Cobro atómico: el propio UPDATE exige el saldo — dos compras concurrentes
+      // no pueden dejar el balance en negativo (antes el check y el cargo eran dos pasos).
+      const charged = await tx.wallet.updateMany({
+        where: { userId, balance: { gte: item.price } },
         data: { balance: { decrement: item.price } },
       });
+      if (charged.count === 0) {
+        throw new AppError('INSUFFICIENT_NOVAS', 402, 'No tienes Novas suficientes: sigue aprendiendo para ganar más');
+      }
       await tx.inventoryItem.create({ data: { userId, itemId, equipped: false } });
-      return { balance: updated.balance };
+      const wallet = await tx.wallet.findUniqueOrThrow({ where: { userId } });
+      return { balance: wallet.balance };
     });
   }
 
@@ -126,6 +128,28 @@ export class EconomyService {
       update: { balance: { increment: grant.amount }, earned: { increment: grant.amount } },
     });
     return true;
+  }
+
+  /**
+   * ¿Ya se otorgó un premio `kind` ligado a alguna sesión de esta lección?
+   * Los refId son UUID de sesiones: la idempotencia "una vez por lección" se
+   * resuelve mirando a qué lección pertenecían esas sesiones (lectura cruzada
+   * de solo consulta dentro de la tx del módulo origen).
+   */
+  async hasGrantForLessonInTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    kind: string,
+    lessonContractId: string,
+  ): Promise<boolean> {
+    const grants = await tx.xpEvent.findMany({ where: { userId, kind }, select: { refId: true } });
+    const refIds = grants.map((grant) => grant.refId).filter((id): id is string => id !== null);
+    if (refIds.length === 0) return false;
+    const hit = await tx.learningSession.findFirst({
+      where: { id: { in: refIds }, lessonContractId },
+      select: { id: true },
+    });
+    return hit !== null;
   }
 }
 

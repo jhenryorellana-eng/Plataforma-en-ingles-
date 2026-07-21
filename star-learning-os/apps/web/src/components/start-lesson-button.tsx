@@ -57,11 +57,11 @@ export function StartLessonButton({
           type="button"
           onClick={start}
           disabled={loading}
-          className="text-[15px] font-semibold text-primary transition-opacity hover:opacity-70 disabled:opacity-40"
+          className="min-h-11 rounded-xl px-3 text-[15px] font-semibold text-primary transition-colors hover:bg-primary-soft disabled:opacity-40"
         >
           {loading ? 'Abriendo…' : label}
         </button>
-        {error && <p className="mt-1 text-[12px] text-risk">{error}</p>}
+        {error && <p role="alert" className="mt-1 text-[12px] text-risk">{error}</p>}
       </div>
     );
   }
@@ -73,31 +73,30 @@ export function StartLessonButton({
         type="button"
         onClick={start}
         disabled={loading}
-        className="sheen group relative w-full overflow-hidden rounded-3xl px-6 pb-6 pt-14 text-left text-white shadow-[0_16px_38px_rgba(94,92,230,0.42),inset_0_1px_0_rgba(255,255,255,0.25)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-70"
-        style={{
-          backgroundImage:
-            'radial-gradient(340px 200px at 90% -20%, rgba(23,184,205,0.5), transparent 65%), linear-gradient(120deg, #7c7aff 0%, #5e5ce6 55%, #4b49d6 100%)',
-        }}
+        className="mission-hero group w-full rounded-[28px] px-5 pb-5 pt-5 text-left text-white transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.995] disabled:opacity-70 sm:px-6 sm:pb-6 sm:pt-6"
       >
-        <StarMark className="star-float pointer-events-none absolute -right-7 -top-9 size-36 text-white/12" />
-        <StarMark className="pointer-events-none absolute right-16 top-10 size-5 text-white/25" />
-        <span className="absolute left-6 top-5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white/90 backdrop-blur">
+        <StarMark className="star-float pointer-events-none absolute -right-6 -top-5 size-32 text-white/10" />
+        <StarMark className="pointer-events-none absolute right-20 top-20 size-4 text-gold/70" />
+        <span className="mission-kicker relative inline-flex items-center gap-1.5 text-[10px] text-white/70">
           <StarMark className="size-3 text-white" />
           {loading ? 'Preparando…' : 'Sigue tu misión'}
         </span>
-        <span className="relative block max-w-[26rem] pr-12 text-[27px] font-extrabold leading-[1.12] tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">
+        <span className="relative mt-7 block max-w-[28rem] pr-8 text-[27px] font-extrabold leading-[1.08] tracking-[-0.035em] drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)] sm:text-[31px]">
           {label}
         </span>
         {sublabel && (
-          <span className="relative mt-1.5 block pr-14 text-[15px] font-medium leading-snug text-white/80">
+          <span className="relative mt-2 block max-w-[34rem] pr-4 text-[14px] font-medium leading-relaxed text-white/74 sm:text-[15px]">
             {sublabel}
           </span>
         )}
-        <span className="absolute bottom-5 right-5 flex size-10 items-center justify-center rounded-full bg-white text-primary shadow-lg transition-transform group-hover:translate-x-0.5 group-hover:scale-105">
-          <Icon name="arrow" className="size-4.5" />
+        <span className="relative mt-6 flex items-center justify-between gap-3 border-t border-white/12 pt-4">
+          <span className="text-[13px] font-bold text-white">Continuar misión</span>
+          <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-[#3443b3] shadow-[0_4px_0_rgba(12,25,72,0.45)] transition-transform group-hover:translate-x-0.5">
+            <Icon name="arrow" className="size-4.5" />
+          </span>
         </span>
       </button>
-      {error && <p className="mt-2 text-sm text-risk">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-risk">{error}</p>}
     </div>
   );
 }

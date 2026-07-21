@@ -9,6 +9,7 @@ import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
 import { EconomyModule } from './modules/economy/economy.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { FamilyModule } from './modules/family/family.module';
+import { HealthModule } from './modules/health/health.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { PreviewModule } from './modules/preview/preview.module';
 import { ReviewModule } from './modules/review/review.module';
@@ -23,6 +24,7 @@ import { VoiceModule } from './modules/voice/voice.module';
     AuthModule,
     CatalogModule,
     FamilyModule,
+    HealthModule,
     EnrollmentModule,
     DiagnosticModule,
     LearningModule,

@@ -743,11 +743,24 @@ async function main(): Promise<void> {
     update: {},
     create: { email: 'lucia@demo.starbiz.pe', displayName: 'Lucía Torres', role: 'learner', ageBand: 'y12_13' },
   });
-  await prisma.user.upsert({
+  const staff = await prisma.user.upsert({
     where: { email: 'rivas@demo.starbiz.pe' },
     update: {},
     create: { email: 'rivas@demo.starbiz.pe', displayName: 'Prof. Rivas', role: 'staff' },
   });
+  for (const capability of [
+    'curriculum_author',
+    'curriculum_publisher',
+    'academic_reviewer',
+    'safeguarding',
+    'operations',
+  ] as const) {
+    await prisma.staffGrant.upsert({
+      where: { userId_capability: { userId: staff.id, capability } },
+      update: {},
+      create: { userId: staff.id, capability },
+    });
+  }
 
   for (const learner of [diego, lucia]) {
     await prisma.guardianLearnerLink.upsert({

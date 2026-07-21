@@ -1,5 +1,4 @@
-let neonCounter = 0;
-
+import { useId } from 'react';
 import { CometBody } from './comet';
 
 interface Dot {
@@ -38,7 +37,7 @@ export function NeonLogo({
   className?: string;
   withWordmark?: boolean;
 }) {
-  const uid = `neon-${(neonCounter += 1)}`;
+  const uid = `neon-${useId().replaceAll(':', '')}`;
   return (
     <svg
       viewBox={withWordmark ? '0 0 760 1080' : '0 0 760 920'}

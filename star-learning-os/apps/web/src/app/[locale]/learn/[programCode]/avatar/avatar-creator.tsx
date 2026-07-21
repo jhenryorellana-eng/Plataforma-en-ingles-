@@ -5,6 +5,8 @@ import type { AvatarConfig, EconomyState } from '@star/contracts';
 import { clientApi, ClientApiError } from '@/lib/client-api';
 import { ALIEN_EXAMPLE, Avatar, AVATAR_OPTIONS, DEFAULT_AVATAR } from '@/components/avatar';
 import { Chip, Icon, Skeleton, StarMark } from '@/components/ui';
+import { AuroraSurface } from '@/components/aurora/aurora-hero';
+import { NovaGuide } from '@/components/aurora/nova-guide';
 import { PickerSection, SpeciesSelector, SwatchRow, TraitRow } from './trait-pickers';
 import { ShopSection } from './shop-section';
 
@@ -134,8 +136,11 @@ export function AvatarCreator() {
     <div className="flex flex-col gap-8">
       <header className="rise flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[32px] font-extrabold tracking-tight text-ink">Tu avatar</h1>
-          <p className="mt-0.5 text-[15px] text-dim">Hazlo tuyo: cámbialo cuando quieras.</p>
+          <p className="mission-kicker text-[9px] text-teal">Identidad de explorador</p>
+          <h1 className="mt-1 text-[32px] font-extrabold tracking-[-0.045em] text-ink sm:text-[38px]">
+            Tu avatar de misión
+          </h1>
+          <p className="mt-1 text-[14px] text-dim">Hazlo tuyo: será quien avance por tu StarMap.</p>
         </div>
         {economy && (
           <div className="flex flex-col items-end gap-1.5">
@@ -157,6 +162,10 @@ export function AvatarCreator() {
         )}
       </header>
 
+      <NovaGuide compact state="idle">
+        Tu avatar es parte de la experiencia. Puedes cambiarlo cuando quieras sin perder progreso.
+      </NovaGuide>
+
       {loadError && (
         <div className="rise flex items-center gap-2.5 rounded-2xl bg-risk-soft px-4 py-3 text-[14px] font-medium text-risk" role="alert">
           <Icon name="flag" className="size-4 shrink-0" />
@@ -171,26 +180,41 @@ export function AvatarCreator() {
         </div>
       )}
 
-      <section className="rise rise-1 relative mx-auto flex h-60 w-full max-w-xs items-center justify-center">
+      <AuroraSurface
+        tone="cyan"
+        className="rise rise-1 relative mx-auto flex h-72 w-full max-w-md items-center justify-center overflow-hidden"
+      >
         <div
-          className="absolute inset-0 rounded-full"
+          className="pointer-events-none absolute inset-x-10 bottom-5 h-12 rounded-[50%] border border-teal/20 bg-primary/10 blur-sm"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -right-16 -top-16 size-52 rounded-full border border-primary/20 shadow-[inset_0_0_55px_rgba(89,108,255,.1)]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 -left-16 size-64 rounded-full border border-teal/15"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0"
           style={{
             background:
-              'radial-gradient(circle at 50% 40%, rgba(124,122,255,0.3), rgba(23,184,205,0.12) 55%, transparent 72%)',
+              'radial-gradient(circle at 50% 42%, rgba(124,122,255,0.34), rgba(23,184,205,0.13) 42%, transparent 68%)',
           }}
           aria-hidden
         />
-        <div className="halo-ring absolute inset-4 rounded-full" aria-hidden />
-        <Avatar config={draft} size={184} label="Vista previa de tu avatar" />
-        <div className="absolute bottom-2 h-3.5 w-40 rounded-[50%] bg-primary/15 blur-sm" aria-hidden />
+        <div className="halo-ring absolute inset-10 rounded-full" aria-hidden />
+        <Avatar config={draft} size={208} label="Vista previa de tu avatar" />
+        <div className="absolute bottom-5 h-3.5 w-44 rounded-[50%] bg-primary/20 blur-sm" aria-hidden />
         {dirty && (
           <span className="absolute -top-1 right-2">
             <Chip tone="warn">Sin guardar</Chip>
           </span>
         )}
-      </section>
+      </AuroraSurface>
 
-      <div className="rise rise-1 flex flex-col gap-6">
+      <AuroraSurface className="rise rise-1 flex flex-col gap-6 p-5 sm:p-6" tone="blue">
         <PickerSection label="Especie">
           <SpeciesSelector
             selected={draft.species}
@@ -260,14 +284,14 @@ export function AvatarCreator() {
             ariaLabel="Outfit"
           />
         </PickerSection>
-      </div>
+      </AuroraSurface>
 
       <div className="rise rise-2 flex flex-col items-center gap-2">
         <button
           type="button"
           onClick={save}
           disabled={saving || (!dirty && saved)}
-          className="btn-gradient rounded-full px-8 py-3 text-[15px] font-bold text-white disabled:opacity-60"
+          className="tactile-button min-h-12 rounded-2xl px-8 text-[15px] font-extrabold text-white disabled:opacity-60"
         >
           {saving ? 'Guardando…' : 'Guardar'}
         </button>
@@ -286,8 +310,9 @@ export function AvatarCreator() {
 
       <section className="rise rise-3 flex flex-col gap-3">
         <div>
-          <h2 className="text-[22px] font-extrabold tracking-tight text-ink">Tienda de estilo</h2>
-          <p className="text-[13px] text-dim">Gana Novas completando tus misiones diarias.</p>
+          <p className="mission-kicker text-[9px] text-gold-deep">Inventario de expedición</p>
+          <h2 className="mt-1 text-[22px] font-extrabold tracking-tight text-ink">Tienda de estilo</h2>
+          <p className="text-[13px] text-dim">Desbloquea piezas completando tus misiones diarias.</p>
         </div>
         {economy ? (
           <ShopSection

@@ -10,7 +10,7 @@ import {
   type CefrLevel,
   type PlacementResponse,
 } from '@star/domain';
-import type { EnrollmentWithLearner } from '../../common/access.service';
+import { AccessService } from '../../common/access.service';
 import { AppError, notFound } from '../../common/errors';
 import type { SessionUser } from '../../common/session';
 import { AuditService } from '../audit/audit.service';
@@ -34,28 +34,40 @@ export class DiagnosticService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly auditService: AuditService,
+    private readonly accessService: AccessService,
   ) {}
 
-  async startOrResume(enrollment: EnrollmentWithLearner): Promise<DiagnosticAttemptResponse> {
+  async startOrResume(actor: SessionUser, enrollmentId: string): Promise<DiagnosticAttemptResponse> {
+    // Carga + autorización + gate juvenil una sola vez. Antes el controller y
+    // el servicio repetían este gate y duplicaban tres consultas de consentimiento.
+    const enrollment = await this.accessService.assertEnrollmentAccess(actor, enrollmentId);
+    this.accessService.assertLearnerIdentity(actor, enrollment);
     if (enrollment.status !== 'pending_diagnostic') {
       throw new AppError('DIAGNOSTIC_ALREADY_COMPLETED', 409, 'El diagnóstico de esta inscripción ya se completó');
     }
 
-    let attempt = await this.prisma.diagnosticAttempt.findFirst({
-      where: { enrollmentId: enrollment.id, status: 'in_progress' },
+    const attemptId = await this.prisma.$transaction(async (tx) => {
+      // React StrictMode, dos pestañas o un retry de red pueden arrancar a la
+      // vez. El lock transaccional por inscripción vuelve atómico find→create.
+      // Prisma no puede deserializar el tipo PostgreSQL `void`; `IS NULL`
+      // conserva el efecto del lock y devuelve un booleano soportado.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`diagnostic:${enrollment.id}`}, 0)) IS NULL AS locked`;
+      let attempt = await tx.diagnosticAttempt.findFirst({
+        where: { enrollmentId: enrollment.id, status: 'in_progress' },
+        orderBy: { startedAt: 'desc' },
+      });
+      if (!attempt) {
+        attempt = await tx.diagnosticAttempt.create({ data: { enrollmentId: enrollment.id } });
+        await this.auditService.recordInTx(tx, {
+          actorId: enrollment.learnerId,
+          action: 'diagnostic.started',
+          objectType: 'diagnostic_attempt',
+          objectId: attempt.id,
+        });
+      }
+      return attempt.id;
     });
-    if (!attempt) {
-      attempt = await this.prisma.diagnosticAttempt.create({
-        data: { enrollmentId: enrollment.id },
-      });
-      await this.auditService.record({
-        actorId: enrollment.learnerId,
-        action: 'diagnostic.started',
-        objectType: 'diagnostic_attempt',
-        objectId: attempt.id,
-      });
-    }
-    return this.toResponse(attempt.id);
+    return this.toResponse(attemptId);
   }
 
   async answer(
@@ -346,9 +358,7 @@ export class DiagnosticService {
       include: { enrollment: true },
     });
     if (!attempt) throw notFound('Intento de diagnóstico no encontrado');
-    if (actor.role !== 'staff' && attempt.enrollment.learnerId !== actor.id) {
-      throw new AppError('FORBIDDEN', 403, 'No tienes acceso a este intento');
-    }
+    await this.accessService.assertLearnerSelf(actor, attempt.enrollment);
     return attempt;
   }
 }

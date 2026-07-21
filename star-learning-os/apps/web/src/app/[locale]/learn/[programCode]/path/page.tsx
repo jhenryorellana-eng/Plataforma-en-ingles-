@@ -1,8 +1,12 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { PathResponse } from '@star/contracts';
 import { apiFetch } from '@/lib/api';
 import { resolveEnrollment } from '@/lib/enrollment';
 import { rankFor } from '@/lib/ranks';
+import { AuroraHero } from '@/components/aurora/aurora-hero';
+import { NovaGuide } from '@/components/aurora/nova-guide';
+import { Icon } from '@/components/ui';
 
 const PLANET_HUES = ['#2fe6ff', '#8a88ff', '#ff9ecf', '#ffb340', '#3dd771', '#4da3ff'];
 
@@ -96,8 +100,10 @@ export default async function PathPage({
   params: Promise<{ locale: string; programCode: string }>;
 }) {
   const { locale, programCode } = await params;
-  const enrollment = await resolveEnrollment(programCode);
-  if (!enrollment) redirect(`/${locale}/login`);
+  const resolution = await resolveEnrollment(programCode);
+  if (resolution.kind === 'anonymous') redirect(`/${locale}/login`);
+  if (resolution.kind === 'no-enrollment') redirect(`/${locale}/enroll`);
+  const enrollment = resolution.enrollment;
   if (enrollment.status === 'pending_diagnostic') redirect(`/${locale}/learn/${programCode}/diagnostic`);
 
   const path = await apiFetch<PathResponse>(`/enrollments/${enrollment.id}/path`);
@@ -116,27 +122,59 @@ export default async function PathPage({
   const totalMastered = totals.reduce((sum, entry) => sum + entry.mastered, 0);
   const overallRatio = allCompetencies.length === 0 ? 0 : totalMastered / allCompetencies.length;
   const rank = rankFor(overallRatio);
+  const activeUnit = currentIndex === -1 ? undefined : units[currentIndex];
 
   return (
-    <div className="flex flex-col gap-7">
-      <header className="rise">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-ink">
-            Tu galaxia
-          </h1>
-          <span
-            className="rounded-full px-3 py-1 text-[13px] font-bold"
-            style={{ backgroundColor: `${rank.color}22`, color: rank.color }}
-          >
-            {rank.name}
-          </span>
-        </div>
-        <p className="mt-1 text-[15px] leading-relaxed text-dim">
-          Conquista cada planeta camino a Starbiz Global B2. El que brilla es tu próxima misión.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6 lg:gap-8">
+      <div className="rise">
+        <AuroraHero
+          asset="starmap"
+          eyebrow="Mapa de dominio · Expedición Aurora"
+          title="Ruta Estelar"
+          body={
+            <>
+              <p>
+                {activeUnit
+                  ? `Tu siguiente estación es ${activeUnit.stage.name} · ${activeUnit.unit.name}.`
+                  : 'Conquistaste todas las estaciones disponibles de esta ruta.'}
+              </p>
+              <div className="mt-3 max-w-[19rem]">
+                <div className="h-2.5 overflow-hidden rounded-full bg-white/15 p-[2px]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#7f8cff] via-[#53d8ee] to-[#ffd35a] transition-[width] duration-700"
+                    style={{ width: `${Math.round(overallRatio * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-white/70">
+                  {Math.round(overallRatio * 100)}% · {totalMastered} de {allCompetencies.length} dominadas
+                </p>
+              </div>
+            </>
+          }
+          badge={
+            <span
+              className="rounded-full border border-white/15 bg-[#071525]/75 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] shadow-lg backdrop-blur-md"
+              style={{ color: rank.color }}
+            >
+              {rank.name}
+            </span>
+          }
+          tone="gold"
+          compact
+          priority
+          imageAlt="Archipiélago de estaciones estelares unido por una ruta luminosa"
+        />
+      </div>
 
-      <div className="relative flex flex-col gap-9 py-3">
+      <div className="rise rise-1">
+        <NovaGuide compact state={activeUnit ? 'idle' : 'celebrate'}>
+          {activeUnit
+            ? 'Busca el planeta que pulsa: esa es la estación donde tu evidencia puede crecer ahora.'
+            : 'Tu constelación está completa. Cada planeta conserva la evidencia de lo que dominaste.'}
+        </NovaGuide>
+      </div>
+
+      <div className="relative flex flex-col gap-7 py-3 sm:gap-9">
         <span
           aria-hidden
           className="absolute bottom-4 left-[43px] top-4 w-[3px] rounded-full lg:left-1/2"
@@ -151,11 +189,15 @@ export default async function PathPage({
             ratio >= 1 ? 'done' : index === currentIndex ? 'current' : 'locked';
           const hue = PLANET_HUES[index % PLANET_HUES.length];
           const isRight = index % 2 === 1;
+          const visibleCompetencies =
+            state === 'current'
+              ? unit.competencies.filter((competency) => competency.state !== 'mastered').slice(0, 3)
+              : [];
           return (
             <div
               key={unit.code}
               className={`rise relative flex items-start gap-4 lg:w-1/2 ${
-                isRight ? 'lg:ml-auto lg:pl-16' : 'lg:flex-row-reverse lg:pr-16 lg:text-right'
+                isRight ? 'lg:ml-auto lg:pl-16' : 'lg:flex-row-reverse lg:pr-16'
               }`}
               style={{ animationDelay: `${Math.min(index * 0.08, 0.5)}s` }}
             >
@@ -168,20 +210,42 @@ export default async function PathPage({
                 <Planet hue={hue} ratio={ratio} state={state} id={`planet-${index}`} />
               </div>
               <div
-                className={`card-shadow min-w-0 flex-1 rounded-3xl bg-surface ${
+                className={`mission-panel min-w-0 flex-1 overflow-hidden rounded-[24px] ${
                   state === 'locked' ? 'opacity-70' : ''
                 }`}
               >
-                <div className="flex items-baseline justify-between gap-3 border-b border-line px-5 py-3.5">
-                  <p className="text-[13px] font-bold uppercase tracking-wide text-dim">
+                <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5">
+                  <p className="mission-kicker text-[9px] text-dim">
                     {stage.name} · {unit.name}
                   </p>
-                  <p className="text-[13px] font-semibold tabular-nums text-dim">
-                    {mastered}/{unit.competencies.length}
+                  <span
+                    className={`rounded-full px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide ${
+                      state === 'done'
+                        ? 'bg-ok-soft text-ok-deep'
+                        : state === 'current'
+                          ? 'bg-primary-soft text-primary-deep'
+                          : 'bg-fill text-dim'
+                    }`}
+                  >
+                    {state === 'done' ? 'Dominada' : state === 'current' ? 'Actual' : 'Bloqueada'}
+                  </span>
+                </div>
+                <div className="px-4 pb-3 pt-3 sm:px-5">
+                  <div className="h-2 overflow-hidden rounded-full bg-fill">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-700"
+                      style={{
+                        width: `${state === 'locked' ? 0 : ratio * 100}%`,
+                        backgroundColor: hue,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold tabular-nums text-dim">
+                    {mastered} de {unit.competencies.length} competencias
                   </p>
                 </div>
-                <div className="flex flex-col px-5 py-2">
-                  {unit.competencies.map((competency) => {
+                <div className="flex flex-col border-t border-line px-4 py-2 sm:px-5">
+                  {visibleCompetencies.map((competency) => {
                     const dot = STATE_DOTS[competency.state] ?? STATE_DOTS.not_seen;
                     return (
                       <div key={competency.code} className="flex items-start gap-3 py-2.5">
@@ -194,12 +258,35 @@ export default async function PathPage({
                           <span className="text-[12px] text-dim">
                             · {SKILL_LABELS[competency.skill]}
                             {competency.criticality === 'critical' ? ' · Crítica' : ''}
+                            {' · '}{dot.label}
                           </span>
                         </p>
                       </div>
                     );
                   })}
+                  {state === 'done' && (
+                    <p className="py-3 text-[13px] font-semibold text-ok-deep">
+                      Estación completada. Tu evidencia quedó guardada.
+                    </p>
+                  )}
+                  {state === 'locked' && (
+                    <p className="py-3 text-[13px] leading-relaxed text-dim">
+                      Completa la estación anterior para abrir esta parte de la ruta.
+                    </p>
+                  )}
+                  {state === 'current' && visibleCompetencies.length === 0 && (
+                    <p className="py-3 text-[13px] text-dim">Preparando tu siguiente competencia.</p>
+                  )}
                 </div>
+                {state === 'current' && (
+                  <Link
+                    href={`/${locale}/learn/${programCode}/today`}
+                    className="flex items-center justify-between border-t border-line px-4 py-3 text-[13px] font-extrabold text-primary-deep transition-colors hover:bg-primary-soft sm:px-5"
+                  >
+                    Continuar desde Hoy
+                    <Icon name="arrow" className="size-4" />
+                  </Link>
+                )}
               </div>
             </div>
           );

@@ -1,5 +1,6 @@
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomInt } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { GrantConsentsRequest, InvitationResponse, OnboardingStatus } from '@star/contracts';
 import { isMinor } from '@star/domain';
 import type { SessionUser } from '../../common/session';
@@ -8,12 +9,24 @@ import { AuditService } from '../audit/audit.service';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { weeklyVoiceMinutesUsed } from '../voice/voice-usage';
+import { loadConfig } from '../../config/config';
+import { lockLearnerPolicy } from '../../common/learner-policy-lock';
+import { ACTIVE_ASSENT_NOTICE_VERSION, ACTIVE_CONSENT_NOTICE_VERSION, INVITATION_TTL_MS, REQUIRED_LEARNING_CONSENTS } from './family-policy';
 
 /** Código legible sin caracteres ambiguos (0/O, 1/I). */
-function invitationCode(): string {
+export function invitationCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = randomBytes(6);
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+  return Array.from({ length: 8 }, () => alphabet[randomInt(alphabet.length)]).join('');
+}
+
+export function normalizeGuardianEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function invitationCodeHash(code: string, secret: string): string {
+  return createHmac('sha256', secret)
+    .update(`guardian-invitation:v1:${code.trim().toUpperCase()}`)
+    .digest('hex');
 }
 
 @Injectable()
@@ -24,177 +37,222 @@ export class FamilyService {
     private readonly outboxService: OutboxService,
   ) {}
 
-  /** El alumno invita a su apoderado (Stack §5.2 paso 2). */
   async createInvitation(learnerId: string, guardianEmail: string): Promise<InvitationResponse> {
-    const existing = await this.prisma.guardianInvitation.findFirst({
-      where: { learnerId, status: 'pending' },
-      orderBy: { createdAt: 'desc' },
+    const code = invitationCode();
+    const normalizedEmail = normalizeGuardianEmail(guardianEmail);
+    const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+    const codeHash = invitationCodeHash(code, loadConfig().sessionSecret);
+    const created = await this.prisma.$transaction(async (tx) => {
+      await lockLearnerPolicy(tx, learnerId);
+      await tx.guardianInvitation.updateMany({ where: { learnerId, status: 'pending' }, data: { status: 'expired' } });
+      const invitation = await tx.guardianInvitation.create({
+        data: { learnerId, guardianEmail: normalizedEmail, code: null, codeHash, expiresAt },
+      });
+      await this.outboxService.emitInTx(tx, { aggregateType: 'learner', aggregateId: learnerId, eventType: 'guardian.invited', payload: {} });
+      await this.auditService.recordInTx(tx, { actorId: learnerId, action: 'guardian.invited', objectType: 'guardian_invitation', objectId: invitation.id });
+      return invitation;
     });
-    if (existing) {
-      return { code: existing.code, guardianEmail: existing.guardianEmail, status: existing.status };
-    }
-    const invitation = await this.prisma.guardianInvitation.create({
-      data: { learnerId, guardianEmail, code: invitationCode() },
-    });
-    await this.outboxService.emitInTx(this.prisma, {
-      aggregateType: 'learner',
-      aggregateId: learnerId,
-      eventType: 'guardian.invited',
-      payload: {},
-    });
-    await this.auditService.record({
-      actorId: learnerId,
-      action: 'guardian.invited',
-      objectType: 'guardian_invitation',
-      objectId: invitation.id,
-    });
-    return { code: invitation.code, guardianEmail, status: 'pending' };
+    return { code, guardianEmail: created.guardianEmail, status: 'pending', expiresAt: created.expiresAt.toISOString() };
   }
 
-  /**
-   * El apoderado acepta con el código (nivel A1 de age assurance; el proveedor
-   * A2 de verificación de identidad es un bloqueador externo pendiente).
-   */
   async acceptInvitation(guardian: SessionUser, code: string): Promise<{ learnerId: string; learnerName: string }> {
-    const invitation = await this.prisma.guardianInvitation.findFirst({
-      where: { code: code.toUpperCase(), status: 'pending' },
-      include: { learner: true },
-    });
-    if (!invitation) throw notFound('Código de invitación no válido o ya usado');
-
-    await this.prisma.$transaction(async (tx) => {
+    const normalizedCode = code.trim().toUpperCase();
+    const codeHash = invitationCodeHash(normalizedCode, loadConfig().sessionSecret);
+    return this.prisma.$transaction(async (tx) => {
+      const invitation = await tx.guardianInvitation.findFirst({
+        where: { codeHash, status: 'pending', expiresAt: { gt: new Date() } }, include: { learner: true },
+      });
+      if (!invitation) throw notFound('Código de invitación no válido, expirado o ya usado');
+      await lockLearnerPolicy(tx, invitation.learnerId);
+      const guardianUser = await tx.user.findUniqueOrThrow({ where: { id: guardian.id } });
+      if (normalizeGuardianEmail(guardianUser.email ?? '') !== invitation.guardianEmail) {
+        throw new AppError('FORBIDDEN', 403, 'Este código fue enviado a otro correo');
+      }
+      const consumed = await tx.guardianInvitation.updateMany({
+        where: { id: invitation.id, status: 'pending', expiresAt: { gt: new Date() } },
+        data: { status: 'accepted', acceptedAt: new Date() },
+      });
+      if (consumed.count !== 1) throw notFound('Código de invitación ya usado');
       await tx.guardianLearnerLink.upsert({
-        where: {
-          guardianId_learnerId: { guardianId: guardian.id, learnerId: invitation.learnerId },
-        },
+        where: { guardianId_learnerId: { guardianId: guardian.id, learnerId: invitation.learnerId } },
         create: { guardianId: guardian.id, learnerId: invitation.learnerId, status: 'active' },
         update: { status: 'active', revokedAt: null },
       });
-      await tx.guardianInvitation.update({
-        where: { id: invitation.id },
-        data: { status: 'accepted', acceptedAt: new Date() },
-      });
-      await this.outboxService.emitInTx(tx, {
-        aggregateType: 'learner',
-        aggregateId: invitation.learnerId,
-        eventType: 'guardian.linked',
-        payload: {},
-      });
-      await this.auditService.recordInTx(tx, {
-        actorId: guardian.id,
-        action: 'guardian.linked',
-        objectType: 'learner',
-        objectId: invitation.learnerId,
-      });
+      await this.outboxService.emitInTx(tx, { aggregateType: 'learner', aggregateId: invitation.learnerId, eventType: 'guardian.linked', payload: {} });
+      await this.auditService.recordInTx(tx, { actorId: guardian.id, action: 'guardian.linked', objectType: 'learner', objectId: invitation.learnerId });
+      return { learnerId: invitation.learnerId, learnerName: invitation.learner.displayName };
     });
-    return { learnerId: invitation.learnerId, learnerName: invitation.learner.displayName };
   }
 
-  /** Estado del onboarding del alumno: guía la UI paso a paso (Especificación §5.2). */
   async onboardingStatus(learner: SessionUser): Promise<OnboardingStatus> {
-    const minor = learner.ageBand ? isMinor(learner.ageBand) : false;
+    const now = new Date();
+    await this.prisma.guardianInvitation.updateMany({
+      where: { learnerId: learner.id, status: 'pending', expiresAt: { lte: now } },
+      data: { status: 'expired' },
+    });
+    // Unknown age is handled with the stricter juvenile posture until the
+    // profile is repaired; it must never inherit adult readiness.
+    const ageBandKnown = learner.ageBand !== null;
+    const minor = learner.ageBand === null || isMinor(learner.ageBand);
     const [link, consents, assent, invitation] = await Promise.all([
-      this.prisma.guardianLearnerLink.findFirst({
-        where: { learnerId: learner.id, status: 'active' },
-      }),
+      this.prisma.guardianLearnerLink.findFirst({ where: { learnerId: learner.id, status: 'active' } }),
       this.prisma.consentGrant.findMany({
-        where: { learnerId: learner.id, status: 'granted' },
-        select: { purpose: true },
-        distinct: ['purpose'],
+        where: { learnerId: learner.id, status: 'granted', noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
+        select: { purpose: true }, distinct: ['purpose'],
       }),
-      this.prisma.youthAssent.findFirst({ where: { learnerId: learner.id } }),
-      this.prisma.guardianInvitation.findFirst({
-        where: { learnerId: learner.id },
-        orderBy: { createdAt: 'desc' },
+      this.prisma.youthAssent.findFirst({
+        where: { learnerId: learner.id, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION, revokedAt: null },
       }),
+      this.prisma.guardianInvitation.findFirst({ where: { learnerId: learner.id }, orderBy: { createdAt: 'desc' } }),
     ]);
-    const purposes = consents.map((c) => c.purpose);
+    const purposes = consents.map((consent) => consent.purpose);
+    const learningConsents = REQUIRED_LEARNING_CONSENTS.every((purpose) => purposes.includes(purpose));
     return {
       ageBand: learner.ageBand,
       isMinor: minor,
       hasActiveLink: link !== null,
       consents: purposes,
       hasAssent: assent !== null,
-      invitation: invitation
-        ? { code: invitation.code, guardianEmail: invitation.guardianEmail, status: invitation.status }
-        : null,
-      readyToEnroll: !minor || (link !== null && purposes.includes('service')),
+      invitation: invitation ? {
+        code: null,
+        guardianEmail: invitation.guardianEmail,
+        status: invitation.status,
+        expiresAt: invitation.expiresAt.toISOString(),
+      } : null,
+      readyToEnroll: ageBandKnown && (!minor || (link !== null && learningConsents && assent !== null)),
     };
   }
 
-  /** Revocación por finalidad (Stack §5.5): impide crear nuevas sesiones de voz. */
-  async revokeConsent(guardianId: string, learnerId: string, purpose: GrantConsentsRequest['purposes'][number]): Promise<{ revoked: string }> {
-    const updated = await this.prisma.consentGrant.updateMany({
-      where: { learnerId, purpose, status: 'granted' },
-      data: { status: 'revoked', revokedAt: new Date() },
-    });
-    if (updated.count === 0) {
-      throw new AppError('NOT_FOUND', 404, 'No hay un consentimiento vigente de esa finalidad');
-    }
-    await this.outboxService.emitInTx(this.prisma, {
-      aggregateType: 'learner',
-      aggregateId: learnerId,
-      eventType: 'consent.revoked',
-      payload: { purpose },
-    });
-    await this.auditService.record({
-      actorId: guardianId,
-      action: 'consent.revoked',
-      objectType: 'learner',
-      objectId: learnerId,
-      metadata: { purpose },
-    });
-    return { revoked: purpose };
-  }
-
-  async grantConsents(guardianId: string, request: GrantConsentsRequest): Promise<{ granted: string[] }> {
-    const granted: string[] = [];
-    for (const purpose of request.purposes) {
-      const existing = await this.prisma.consentGrant.findFirst({
-        where: { learnerId: request.learnerId, purpose, status: 'granted' },
-      });
-      if (!existing) {
-        await this.prisma.consentGrant.create({
-          data: {
-            learnerId: request.learnerId,
-            grantedById: guardianId,
-            purpose,
-            noticeVersion: request.noticeVersion,
-          },
+  async grantConsents(guardianId: string, request: GrantConsentsRequest, retry = true): Promise<{ granted: string[] }> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await lockLearnerPolicy(tx, request.learnerId);
+        await this.assertActiveGuardianLinkInTx(tx, guardianId, request.learnerId);
+        const granted: string[] = [];
+        for (const purpose of [...new Set(request.purposes)]) {
+          await tx.consentGrant.updateMany({
+            where: { learnerId: request.learnerId, purpose, status: 'granted', noticeVersion: { not: ACTIVE_CONSENT_NOTICE_VERSION } },
+            data: { status: 'expired', revokedAt: new Date() },
+          });
+          const existing = await tx.consentGrant.findFirst({
+            where: { learnerId: request.learnerId, purpose, status: 'granted', noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
+          });
+          if (!existing) {
+            await tx.consentGrant.create({
+              data: { learnerId: request.learnerId, grantedById: guardianId, purpose, noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
+            });
+            granted.push(purpose);
+          }
+        }
+        await this.outboxService.emitInTx(tx, {
+          aggregateType: 'learner', aggregateId: request.learnerId, eventType: 'consent.granted',
+          payload: { purposes: request.purposes, noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
         });
-        granted.push(purpose);
+        await this.auditService.recordInTx(tx, {
+          actorId: guardianId, action: 'consent.granted', objectType: 'learner', objectId: request.learnerId,
+          metadata: { purposes: request.purposes, noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
+        });
+        return { granted };
+      });
+    } catch (error) {
+      if (retry && error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2002' || error.code === 'P2034')) {
+        return this.grantConsents(guardianId, request, false);
       }
+      throw error;
     }
-    await this.auditService.record({
-      actorId: guardianId,
-      action: 'consent.granted',
-      objectType: 'learner',
-      objectId: request.learnerId,
-      metadata: { purposes: request.purposes },
-    });
-    return { granted };
   }
 
-  async recordAssent(learnerId: string, noticeVersion: string): Promise<{ ok: true }> {
-    const existing = await this.prisma.youthAssent.findFirst({
-      where: { learnerId, noticeVersion },
-    });
-    if (!existing) {
-      await this.prisma.youthAssent.create({ data: { learnerId, noticeVersion } });
-      await this.auditService.record({
-        actorId: learnerId,
-        action: 'assent.recorded',
-        objectType: 'learner',
-        objectId: learnerId,
+  async revokeConsent(guardianId: string, learnerId: string, purpose: GrantConsentsRequest['purposes'][number]): Promise<{ revoked: string }> {
+    return this.prisma.$transaction(async (tx) => {
+      await lockLearnerPolicy(tx, learnerId);
+      await this.assertActiveGuardianLinkInTx(tx, guardianId, learnerId);
+      const now = new Date();
+      const updated = await tx.consentGrant.updateMany({
+        where: { learnerId, purpose, status: 'granted', noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION },
+        data: { status: 'revoked', revokedAt: now },
       });
-    }
+      if (updated.count === 0) throw notFound('No hay un consentimiento vigente de esa finalidad');
+      if (purpose === 'service' || purpose === 'storage') {
+        await tx.authSession.updateMany({ where: { userId: learnerId, revokedAt: null }, data: { revokedAt: now } });
+      }
+      if (purpose === 'ai_voice' || purpose === 'international_transfer') {
+        await tx.voiceSession.updateMany({
+          where: { enrollment: { learnerId }, status: { in: ['created', 'connected'] } },
+          data: { status: 'terminated', endedAt: now, endReason: 'consent_revoked' },
+        });
+      }
+      await this.outboxService.emitInTx(tx, { aggregateType: 'learner', aggregateId: learnerId, eventType: 'consent.revoked', payload: { purpose } });
+      await this.auditService.recordInTx(tx, { actorId: guardianId, action: 'consent.revoked', objectType: 'learner', objectId: learnerId, metadata: { purpose } });
+      return { revoked: purpose };
+    });
+  }
+
+  async recordAssent(learnerId: string): Promise<{ ok: true }> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockLearnerPolicy(tx, learnerId);
+      const existing = await tx.youthAssent.findFirst({ where: { learnerId, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION, revokedAt: null } });
+      if (!existing) {
+        await tx.youthAssent.create({ data: { learnerId, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION } });
+        await this.outboxService.emitInTx(tx, { aggregateType: 'learner', aggregateId: learnerId, eventType: 'assent.recorded', payload: { noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION } });
+        await this.auditService.recordInTx(tx, { actorId: learnerId, action: 'assent.recorded', objectType: 'learner', objectId: learnerId });
+      }
+    });
     return { ok: true };
   }
 
-  /**
-   * Resumen familiar (Especificación §5.3): progreso, carga, permisos y alertas.
-   * Nunca transcripciones ni contenido de casos de protección.
-   */
+  async revokeCurrentAssent(learnerId: string): Promise<{ revoked: true }> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockLearnerPolicy(tx, learnerId);
+      const updated = await tx.youthAssent.updateMany({
+        where: { learnerId, noticeVersion: ACTIVE_ASSENT_NOTICE_VERSION, revokedAt: null }, data: { revokedAt: new Date() },
+      });
+      if (updated.count === 0) throw notFound('No hay asentimiento vigente');
+      await this.outboxService.emitInTx(tx, { aggregateType: 'learner', aggregateId: learnerId, eventType: 'assent.revoked', payload: {} });
+      await this.auditService.recordInTx(tx, { actorId: learnerId, action: 'assent.revoked', objectType: 'learner', objectId: learnerId });
+    });
+    return { revoked: true };
+  }
+
+  async revokeOwnLink(guardianId: string, learnerId: string): Promise<{ revoked: true }> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockLearnerPolicy(tx, learnerId);
+      const now = new Date();
+      const link = await tx.guardianLearnerLink.updateMany({
+        where: { guardianId, learnerId, status: 'active' }, data: { status: 'revoked', revokedAt: now },
+      });
+      if (link.count === 0) throw notFound('No existe ese vínculo activo');
+      await tx.guardianInvitation.updateMany({ where: { learnerId, status: 'pending' }, data: { status: 'expired' } });
+      await tx.consentGrant.updateMany({
+        where: { learnerId, grantedById: guardianId, status: 'granted' }, data: { status: 'revoked', revokedAt: now },
+      });
+      const remainingGuardians = await tx.guardianLearnerLink.count({ where: { learnerId, status: 'active' } });
+      if (remainingGuardians === 0) {
+        await tx.authSession.updateMany({ where: { userId: learnerId, revokedAt: null }, data: { revokedAt: now } });
+      }
+      await tx.voiceSession.updateMany({
+        where: { enrollment: { learnerId }, status: { in: ['created', 'connected'] } },
+        data: { status: 'terminated', endedAt: now, endReason: 'guardian_link_revoked' },
+      });
+      await this.outboxService.emitInTx(tx, { aggregateType: 'learner', aggregateId: learnerId, eventType: 'guardian.unlinked', payload: {} });
+      await this.auditService.recordInTx(tx, { actorId: guardianId, action: 'guardian.unlinked', objectType: 'learner', objectId: learnerId });
+    });
+    return { revoked: true };
+  }
+
+  private async assertActiveGuardianLinkInTx(
+    tx: Prisma.TransactionClient,
+    guardianId: string,
+    learnerId: string,
+  ): Promise<void> {
+    const link = await tx.guardianLearnerLink.findFirst({
+      where: { guardianId, learnerId, status: 'active' },
+      select: { id: true },
+    });
+    if (!link) {
+      throw new AppError('FORBIDDEN', 403, 'No existe un vínculo activo con este alumno');
+    }
+  }
+
   async guardianSummary(guardianId: string): Promise<unknown> {
     const links = await this.prisma.guardianLearnerLink.findMany({
       where: { guardianId, status: 'active' },
@@ -209,7 +267,11 @@ export class FamilyService {
         include: { program: true, entitlement: true },
       });
       const consents = await this.prisma.consentGrant.findMany({
-        where: { learnerId: learner.id, status: 'granted' },
+        where: {
+          learnerId: learner.id,
+          status: 'granted',
+          noticeVersion: ACTIVE_CONSENT_NOTICE_VERSION,
+        },
         select: { purpose: true },
       });
       const openSafetyCases = await this.prisma.safetySignal.count({

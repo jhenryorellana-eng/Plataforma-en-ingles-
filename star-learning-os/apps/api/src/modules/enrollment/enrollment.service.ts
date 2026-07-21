@@ -7,13 +7,14 @@ import type {
   ProgressResponse,
 } from '@star/contracts';
 import {
+  BAND_GUARANTEED_AGE,
   PLAN_LIMITS,
   projectCalendar,
   type CefrLevel,
   type PaceCode,
   type Skill,
 } from '@star/domain';
-import type { EnrollmentWithLearner } from '../../common/access.service';
+import { AccessService, type EnrollmentWithLearner } from '../../common/access.service';
 import { AppError, forbidden } from '../../common/errors';
 import type { SessionUser } from '../../common/session';
 import { AuditService } from '../audit/audit.service';
@@ -27,14 +28,13 @@ export interface PlacementJson {
   provisional: boolean;
 }
 
-const BAND_MAX_AGE: Record<string, number> = { y12_13: 13, t14_17: 17, a18_plus: 120 };
-
 @Injectable()
 export class EnrollmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly auditService: AuditService,
+    private readonly accessService: AccessService,
   ) {}
 
   async create(actor: SessionUser, request: CreateEnrollmentRequest): Promise<EnrollmentResponse> {
@@ -51,8 +51,14 @@ export class EnrollmentService {
     }
     const version = program.versions[0];
 
-    const ageBand = actor.ageBand ?? 'a18_plus';
-    if (program.minimumAge > (BAND_MAX_AGE[ageBand] ?? 120)) {
+    if (!actor.ageBand) {
+      throw new AppError('AGE_NOT_ALLOWED', 403, 'Tu cuenta necesita una banda de edad verificada');
+    }
+    const ageBand = actor.ageBand;
+    await this.accessService.assertYouthLearningEligibility(actor.id, ageBand);
+    // Solo admite si la edad GARANTIZADA de la banda cumple el mínimo del programa
+    // (contra el máximo de la banda admitía a menores: un programa 13+ dejaba entrar a un niño de 12).
+    if (program.minimumAge > BAND_GUARANTEED_AGE[ageBand]) {
       throw new AppError('AGE_NOT_ALLOWED', 403, 'Este programa no está habilitado para tu edad');
     }
 
@@ -98,8 +104,18 @@ export class EnrollmentService {
     // Sin elección explícita se inscribe en Accelerated (plan principal del piloto, D04)
     // y queda pendiente de confirmar el ritmo tras el diagnóstico (Metodología §7.5).
     const paceCode = request.paceCode ?? 'accelerated';
+    // La regla D04 se aplica igual en el alta que al cambiar de ritmo (antes se podía
+    // esquivar pidiendo sprint directamente en la inscripción).
+    if (paceCode === 'sprint' && ageBand === 'y12_13') {
+      throw new AppError(
+        'AGE_NOT_ALLOWED',
+        403,
+        'Sprint requiere validación de carga, edad y bienestar; no está disponible para tu edad (D04)',
+      );
+    }
     const limits = PLAN_LIMITS[paceCode];
     const enrollment = await this.prisma.$transaction(async (tx) => {
+      await this.accessService.assertYouthLearningEligibility(actor.id, ageBand, tx);
       const created = await tx.enrollment.create({
         data: {
           learnerId: actor.id,
@@ -138,6 +154,12 @@ export class EnrollmentService {
   }
 
   async listMine(actor: SessionUser): Promise<EnrollmentResponse[]> {
+    if (actor.role === 'staff') {
+      throw forbidden(
+        'El personal debe usar las colas operativas con capacidad y propósito explícitos',
+      );
+    }
+
     let learnerIds: string[];
     if (actor.role === 'learner') {
       learnerIds = [actor.id];
@@ -147,12 +169,10 @@ export class EnrollmentService {
         select: { learnerId: true },
       });
       learnerIds = links.map((link) => link.learnerId);
-    } else {
-      learnerIds = [];
-    }
+    } else learnerIds = [];
 
     const enrollments = await this.prisma.enrollment.findMany({
-      where: actor.role === 'staff' ? {} : { learnerId: { in: learnerIds } },
+      where: { learnerId: { in: learnerIds } },
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: { id: true },
@@ -244,6 +264,7 @@ export class EnrollmentService {
 
   /** Confirma o cambia el ritmo: modifica calendario y cupos, nunca el estándar (§9.4). */
   async updatePace(actor: SessionUser, enrollment: EnrollmentWithLearner, paceCode: PaceCode): Promise<EnrollmentResponse> {
+    await this.accessService.assertLearnerSelf(actor, enrollment);
     if (enrollment.status !== 'active' && enrollment.status !== 'paused') {
       throw new AppError('ENROLLMENT_NOT_ACTIVE', 409, 'Completa el diagnóstico antes de elegir tu ritmo');
     }

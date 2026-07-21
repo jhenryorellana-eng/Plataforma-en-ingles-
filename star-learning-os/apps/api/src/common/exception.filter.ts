@@ -16,6 +16,12 @@ export class AppExceptionFilter implements ExceptionFilter {
     const reply = host.switchToHttp().getResponse<FastifyReply>();
 
     if (exception instanceof AppError) {
+      if (exception.status === 429) {
+        const retryAfter = exception.details?.retryAfterSeconds;
+        if (typeof retryAfter === 'number' && Number.isFinite(retryAfter)) {
+          reply.header('Retry-After', String(Math.max(1, Math.ceil(retryAfter))));
+        }
+      }
       void reply.status(exception.status).send(this.shape(exception.code, exception.message, exception.details));
       return;
     }
@@ -29,8 +35,27 @@ export class AppExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      const code = status === 404 ? 'NOT_FOUND' : status === 403 ? 'FORBIDDEN' : status === 401 ? 'UNAUTHENTICATED' : 'INTERNAL';
+      const code =
+        status === 404
+          ? 'NOT_FOUND'
+          : status === 403
+            ? 'FORBIDDEN'
+            : status === 401
+              ? 'UNAUTHENTICATED'
+              : status === 503
+                ? 'SERVICE_UNAVAILABLE'
+                : 'INTERNAL';
       void reply.status(status).send(this.shape(code, exception.message));
+      return;
+    }
+
+    if (isDatabaseCapacityError(exception)) {
+      const message = exception instanceof Error ? exception.message : String(exception);
+      this.logger.warn(`Capacidad temporal de base de datos agotada: ${message}`);
+      reply.header('Retry-After', '2');
+      void reply
+        .status(503)
+        .send(this.shape('SERVICE_UNAVAILABLE', 'La base de datos está ocupada. Inténtalo nuevamente.'));
       return;
     }
 
@@ -46,4 +71,13 @@ export class AppExceptionFilter implements ExceptionFilter {
   ): ApiErrorShape {
     return { error: { code, message, ...(details ? { details } : {}) } };
   }
+}
+
+/** Prisma P2024 o rechazo explícito del pool compartido de Postgres/Supavisor. */
+export function isDatabaseCapacityError(exception: unknown): boolean {
+  if (typeof exception !== 'object' || exception === null) return false;
+  const candidate = exception as { code?: unknown; message?: unknown };
+  if (candidate.code === 'P2024') return true;
+  const message = typeof candidate.message === 'string' ? candidate.message : '';
+  return /EMAXCONNSESSION|max clients reached|connection pool timeout/i.test(message);
 }

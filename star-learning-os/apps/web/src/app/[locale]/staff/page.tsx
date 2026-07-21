@@ -1,7 +1,10 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import type { MeResponse } from '@star/contracts';
 import { apiFetchOrNull } from '@/lib/api';
 import { Chip, EmptyState, Group, IconTile, SectionHeader, Wordmark } from '@/components/ui';
 import { ReviewDecisionButtons } from '@/components/review-decision';
+import { SafetyCaseActions } from '@/components/safety-case-actions';
 
 interface ReviewRow {
   id: string;
@@ -17,6 +20,8 @@ interface SafetyRow {
   caseId: string | null;
   severity: string;
   category: string;
+  status: 'open' | 'triaged';
+  assignee: string | null;
   learner: string;
   excerpt: string | null;
   createdAt: string;
@@ -100,20 +105,26 @@ function ReviewPayload({ payload }: { payload: Record<string, unknown> }) {
 
 export default async function StaffPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const me = await apiFetchOrNull<MeResponse>('/auth/me');
+  if (!me || me.role !== 'staff') redirect(`/${locale}/login`);
+  const canReview = me.capabilities.includes('academic_reviewer');
+  const canSafeguard = me.capabilities.includes('safeguarding');
+  const canAuthor = me.capabilities.includes('curriculum_author');
   const [reviews, safetyCases] = await Promise.all([
-    apiFetchOrNull<ReviewRow[]>('/human-reviews?status=pending'),
-    apiFetchOrNull<SafetyRow[]>('/admin/safety/cases'),
+    canReview ? apiFetchOrNull<ReviewRow[]>('/human-reviews?status=pending') : Promise.resolve(null),
+    canSafeguard ? apiFetchOrNull<SafetyRow[]>('/admin/safety/cases') : Promise.resolve(null),
   ]);
-  if (reviews === null) redirect(`/${locale}/login`);
 
   return (
     <div className="min-h-dvh">
       <header className="material-bar sticky top-0 z-40 border-b border-line">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5 lg:max-w-6xl">
           <Wordmark />
-          <a href={`/${locale}/studio`} className="text-[15px] font-medium text-primary">
-            Estudio de contenido
-          </a>
+          {canAuthor && (
+            <Link href={`/${locale}/studio`} className="text-[15px] font-medium text-primary">
+              Estudio de contenido
+            </Link>
+          )}
         </div>
       </header>
 
@@ -128,9 +139,9 @@ export default async function StaffPage({ params }: { params: Promise<{ locale: 
           </p>
         </div>
 
-        <section className="rise rise-1">
+        {canReview && <section className="rise rise-1">
           <SectionHeader>Revisión humana · pendientes</SectionHeader>
-          {reviews.length === 0 ? (
+          {(reviews ?? []).length === 0 ? (
             <div className="card-shadow rounded-2xl bg-surface">
               <EmptyState
                 icon="shield"
@@ -141,7 +152,7 @@ export default async function StaffPage({ params }: { params: Promise<{ locale: 
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {reviews.map((review) => (
+              {(reviews ?? []).map((review) => (
                 <div key={review.id} className="card-shadow rounded-2xl bg-surface px-5 py-4">
                   <div className="flex items-start gap-3.5">
                     <IconTile name="shield" color="bg-primary" />
@@ -166,9 +177,9 @@ export default async function StaffPage({ params }: { params: Promise<{ locale: 
               ))}
             </div>
           )}
-        </section>
+        </section>}
 
-        <section className="rise rise-2 mt-8">
+        {canSafeguard && <section className="rise rise-2 mt-8">
           <SectionHeader>Casos de protección abiertos</SectionHeader>
           {(safetyCases ?? []).length === 0 ? (
             <div className="card-shadow rounded-2xl bg-surface">
@@ -191,6 +202,11 @@ export default async function StaffPage({ params }: { params: Promise<{ locale: 
                       {item.category} · <span className="text-dim">{item.learner}</span>
                     </p>
                     {item.excerpt && <p className="text-[13px] text-dim">“{item.excerpt}”</p>}
+                    <p className="text-[12px] text-dim">
+                      {item.status === 'triaged' ? 'Triado' : 'Abierto'}
+                      {item.assignee ? ` · ${item.assignee}` : ''}
+                    </p>
+                    {item.caseId && <SafetyCaseActions caseId={item.caseId} status={item.status} />}
                   </div>
                   <span className="shrink-0 text-[13px] tabular-nums text-dim">
                     {new Date(item.createdAt).toLocaleDateString('es-PE')}
@@ -199,7 +215,18 @@ export default async function StaffPage({ params }: { params: Promise<{ locale: 
               ))}
             </Group>
           )}
-        </section>
+        </section>}
+
+        {!canReview && !canSafeguard && !canAuthor && (
+          <div className="card-shadow rounded-2xl bg-surface">
+            <EmptyState
+              icon="shield"
+              iconColor="bg-fill"
+              title="Sin módulos operativos asignados"
+              body="Un responsable de operaciones debe asignarte una capacidad antes de continuar."
+            />
+          </div>
+        )}
       </main>
     </div>
   );

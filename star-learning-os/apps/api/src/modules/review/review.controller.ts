@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { ReviewStatus } from '@prisma/client';
 import { zHumanReviewDecisionRequest } from '@star/contracts';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { Capabilities, CurrentUser, Roles } from '../../common/decorators';
 import { AppError, notFound } from '../../common/errors';
 import type { SessionUser } from '../../common/session';
 import { parse } from '../../common/validate';
@@ -15,6 +15,7 @@ import { PrismaService } from '../../prisma/prisma.service';
  * permanecen provisionales hasta que una persona confirme, corrija o invalide.
  */
 @Roles('staff')
+@Capabilities('academic_reviewer')
 @Controller('human-reviews')
 export class ReviewController {
   constructor(

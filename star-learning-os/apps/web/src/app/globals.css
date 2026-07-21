@@ -1,29 +1,29 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Estructura Apple + identidad Starbiz premium. */
-  --color-paper: #f5f4fb;
+  /* STAR Mission Control: claridad tactil con identidad orbital propia. */
+  --color-paper: #eef4f8;
   --color-surface: #ffffff;
-  --color-mist: #f1f0f8;
-  --color-fill: #e8e7f2;
-  --color-line: rgba(60, 60, 90, 0.1);
-  --color-ink: #15152a;
-  --color-dim: #616178;
-  --color-primary: #5e5ce6;
-  --color-primary-deep: #4b49d6;
-  --color-primary-soft: rgba(94, 92, 230, 0.1);
-  --color-blue: #0a84ff;
-  --color-teal: #17b8cd;
-  --color-gold: #ff9f0a;
-  --color-gold-deep: #b06e00;
-  --color-gold-soft: rgba(255, 159, 10, 0.13);
-  --color-ok: #2fbf5f;
-  --color-ok-deep: #1d8a42;
-  --color-ok-soft: rgba(47, 191, 95, 0.13);
-  --color-warn: #ff9f0a;
-  --color-warn-soft: rgba(255, 159, 10, 0.13);
-  --color-risk: #ff453a;
-  --color-risk-soft: rgba(255, 69, 58, 0.11);
+  --color-mist: #e6eef4;
+  --color-fill: #d7e3eb;
+  --color-line: rgba(18, 47, 72, 0.12);
+  --color-ink: #102136;
+  --color-dim: #64788d;
+  --color-primary: #596cff;
+  --color-primary-deep: #3f50dc;
+  --color-primary-soft: rgba(89, 108, 255, 0.11);
+  --color-blue: #1689f8;
+  --color-teal: #0ebfc4;
+  --color-gold: #ffbf3f;
+  --color-gold-deep: #9b6500;
+  --color-gold-soft: rgba(255, 191, 63, 0.17);
+  --color-ok: #68c941;
+  --color-ok-deep: #37831c;
+  --color-ok-soft: rgba(104, 201, 65, 0.15);
+  --color-warn: #ffad32;
+  --color-warn-soft: rgba(255, 173, 50, 0.16);
+  --color-risk: #f65362;
+  --color-risk-soft: rgba(246, 83, 98, 0.12);
 }
 
 /* Modo oscuro: se activa con data-theme="dark" en <html> (lo fija el script del
@@ -34,28 +34,28 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-paper: #0c0c16;
-  --color-surface: #191924;
-  --color-mist: #21212e;
-  --color-fill: #2c2c3d;
-  --color-line: rgba(255, 255, 255, 0.09);
-  --color-ink: #f1f1f8;
-  --color-dim: #9c9cb2;
-  --color-primary: #8a88ff;
-  --color-primary-deep: #a5a3ff;
-  --color-primary-soft: rgba(138, 136, 255, 0.16);
-  --color-blue: #4da3ff;
-  --color-teal: #2fc6da;
-  --color-gold: #ffb340;
-  --color-gold-deep: #ffc95e;
-  --color-gold-soft: rgba(255, 179, 64, 0.16);
-  --color-ok: #3dd771;
-  --color-ok-deep: #55d97e;
-  --color-ok-soft: rgba(61, 215, 113, 0.15);
-  --color-warn: #ffb340;
-  --color-warn-soft: rgba(255, 179, 64, 0.16);
-  --color-risk: #ff6b62;
-  --color-risk-soft: rgba(255, 107, 98, 0.14);
+  --color-paper: #07111f;
+  --color-surface: #0e1c2c;
+  --color-mist: #14273b;
+  --color-fill: #20364c;
+  --color-line: rgba(161, 199, 229, 0.14);
+  --color-ink: #f4f8fc;
+  --color-dim: #94a9be;
+  --color-primary: #7281ff;
+  --color-primary-deep: #9aa5ff;
+  --color-primary-soft: rgba(114, 129, 255, 0.17);
+  --color-blue: #49b7ff;
+  --color-teal: #3bd9d4;
+  --color-gold: #ffc857;
+  --color-gold-deep: #ffd67d;
+  --color-gold-soft: rgba(255, 200, 87, 0.16);
+  --color-ok: #8de466;
+  --color-ok-deep: #a9ef88;
+  --color-ok-soft: rgba(141, 228, 102, 0.15);
+  --color-warn: #ffb84d;
+  --color-warn-soft: rgba(255, 184, 77, 0.16);
+  --color-risk: #ff7180;
+  --color-risk-soft: rgba(255, 113, 128, 0.15);
 }
 
 @theme inline {
@@ -381,6 +381,133 @@ html[data-theme='dark'] .glass-dock {
 }
 .eq-paused span { animation-play-state: paused; height: 28%; }
 
+/* ─── Nova: el espíritu de aurora que acompaña la voz ─── */
+.nova { --nova-amp: 0; }
+
+.nova-aura {
+  background:
+    radial-gradient(45% 45% at 35% 35%, rgba(196, 181, 253, 0.75), transparent 70%),
+    radial-gradient(45% 45% at 68% 45%, rgba(255, 158, 207, 0.6), transparent 70%),
+    radial-gradient(50% 50% at 45% 72%, rgba(125, 249, 255, 0.55), transparent 72%);
+  filter: blur(16px);
+  opacity: calc(0.45 + var(--nova-amp) * 0.5);
+  transform: scale(calc(1 + var(--nova-amp) * 0.18));
+  transition: opacity 0.25s ease-out;
+}
+
+.nova-body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: nova-breathe 4.2s ease-in-out infinite;
+}
+@keyframes nova-breathe {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-3px) scale(1.015, 0.97); }
+}
+
+/* Hablando: la forma ondula y brilla con la amplitud real del audio. */
+.nova.is-speaking .nova-body {
+  animation: none;
+  transform:
+    scale(calc(1 + var(--nova-amp) * 0.07), calc(1 + var(--nova-amp) * 0.1))
+    translateY(calc(var(--nova-amp) * -3px));
+  filter: brightness(calc(1 + var(--nova-amp) * 0.28));
+}
+
+/* Escuchando: se inclina atenta hacia ti, muy sutil. */
+.nova.is-listening .nova-body { animation-duration: 3.2s; }
+.nova.is-listening .nova-aura {
+  opacity: 0.6;
+  transform: scale(1.06);
+}
+
+/* Pensando: anillo de Saturno con marcha lenta de guiones. */
+.nova-ring {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.nova.is-thinking .nova-ring { opacity: 1; }
+.nova.is-thinking .nova-ring ellipse {
+  animation: nova-ring-march 2.8s linear infinite;
+}
+@keyframes nova-ring-march {
+  to { stroke-dashoffset: -40; }
+}
+
+.nova-eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: nova-blink 5.2s ease-in-out infinite;
+}
+@keyframes nova-blink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(0.08); }
+  97% { transform: scaleY(1); }
+}
+
+/* Aurora interna: tres masas de color a la deriva, siempre lentas. */
+.nova-blob-a { animation: nova-drift-a 11s ease-in-out infinite; }
+.nova-blob-b { animation: nova-drift-b 13s ease-in-out infinite; }
+.nova-blob-c { animation: nova-drift-c 12s ease-in-out infinite; }
+@keyframes nova-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(14px, 10px); }
+}
+@keyframes nova-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-12px, 12px); }
+}
+@keyframes nova-drift-c {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(10px, -12px); }
+}
+
+/* Nacimiento: estrellitas convergen y Nova se materializa. */
+.nova-born svg { animation: nova-birth 0.9s cubic-bezier(0.3, 1.4, 0.4, 1) both; }
+@keyframes nova-birth {
+  0% { transform: scale(0.2); opacity: 0; }
+  55% { transform: scale(1.07); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.nova-born .nova-aura { animation: nova-aura-in 1.3s ease-out both; }
+@keyframes nova-aura-in {
+  from { opacity: 0; }
+  to { opacity: 0.45; }
+}
+.nova-sparks circle {
+  animation: nova-spark-converge 0.85s ease-out both;
+}
+@keyframes nova-spark-converge {
+  0% { transform: translate(var(--sx), var(--sy)) scale(1); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(0, 0) scale(0.3); opacity: 0; }
+}
+
+/* Celebración: squish feliz y contenido, nunca estridente. */
+.nova.is-celebrate .nova-body { animation: nova-celebrate 1.8s ease-in-out infinite; }
+@keyframes nova-celebrate {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-6px) scale(0.94, 1.08); }
+  55% { transform: translateY(0) scale(1.06, 0.92); }
+  75% { transform: translateY(-2px) scale(0.98, 1.03); }
+}
+
+/* Pausa: se apaga con calma, sin desaparecer. */
+.nova.is-paused { filter: saturate(0.55) brightness(0.72); }
+.nova.is-paused .nova-body,
+.nova.is-paused .nova-eyes,
+.nova.is-paused .nova-blob-a,
+.nova.is-paused .nova-blob-b,
+.nova.is-paused .nova-blob-c {
+  animation-play-state: paused;
+}
+
+/* Tarjeta de capítulo: se desvanece justo antes de desmontar (2.9 s). */
+.nova-intro { animation: nova-intro-out 0.6s ease 2.3s both; }
+@keyframes nova-intro-out {
+  to { opacity: 0; }
+}
+
 /* ─── Espacio (login): estrellas, nebulosa, fugaces y neón ─── */
 @keyframes twinkle {
   0%, 100% { opacity: 0.2; }
@@ -565,6 +692,160 @@ html[data-theme='dark'] .glass-dock {
     0 0 52px rgba(255, 79, 216, 0.35);
 }
 
+/* --------------------------------------------------------------------------
+   STAR Mission Control
+   Un sistema oscuro, tactil y juvenil: una accion principal, progreso visible
+   y atmosfera orbital sin depender de ilustraciones ajenas.
+   -------------------------------------------------------------------------- */
+@layer components {
+.mission-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  background:
+    radial-gradient(900px 620px at 76% -12%, rgba(91, 108, 255, 0.15), transparent 66%),
+    radial-gradient(680px 520px at 0% 38%, rgba(59, 217, 212, 0.08), transparent 68%),
+    var(--color-paper);
+}
+
+.mission-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image:
+    radial-gradient(circle at 12% 16%, currentColor 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 34%, currentColor 0 1px, transparent 1.5px),
+    radial-gradient(circle at 38% 82%, currentColor 0 1px, transparent 1.5px),
+    radial-gradient(circle at 91% 74%, currentColor 0 1px, transparent 1.5px);
+  background-size: 146px 146px, 211px 211px, 173px 173px, 257px 257px;
+  color: var(--color-dim);
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.mission-panel {
+  border: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 52px -34px rgba(0, 0, 0, 0.8);
+}
+
+.mission-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(173, 184, 255, 0.28);
+  background:
+    radial-gradient(300px 220px at 88% 2%, rgba(59, 217, 212, 0.35), transparent 68%),
+    radial-gradient(240px 190px at 10% 110%, rgba(255, 200, 87, 0.18), transparent 72%),
+    linear-gradient(138deg, #5b64ee 0%, #3948bd 48%, #132a58 120%);
+  box-shadow:
+    0 18px 48px rgba(28, 39, 126, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -5px 0 rgba(18, 28, 92, 0.36);
+}
+
+.mission-hero::before,
+.mission-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.mission-hero::before {
+  width: 250px;
+  height: 250px;
+  right: -105px;
+  top: -114px;
+  box-shadow: 0 0 60px rgba(59, 217, 212, 0.18);
+}
+
+.mission-hero::after {
+  width: 168px;
+  height: 72px;
+  right: -22px;
+  bottom: 8px;
+  transform: rotate(-18deg);
+}
+
+.mission-kicker {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.tactile-button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, #7785ff 0%, #596cff 100%);
+  box-shadow:
+    0 5px 0 #3443b3,
+    0 12px 26px rgba(46, 62, 185, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 160ms ease;
+}
+
+.tactile-button:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 0 #3443b3,
+    0 15px 30px rgba(46, 62, 185, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.tactile-button:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 #3443b3,
+    0 6px 14px rgba(46, 62, 185, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.tactile-button:disabled {
+  filter: saturate(0.45);
+  transform: none;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--color-fill) 74%, #101b37);
+}
+
+.mission-choice {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--color-fill) 70%, #07111f);
+  transition: border-color 150ms ease, background 150ms ease, transform 100ms ease, box-shadow 100ms ease;
+}
+
+.mission-choice:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-line));
+  background: color-mix(in srgb, var(--color-primary-soft) 34%, var(--color-surface));
+}
+
+.mission-choice:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-fill) 70%, #07111f);
+}
+
+.mission-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-line) 18%, var(--color-line) 82%, transparent);
+}
+
+.nova-nav-orb {
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.82), transparent 18%),
+    linear-gradient(145deg, #8b8eff 0%, #5b64ee 48%, #35cbd4 115%);
+  box-shadow:
+    0 5px 0 #3340a3,
+    0 12px 26px rgba(72, 85, 225, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+}
+
 /* Respeto por reduce-motion. */
 @media (prefers-reduced-motion: reduce) {
   body::before,
@@ -594,6 +875,14 @@ html[data-theme='dark'] .glass-dock {
   .warp-rocket,
   .planet-pulse,
   .hint-bob,
+  .nova svg,
+  .nova-body,
+  .nova-eyes,
+  .nova-blob-a,
+  .nova-blob-b,
+  .nova-blob-c,
+  .nova-sparks circle,
+  .nova-ring ellipse,
   .space-sky *,
   .neon-logo * {
     animation: none !important;

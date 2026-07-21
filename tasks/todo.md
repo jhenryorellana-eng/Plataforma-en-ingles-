@@ -1,6 +1,6 @@
 # STAR Learning OS — Estado y plan (XL)
 
-**Última actualización:** 2026-07-15 (corte vertical local VERIFICADO)
+**Última actualización:** 2026-07-20 (hardening lógico verificado; Supabase 11/11 migraciones; dominio 55/55 + API 54/54; E2E real auth/familia)
 **Mandato:** construir la plataforma definida en los 5 documentos raíz, con corte vertical funcional local primero (Fase 0/1 de Stack v1.0 §19), esquema multi-programa desde el día 1 (Arquitectura Multilingüe, nota de arranque en verde §24).
 
 ## Decisiones de construcción adoptadas (derivadas de los documentos)
@@ -75,8 +75,9 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
 **Plan de subida (en orden):**
 1. ✅ **BD de producción en Supabase** (2026-07-16): proyecto "Academia de ingles"
    (`addkqfebkufynjovqxsv`, región sa-east-1, Postgres 17.6, org wakriowwiycapmfzzxql).
-   - 5 migraciones aplicadas vía MCP + ledger `public._prisma_migrations` con checksums
-     reales (futuros `prisma migrate deploy` reconocen el estado).
+   - 11 migraciones aplicadas y ledger `public._prisma_migrations` al día. Las cuatro
+     de hardening 2026-07-20 se aplicaron con `prisma migrate deploy`; el estado remoto
+     queda `Database schema is up to date`.
    - RLS habilitado en las 33 tablas SIN policies = denegación total a anon/PostgREST;
      la API entra por conexión directa (owner). Advisor de seguridad: solo INFOs esperados.
    - Data curada insertada (88 filas): 2 programas, catálogo B1, 4 lecciones PUBLICADAS
@@ -137,6 +138,83 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
    ☐ Pendiente config: OPENAI_API_KEY en Railway cuando Henry cargue créditos.
    ☐ Vercel Hobby prohíbe uso comercial → Pro $20/mes al cobrar.
 
+## Auditoría 2026-07-18 + Pack A (protección y economía) — COMPLETADO ✅
+
+Auditoría completa (2 subagentes + revisión propia + smoke en runtime): build 4/4, tests 55/55,
+lint limpio, smoke E2E **93/93** (60 anteriores + 33 nuevos anti-farming/gates, repetibles con
+usuarios frescos por corrida). Hallazgos clave y su estado:
+
+- [x] **A1 Economía anti-farming**: `completeSession` exige ≥1 evidencia nueva y otorga UNA vez
+  por lección (`hasGrantForLessonInTx`); voz exige ≥60 s activos + tope de 5 premios/día;
+  dedup de submissions normalizado (gap_fill trim/lowercase) + premio solo al PRIMER acierto
+  por actividad; todas las Novas van siempre a `enrollment.learnerId`.
+- [x] **A2 Voz (web)**: heartbeat real (endSession estable con `elapsedRef` — antes el efecto
+  se reiniciaba cada segundo y jamás disparaba); errores visibles en fase live; Pausar muta
+  mic + silencia remoto + cancela TTS; reporte de seguridad ya NO finge éxito al fallar;
+  guard doble-submit en startMission; TTS/peer/mic se limpian al salir o desmontar.
+- [x] **A3 Protección**: banda etaria por EDAD GARANTIZADA (`ageBandForBirthYear` en domain,
+  8 tests nuevos) — un posible menor jamás clasifica como adulto; `minimumAge` de programa
+  contra edad garantizada de la banda (un 13+ ya no admite a un niño de 12); Sprint bloqueado
+  también en el alta (antes solo al cambiar ritmo); escritura académica solo-alumno
+  (`assertLearnerSelf` en sessions/submissions/voz — apoderado/staff no generan evidencia).
+- [x] Lección aprendida: `pnpm dev:api` (tsx) NO emite metadata DI con Node 25 — API local
+  siempre compilada (`node dist/main.js`); documentado en tasks/lessons.md.
+- [x] **Pack B robustez (2026-07-19, smoke 95/95)**: player/diagnóstico separan bootError
+  (pantalla completa + reintento) de submitError (inline — la respuesta del alumno jamás se
+  destruye por un corte de red); EmptyState si focusActivityId no existe; finish() reintenta
+  el cierre; writingText se limpia tras enviar; gap_fill valida huecos REALES del texto;
+  MicTest onDone en useEffect (no en render); gradientes SVG con id derivado de props
+  (adiós hydration mismatch por contador de módulo); logout navega siempre (finally);
+  boot de voz con error visible + reintento; onboarding sin "Cargando…" eterno;
+  resolveEnrollment distingue anónimo (/login) de sin-inscripción (/enroll);
+  compra atómica (el UPDATE exige saldo — sin balance negativo por carrera);
+  heartbeat/end de voz condicionales a sesión abierta (no resucita, no duplica coste);
+  repasos con cierre condicional e idempotentes tras timeout; aceptar invitación
+  exige el correo invitado (un código visto por un tercero ya no vincula).
+- [x] **Verificación E2E en navegador real (2026-07-19, Playwright 27/27)**: login demo → Hoy →
+  lección (feedback correcto + **error inline con reintento** tras corte de red simulado) → voz
+  completa (mic test con dispositivo fake, saludo, turno del alumno, **pausa que detiene el
+  cronómetro de verdad**, **reporte que ya no finge éxito**, heartbeat activo server-side,
+  "Misión terminada", **tope diario anti-farming verificado**: 5.º premio del día concedido,
+  6.º bloqueado) → avatar/tienda → progreso → portal familiar → consola staff. Sin errores de
+  hidratación ni pageerrors. Arnés: `.shots/tool/verify-pack.cjs` (+`verify-login.cjs`).
+  Hallazgo y fix en caliente: `WEB_ORIGIN` debe igualar el puerto de la web o TODAS las
+  llamadas client-side mueren por CORS (el "No pudimos conectar" del login) — lessons.md.
+- [ ] **Pack C pendiente**: llamada inmersiva (ocultar dock/topbar en live), Guardar sticky en
+  avatar, fin de misión centrada, Nova con más presencia en preview, retirar sonda audioDebug,
+  OPENAI_API_KEY activa sin créditos rompe modo demo local (fallback a mock).
+
+## Hardening de producción 2026-07-20 — LÓGICA + SUPABASE VERIFICADOS; RUNTIME PENDIENTE
+
+- [x] Sesiones STAR opacas, hasheadas y revocables en PostgreSQL; logout invalida en servidor y
+  cada request recarga rol/capacidades actuales.
+- [x] Arranque fail-closed en producción para DB local, secreto corto/default, origen sin HTTPS o
+  variables incompletas de Supabase Auth.
+- [x] Capacidades de staff + administración por API + cuatro ojos: el autor no publica su borrador.
+- [x] Safety con pertenencia de sesión, triage, resolución obligatoriamente motivada, asignación,
+  auditoría y controles en la consola.
+- [x] Voz acredita solo segundos compatibles con tiempo de pared entre heartbeats; `activeSeconds`
+  del cliente ya no puede fabricar consumo ni premios.
+- [x] Health live/ready, headers defensivos, Node 22 fijado y GitHub Actions con PostgreSQL 17,
+  migraciones, seed, lint, typecheck, tests, build y smoke E2E.
+- [x] Migración `20260720235301_production_hardening` aplicada y verificada en PostgreSQL local:
+  RLS activo en `identity.auth_sessions`/`staff_grants`, grants de staff backfilled, sin drift.
+- [x] Sesión/login protegidos contra la carrera reset↔login mediante `credentialVersion` y CAS;
+  recovery real acepta la representación Supabase `amr=otp`, consume el bearer una sola vez,
+  revoca sesiones STAR y hace logout global en Supabase.
+- [x] Invitaciones familiares: HMAC, 8 caracteres, 24 h, rotación/consumo serializados y código
+  no reexpuesto; consentimiento/asentimiento versionados y revocación efectiva de sesiones.
+- [x] Voz: revalidación pos-provider bajo el mismo lock de política, cero secreto/sesión tras una
+  revocación, heartbeat sin tiempo inventado y cap diario de Novas serializado.
+- [x] Verificación final: dominio **55/55**, API **54/54**, lint y 4 typechecks limpios,
+  builds API+web, migraciones completas desde cero en PostgreSQL y Supabase **11/11**.
+- [x] E2E real Supabase: auth reset/replay/cookies/passwords PASS; familia/consentimiento
+  **27 PASS, 0 FAIL** usando apoderados Admin temporales; limpieza DB/Auth completa.
+- [ ] Alta pública de apoderado bloqueada externamente: Supabase Auth devuelve
+  `over_email_send_rate_limit` (429). Configurar SMTP propio y repetir confirmación por correo.
+- [ ] Rotar credenciales expuestas y desplegar el runtime nuevo en Railway/Vercel. Runbook:
+  `star-learning-os/docs/PRODUCTION_GATES.md`.
+
 ## Bloqueadores externos (solo Starbiz puede resolverlos — NO son código)
 
 | # | Dependencia | Referencia | Estado |
@@ -151,6 +229,9 @@ arquitectura lo permite sin tocar código: todo pasa por Prisma vía `DATABASE_U
 | 8 | Responsable de salvaguarda + cobertura | Stack §1.4 | Sin nombrar |
 | 9 | Currículo B1→B2 completo (sílabo, banco, rúbricas) | Metodología §22 | Solo unidad muestra |
 | 10 | Contenido y equipo ELE para Spanish Path | Arquitectura §17.2 | Post-MVP (flag apagado) |
+| 11 | SMTP transaccional para confirmación/reset | Supabase Auth | Bloqueado: servicio integrado devolvió 429 en E2E real |
+| 12 | Receptor HTTPS del outbox + secreto HMAC | Producción API | Sin definir; el runtime nuevo falla cerrado sin ellos |
+| 13 | Rate limit distribuido antes de múltiples réplicas | Auth/familia | Hoy es local por proceso |
 
 ## Siguiente fase (Fase 2 del Stack — MVP de piloto)
 

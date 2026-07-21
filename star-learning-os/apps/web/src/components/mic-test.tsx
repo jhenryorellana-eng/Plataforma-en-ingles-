@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, Icon } from './ui';
 
 type MicState = 'idle' | 'testing' | 'ok' | 'fail';
@@ -80,10 +80,13 @@ export function MicTest({ onDone }: { onDone: (micOk: boolean) => void }) {
   }
 
   const finished = (micState === 'ok' || micState === 'fail') && speakerConfirmed;
-  if (finished && !doneRef.current) {
-    doneRef.current = true;
-    onDone(micState === 'ok');
-  }
+  // onDone es un side effect (setState del padre): jamás durante el render.
+  useEffect(() => {
+    if (finished && !doneRef.current) {
+      doneRef.current = true;
+      onDone(micState === 'ok');
+    }
+  }, [finished, micState, onDone]);
 
   return (
     <Card className="px-4 py-4">

@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { SessionResponse, SubmissionResult } from '@star/contracts';
 import { clientApi } from '@/lib/client-api';
-import { Chip, Icon, LoadingStack } from '@/components/ui';
+import { Chip, EmptyState, Icon, LoadingStack } from '@/components/ui';
 import { ActivityForm, CtaBar, CtaButton } from './activity-form';
 import { VictoryScreen, type SessionStats } from './victory-screen';
 
@@ -35,16 +36,29 @@ export function LessonPlayer({
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /** Error de CARGA (pantalla completa con reintento) — jamás se mezcla con el de envío. */
+  const [bootError, setBootError] = useState<string | null>(null);
+  /** Error de ENVÍO (inline): la lección y lo escrito por el alumno NO se destruyen. */
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [victory, setVictory] = useState(false);
   const [stats, setStats] = useState<SessionStats>({ answered: 0, correct: 0, bestCombo: 0, xp: 0 });
   const comboRef = useRef(0);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setBootError(null);
     clientApi<SessionResponse>(`/sessions/${sessionId}`)
       .then(setSession)
-      .catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar la sesión'));
+      .catch((err) => setBootError(err instanceof Error ? err.message : 'No se pudo cargar la sesión'));
   }, [sessionId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (result) feedbackRef.current?.focus();
+  }, [result]);
 
   const activities = useMemo(() => {
     if (!session) return [];
@@ -52,32 +66,16 @@ export function LessonPlayer({
     return session.activities;
   }, [session, focusActivityId]);
 
-  if (error) {
-    return (
-      <div className="mt-10 rounded-2xl bg-risk-soft px-4 py-4 text-center text-[14px] text-risk">
-        {error}
-      </div>
-    );
-  }
-  if (!session || activities.length === 0) {
-    return <LoadingStack label="Cargando tu lección" />;
-  }
-
-  if (victory) {
-    return <VictoryScreen stats={stats} onContinue={finish} />;
-  }
-
-  const activity = activities[index];
-  const isLast = index + 1 >= activities.length;
   const home = `/${locale}/learn/${programCode}/${reviewItemId ? 'review' : 'today'}`;
-  const gainedXp = result?.correct === true ? 10 + (comboRef.current >= 3 ? 5 : 0) : 0;
 
   async function submit(response: Record<string, unknown>) {
+    const current = activities[index];
+    if (!current) return;
     setBusy(true);
-    setError(null);
+    setSubmitError(null);
     try {
       const submission = await clientApi<SubmissionResult>(
-        `/sessions/${sessionId}/activities/${activity.id}/submissions`,
+        `/sessions/${sessionId}/activities/${current.id}/submissions`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -90,19 +88,20 @@ export function LessonPlayer({
       if (submission.correct === true) {
         comboRef.current += 1;
         const bonus = comboRef.current >= 3 ? 5 : 0;
-        setStats((current) => ({
-          answered: current.answered + 1,
-          correct: current.correct + 1,
-          bestCombo: Math.max(current.bestCombo, comboRef.current),
-          xp: current.xp + 10 + bonus,
+        setStats((prev) => ({
+          answered: prev.answered + 1,
+          correct: prev.correct + 1,
+          bestCombo: Math.max(prev.bestCombo, comboRef.current),
+          xp: prev.xp + 10 + bonus,
         }));
       } else {
         if (submission.correct === false) comboRef.current = 0;
-        setStats((current) => ({ ...current, answered: current.answered + 1 }));
+        setStats((prev) => ({ ...prev, answered: prev.answered + 1 }));
       }
       setResult(submission);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo enviar tu respuesta');
+      // Inline: el formulario sigue montado con la respuesta del alumno intacta.
+      setSubmitError(err instanceof Error ? err.message : 'No se pudo enviar tu respuesta');
     } finally {
       setBusy(false);
     }
@@ -110,7 +109,8 @@ export function LessonPlayer({
 
   function next() {
     setResult(null);
-    if (isLast) {
+    setSubmitError(null);
+    if (index + 1 >= activities.length) {
       setVictory(true);
       return;
     }
@@ -118,10 +118,66 @@ export function LessonPlayer({
   }
 
   async function finish() {
-    await clientApi(`/sessions/${sessionId}/complete`, { method: 'POST' }).catch(() => undefined);
+    // El progreso ya quedó guardado con cada submission; el cierre otorga el
+    // premio de lección: si falla la red se reintenta una vez antes de salir.
+    try {
+      await clientApi(`/sessions/${sessionId}/complete`, { method: 'POST' });
+    } catch {
+      await clientApi(`/sessions/${sessionId}/complete`, { method: 'POST' }).catch(() => undefined);
+    }
     router.push(home);
   }
 
+  if (bootError) {
+    return (
+      <div className="rise mt-10 flex flex-col items-center gap-4 rounded-2xl bg-risk-soft px-6 py-8 text-center">
+        <p className="text-[15px] font-medium text-risk">{bootError}</p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={load}
+            className="rounded-full bg-primary px-5 py-2.5 text-[14px] font-semibold text-white"
+          >
+            Reintentar
+          </button>
+          <Link href={home} className="text-[14px] font-medium text-dim">
+            Volver
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  if (!session) {
+    return <LoadingStack label="Cargando tu lección" />;
+  }
+  if (activities.length === 0) {
+    // p. ej. focusActivityId que ya no existe: salida clara, nunca spinner eterno.
+    return (
+      <EmptyState
+        icon="review"
+        iconColor="bg-gold"
+        title="No encontramos esa actividad"
+        body="La actividad que buscabas ya no está disponible en esta sesión. Vuelve y elige otra para seguir practicando."
+        action={
+          <Link
+            href={home}
+            className="btn-gradient inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-[15px] font-semibold text-white"
+          >
+            Volver
+            <Icon name="arrow" className="size-4 text-white" />
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (victory) {
+    return <VictoryScreen stats={stats} onContinue={finish} />;
+  }
+
+  const activity = activities[index];
+  const isLast = index + 1 >= activities.length;
+  const gainedXp = result?.correct === true ? 10 + (comboRef.current >= 3 ? 5 : 0) : 0;
   const correct = result?.correct !== false;
 
   return (
@@ -159,13 +215,29 @@ export function LessonPlayer({
         </h1>
       </header>
 
-      {!result && (
-        <ActivityForm key={activity.id} activity={activity} busy={busy} onSubmit={submit} />
+      <ActivityForm
+        key={activity.id}
+        activity={activity}
+        busy={busy}
+        locked={Boolean(result)}
+        onSubmit={submit}
+      />
+
+      {submitError && !result && (
+        <p role="alert" className="rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] font-medium text-risk">
+          {submitError}. Inténtalo de nuevo, tu respuesta sigue ahí.
+        </p>
       )}
 
       {result && (
         <>
-          <div className="rise relative flex flex-col items-center gap-2 px-2 pt-4 text-center">
+          <div
+            ref={feedbackRef}
+            role="status"
+            aria-live="polite"
+            tabIndex={-1}
+            className="rise relative flex flex-col items-center gap-2 px-2 pt-4 text-center outline-none"
+          >
             {result.correct === true && (
               <span
                 key={`xp-${index}`}
@@ -187,6 +259,7 @@ export function LessonPlayer({
             <p className="text-[26px] font-extrabold tracking-tight text-ink">
               {result.correct === true ? 'Correcto' : 'Aún no'}
             </p>
+            <p className="sr-only">{result.feedback}</p>
             {result.correct === true && comboRef.current >= 2 && (
               <p
                 key={`combo-${index}-${comboRef.current}`}
@@ -218,12 +291,6 @@ export function LessonPlayer({
             <CtaButton onClick={next}>{isLast ? 'Ver mi resultado' : 'Continuar'}</CtaButton>
           </CtaBar>
         </>
-      )}
-
-      {error && (
-        <div className="rounded-2xl bg-risk-soft px-4 py-3 text-center text-[14px] text-risk">
-          {error}
-        </div>
       )}
     </div>
   );

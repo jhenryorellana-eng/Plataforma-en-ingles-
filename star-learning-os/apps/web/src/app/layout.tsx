@@ -14,21 +14,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f5f4fb' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0c16' },
-  ],
+  themeColor: '#07111f',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className={`${onest.variable} antialiased`}>
         {/* Tema antes del primer paint: elección guardada o preferencia del sistema. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var t=localStorage.getItem('star-theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='light'}})();",
+              "(function(){try{var t=localStorage.getItem('star-theme');if(t!=='dark'&&t!=='light'){t='dark'}document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name=theme-color]');if(m)m.content=t==='dark'?'#07111f':'#eef4f8'}catch(e){document.documentElement.dataset.theme='dark'}})();",
           }}
         />
         {children}
