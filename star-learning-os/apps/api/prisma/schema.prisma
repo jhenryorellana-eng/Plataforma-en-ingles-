@@ -43,16 +43,21 @@ enum AgeBand {
 }
 
 model User {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  email       String?  @unique
+  id                 String   @id @default(uuid(7)) @db.Uuid
+  email              String?  @unique
+  /// Identificador de acceso del alumno administrado; nunca es un correo real.
+  loginName          String?  @unique
   /// ID del usuario en Supabase Auth (auth.users). Null = cuenta demo/seed sin contraseña.
-  authId      String?  @unique @db.Uuid
-  displayName String
-  role        UserRole
-  ageBand     AgeBand?
+  authId             String?  @unique @db.Uuid
+  displayName        String
+  role               UserRole
+  ageBand            AgeBand?
+  birthYear          Int?
+  /// Obliga al alumno a reemplazar la clave temporal antes de usar el producto.
+  mustChangePassword Boolean  @default(false)
   /// Barrera monotónica entre validaciones externas de credenciales y sesiones STAR.
-  credentialVersion Int @default(0)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  credentialVersion  Int      @default(0)
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
 
   guardianLinks       GuardianLearnerLink[] @relation("GuardianSide")
   learnerLinks        GuardianLearnerLink[] @relation("LearnerSide")
@@ -205,10 +210,10 @@ model GuardianInvitation {
 }
 
 model YouthAssent {
-  id            String   @id @default(uuid(7)) @db.Uuid
-  learnerId     String   @db.Uuid
+  id            String    @id @default(uuid(7)) @db.Uuid
+  learnerId     String    @db.Uuid
   noticeVersion String
-  recordedAt    DateTime @default(now()) @db.Timestamptz(6)
+  recordedAt    DateTime  @default(now()) @db.Timestamptz(6)
   revokedAt     DateTime? @db.Timestamptz(6)
 
   learner User @relation(fields: [learnerId], references: [id])
@@ -994,21 +999,21 @@ model SafetyCase {
 // ---------------- audit ----------------
 
 model OutboxEvent {
-  sequenceId      BigInt    @id @default(autoincrement())
-  eventId         String    @unique @db.Uuid
-  aggregateType   String
-  aggregateId     String
-  eventType       String
-  schemaVersion   Int       @default(1)
-  payload         Json
-  occurredAt      DateTime  @db.Timestamptz(6)
-  publishedAt     DateTime? @db.Timestamptz(6)
-  attempts        Int       @default(0)
-  nextAttemptAt   DateTime  @default(now()) @db.Timestamptz(6)
-  leaseOwner      String?
-  leaseUntil      DateTime? @db.Timestamptz(6)
-  deadLetteredAt  DateTime? @db.Timestamptz(6)
-  lastErrorCode   String?
+  sequenceId     BigInt    @id @default(autoincrement())
+  eventId        String    @unique @db.Uuid
+  aggregateType  String
+  aggregateId    String
+  eventType      String
+  schemaVersion  Int       @default(1)
+  payload        Json
+  occurredAt     DateTime  @db.Timestamptz(6)
+  publishedAt    DateTime? @db.Timestamptz(6)
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now()) @db.Timestamptz(6)
+  leaseOwner     String?
+  leaseUntil     DateTime? @db.Timestamptz(6)
+  deadLetteredAt DateTime? @db.Timestamptz(6)
+  lastErrorCode  String?
 
   @@index([publishedAt, sequenceId])
   @@map("outbox_events")

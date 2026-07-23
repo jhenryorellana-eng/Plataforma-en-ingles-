@@ -30,35 +30,35 @@ field() { jsonget "$TMP/last.json" x "$1"; }
 check "health live" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/health/live")"
 check "health ready" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/health/ready")"
 
-echo "=== 0. Onboarding completo: registro → invitación → vínculo → permisos → asentimiento ==="
+echo "=== 0. Onboarding completo: apoderado → cuenta gestionada → clave privada → asentimiento ==="
 TS=$(date +%s)
-SMOKE_PW="Sm0keTest-$TS"
+TEMP_PW="Temp-Sm0ke-$TS"
+SMOKE_PW="Priv-Sm0ke-$TS"
 # Nico nace siempre con 13 garantizados (banda 12-13) para que los gates duren años.
 NICO_BY=$(($(date +%Y) - 14))
-NICO="$TMP/nico.jar"; rm -f "$NICO"
-check "registro alumno con age gate (13 garantizados)" 201 "$(req "$NICO" POST /auth/register-learner "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$NICO_BY}")"
-check "menor de 12 rechazado" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Peque\",\"email\":\"peque-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":2020}" "$API/auth/register-learner")"
-check "año que puede ser 11 también se rechaza (edad garantizada)" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Limite\",\"email\":\"limite-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$(($(date +%Y) - 12))}" "$API/auth/register-learner")"
-check "registro duplicado rechazado (409)" 409 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Nico Clon\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$NICO_BY}" "$API/auth/register-learner")"
-NICO2="$TMP/nico2.jar"; rm -f "$NICO2"
-check "login con contraseña correcta" 201 "$(req "$NICO2" POST /auth/login "{\"email\":\"nico-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
-check "login con contraseña incorrecta (401)" 401 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"email\":\"nico-$TS@demo.pe\",\"password\":\"incorrecta-123\"}" "$API/auth/login")"
-check "recuperación no revela existencia" 201 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"no-existe@demo.pe"}' "$API/auth/forgot-password")"
-check "inscripción bloqueada sin apoderado" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
-check "crear invitación al apoderado" 201 "$(req "$NICO" POST /family-invitations "{\"guardianEmail\":\"ana@demo.starbiz.pe\"}")"
-ICODE=$(field "d['code']")
-PENDING="$TMP/pending.jar"; rm -f "$PENDING"
-check "registro apoderado queda pendiente" 201 "$(req "$PENDING" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\",\"password\":\"$SMOKE_PW\"}")"
-check "respuesta exige verificar correo" pendingVerification "$(field "d['status']")"
-check "registro pendiente NO abre sesión STAR" 401 "$(req "$PENDING" GET /auth/me)"
+NICO_LOGIN="nico-$TS"
 PADRE="$TMP/padre.jar"; rm -f "$PADRE"
 check "apoderada CI entra solo por dev-login" 201 "$(req "$PADRE" POST /auth/dev-login '{"profile":"guardian"}')"
-OTRA="$TMP/otra.jar"; rm -f "$OTRA"
-check "crear apoderada ajena solo en CI" 201 "$(req "$OTRA" POST /auth/dev-login '{"displayName":"Otra Madre","role":"guardian"}')"
-check "código NO vale para otro correo (anti-vínculo indebido)" 403 "$(req "$OTRA" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
-check "aceptar invitación con código" 201 "$(req "$PADRE" POST /family-invitations/accept "{\"code\":\"$ICODE\"}")"
-NICOID=$(req "$NICO" GET /auth/me >/dev/null; field "d['id']")
-check "apoderado otorga consentimientos" 201 "$(req "$PADRE" POST /consents "{\"learnerId\":\"$NICOID\",\"purposes\":[\"service\",\"storage\",\"ai_voice\",\"international_transfer\"]}")"
+check "registro público de un menor redirigido al apoderado" 403 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"displayName\":\"Nico Prueba\",\"email\":\"nico-$TS@demo.pe\",\"password\":\"$TEMP_PW\",\"birthYear\":$NICO_BY}" "$API/auth/register-learner")"
+check "apoderada crea la cuenta gestionada de Nico" 201 "$(req "$PADRE" POST /guardian/learners "{\"displayName\":\"Nico Prueba\",\"loginName\":\"$NICO_LOGIN\",\"password\":\"$TEMP_PW\",\"birthYear\":$NICO_BY,\"legalGuardianAttestation\":true,\"consentNoticeVersion\":\"2026-07\",\"consents\":{\"service\":true,\"storage\":true,\"ai_voice\":true,\"international_transfer\":true}}")"
+NICOID=$(field "d['learner']['id']")
+check "menor de 12 rechazado en cuenta gestionada" 403 "$(req "$PADRE" POST /guardian/learners "{\"displayName\":\"Peque\",\"loginName\":\"peque-$TS\",\"password\":\"$TEMP_PW\",\"birthYear\":$(($(date +%Y) - 11)),\"legalGuardianAttestation\":true,\"consentNoticeVersion\":\"2026-07\",\"consents\":{\"service\":true,\"storage\":true,\"ai_voice\":false,\"international_transfer\":false}}")"
+check "usuario de acceso duplicado rechazado" 409 "$(req "$PADRE" POST /guardian/learners "{\"displayName\":\"Nico Clon\",\"loginName\":\"$NICO_LOGIN\",\"password\":\"$TEMP_PW\",\"birthYear\":$NICO_BY,\"legalGuardianAttestation\":true,\"consentNoticeVersion\":\"2026-07\",\"consents\":{\"service\":true,\"storage\":true,\"ai_voice\":false,\"international_transfer\":false}}")"
+NICO="$TMP/nico.jar"; rm -f "$NICO"
+check "Nico entra con la clave temporal" 201 "$(req "$NICO" POST /auth/login "{\"identifier\":\"$NICO_LOGIN\",\"password\":\"$TEMP_PW\"}")"
+check "primer ingreso exige cambiar la clave" change_password "$(field "d['nextAction']")"
+check "barrera impide usar el producto con clave temporal" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
+check "Nico crea su clave privada" 201 "$(req "$NICO" POST /auth/change-initial-password "{\"password\":\"$SMOKE_PW\"}")"
+check "después de la clave corresponde asentimiento" youth_assent "$(field "d['nextAction']")"
+NICO2="$TMP/nico2.jar"; rm -f "$NICO2"
+check "login con la clave privada" 201 "$(req "$NICO2" POST /auth/login "{\"identifier\":\"$NICO_LOGIN\",\"password\":\"$SMOKE_PW\"}")"
+check "la clave temporal quedó invalidada" 401 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d "{\"identifier\":\"$NICO_LOGIN\",\"password\":\"$TEMP_PW\"}" "$API/auth/login")"
+check "recuperación no revela existencia" 201 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"email":"no-existe@demo.pe"}' "$API/auth/forgot-password")"
+check "una cuenta gestionada no puede invitar otro apoderado" 403 "$(req "$NICO" POST /family-invitations '{"guardianEmail":"otra@demo.pe"}')"
+PENDING="$TMP/pending.jar"; rm -f "$PENDING"
+check "registro apoderado queda pendiente" 201 "$(req "$PENDING" POST /auth/register-guardian "{\"displayName\":\"Madre Prueba\",\"email\":\"madre-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"adultGuardianAttestation\":true}")"
+check "respuesta exige verificar correo" pendingVerification "$(field "d['status']")"
+check "registro pendiente NO abre sesión STAR" 401 "$(req "$PENDING" GET /auth/me)"
 check "inscripción bloqueada sin asentimiento (CNS-02)" 403 "$(req "$NICO" POST /enrollments '{"programCode":"english-path"}')"
 check "asentimiento del alumno" 201 "$(req "$NICO" POST /assents '{}')"
 check "onboarding listo para inscribir" "True" "$(req "$NICO" GET /onboarding/status >/dev/null; field "d['readyToEnroll']")"
@@ -135,6 +135,13 @@ if [ "$ESTADO" = "pending_diagnostic" ]; then
   answer DIAG-RD-01 0; answer DIAG-RD-02 1; answer DIAG-RD-03 1; answer DIAG-RD-04 3
   answer DIAG-LIS-01 1; answer DIAG-LIS-02 2; answer DIAG-LIS-03 0; answer DIAG-LIS-04 0
   answer DIAG-LU-01 1;  answer DIAG-LU-02 2;  answer DIAG-LU-03 0;  answer DIAG-LU-04 0
+  check "módulo adaptativo de Diego" module "$(req "$DIEGO" GET "/diagnostic-attempts/$ATT/next-items" >/dev/null; field "d['stage']")"
+  for c in $(jsonget "$TMP/last.json" x "' '.join(i['code'] for i in d['items'])"); do
+    req "$DIEGO" POST "/diagnostic-attempts/$ATT/responses" "{\"itemCode\":\"$c\",\"selectedIndex\":1}" >/dev/null
+  done
+  check "muestra writing de Diego" writing "$(req "$DIEGO" GET "/diagnostic-attempts/$ATT/next-items" >/dev/null; field "d['stage']")"
+  DWCODE=$(jsonget "$TMP/last.json" x "d['items'][0]['code']")
+  req "$DIEGO" POST "/diagnostic-attempts/$ATT/writing" "{\"itemCode\":\"$DWCODE\",\"text\":\"My name is Diego, and I study English every day because I want to enter university and understand engineering books. I also want to work with classmates from other countries, explain my ideas clearly, and ask useful questions. English will help me take part in international projects with confidence.\"}" >/dev/null
   check "completar diagnóstico" 201 "$(req "$DIEGO" POST "/diagnostic-attempts/$ATT/complete")"
   check "placement provisional (menor)" "True" "$(field "d['placement']['provisional']")"
   check "nivel general B1" B1 "$(field "d['placement']['overall']")"
@@ -186,6 +193,13 @@ if [ "$LESTADO" = "pending_diagnostic" ]; then
   lanswer DIAG-RD-01 0; lanswer DIAG-RD-02 1; lanswer DIAG-RD-03 0; lanswer DIAG-RD-04 0
   lanswer DIAG-LIS-01 1; lanswer DIAG-LIS-02 0; lanswer DIAG-LIS-03 0; lanswer DIAG-LIS-04 1
   lanswer DIAG-LU-01 1;  lanswer DIAG-LU-02 0;  lanswer DIAG-LU-03 1;  lanswer DIAG-LU-04 0
+  req "$LUCIA" GET "/diagnostic-attempts/$LATT/next-items" >/dev/null
+  for c in $(jsonget "$TMP/last.json" x "' '.join(i['code'] for i in d['items'])"); do
+    req "$LUCIA" POST "/diagnostic-attempts/$LATT/responses" "{\"itemCode\":\"$c\",\"selectedIndex\":1}" >/dev/null
+  done
+  req "$LUCIA" GET "/diagnostic-attempts/$LATT/next-items" >/dev/null
+  LWCODE=$(jsonget "$TMP/last.json" x "d['items'][0]['code']")
+  req "$LUCIA" POST "/diagnostic-attempts/$LATT/writing" "{\"itemCode\":\"$LWCODE\",\"text\":\"My name is Lucia, and I want to improve my English to understand stories and study science at school. I would also like to speak with new friends and ask questions without feeling nervous. In the future, English will help me travel with my family and learn about other cultures.\"}" >/dev/null
   req "$LUCIA" POST "/diagnostic-attempts/$LATT/complete" >/dev/null
 fi
 ZCODE=$(req "$LUCIA" POST "/enrollments/$LENR/voice-sessions" "{\"lessonContractId\":\"$VLESSON\"}")
@@ -196,15 +210,14 @@ check "motivo exacto: ZDR_REQUIRED (gate D17)" ZDR_REQUIRED "$ZREASON"
 echo "=== 3b. Economía de voz con alumna fresca 14-17 (repetible) ==="
 SARA="$TMP/sara.jar"; rm -f "$SARA"
 SARA_BY=$(($(date +%Y) - 15))
-check "registro Sara (14 garantizados)" 201 "$(req "$SARA" POST /auth/register-learner "{\"displayName\":\"Sara Prueba\",\"email\":\"sara-$TS@demo.pe\",\"password\":\"$SMOKE_PW\",\"birthYear\":$SARA_BY}")"
+SARA_LOGIN="sara-$TS"
+SARA_TEMP_PW="Sara-Temp-$TS"
+SARA_PRIVATE_PW="Sara-Priv-$TS"
+check "apoderada crea la cuenta gestionada de Sara" 201 "$(req "$PADRE" POST /guardian/learners "{\"displayName\":\"Sara Prueba\",\"loginName\":\"$SARA_LOGIN\",\"password\":\"$SARA_TEMP_PW\",\"birthYear\":$SARA_BY,\"legalGuardianAttestation\":true,\"consentNoticeVersion\":\"2026-07\",\"consents\":{\"service\":true,\"storage\":true,\"ai_voice\":true,\"international_transfer\":true}}")"
+SARAID=$(field "d['learner']['id']")
+check "Sara entra con la clave temporal" 201 "$(req "$SARA" POST /auth/login "{\"identifier\":\"$SARA_LOGIN\",\"password\":\"$SARA_TEMP_PW\"}")"
+check "Sara crea su clave privada" 201 "$(req "$SARA" POST /auth/change-initial-password "{\"password\":\"$SARA_PRIVATE_PW\"}")"
 check "Sara clasifica 14-17 (edad garantizada)" t14_17 "$(req "$SARA" GET /auth/me >/dev/null; field "d['ageBand']")"
-check "invitación al apoderado de Sara" 201 "$(req "$SARA" POST /family-invitations "{\"guardianEmail\":\"ana@demo.starbiz.pe\"}")"
-SCODE=$(field "d['code']")
-SMADRE="$TMP/smadre.jar"; rm -f "$SMADRE"
-check "apoderada de Sara entra solo por dev-login CI" 201 "$(req "$SMADRE" POST /auth/dev-login '{"profile":"guardian"}')"
-check "vínculo de Sara" 201 "$(req "$SMADRE" POST /family-invitations/accept "{\"code\":\"$SCODE\"}")"
-SARAID=$(req "$SARA" GET /auth/me >/dev/null; field "d['id']")
-check "consentimientos de Sara (servicio + voz)" 201 "$(req "$SMADRE" POST /consents "{\"learnerId\":\"$SARAID\",\"purposes\":[\"service\",\"storage\",\"ai_voice\",\"international_transfer\"]}")"
 check "asentimiento de Sara" 201 "$(req "$SARA" POST /assents '{}')"
 check "inscripción de Sara" 201 "$(req "$SARA" POST /enrollments '{"programCode":"english-path"}')"
 SENR=$(field "d['id']")
@@ -218,7 +231,7 @@ for stage in 1 2; do
 done
 req "$SARA" GET "/diagnostic-attempts/$SATT/next-items" >/dev/null
 SWCODE=$(jsonget "$TMP/last.json" x "d['items'][0]['code']")
-req "$SARA" POST "/diagnostic-attempts/$SATT/writing" "{\"itemCode\":\"$SWCODE\",\"text\":\"My name is Sara and I study English every day after school because I want to apply for a scholarship at a university in the United States and speak confidently with my future classmates and professors there.\"}" >/dev/null
+req "$SARA" POST "/diagnostic-attempts/$SATT/writing" "{\"itemCode\":\"$SWCODE\",\"text\":\"My name is Sara, and I study English every day after school because I want to apply for a university scholarship. I hope to speak confidently with my future classmates and professors in the United States. English will also help me understand lectures, write clear assignments, and participate in research projects.\"}" >/dev/null
 check "diagnóstico de Sara completo" 201 "$(req "$SARA" POST "/diagnostic-attempts/$SATT/complete")"
 check "ritmo de Sara confirmado" 200 "$(req "$SARA" PATCH "/enrollments/$SENR/pace" '{"paceCode":"accelerated"}')"
 req "$SARA" GET "/enrollments/$SENR/today" >/dev/null
@@ -251,12 +264,17 @@ check "crear segundo staff revisor" 201 "$(req "$STAFF2" POST /auth/dev-login '{
 check "cola de revisión humana" 200 "$(req "$STAFF" GET '/human-reviews?status=pending')"
 NPEND=$(jsonget "$TMP/last.json" x "len(d)")
 echo "INFO  casos pendientes: $NPEND"
-if [ "$NPEND" -ge 1 ] 2>/dev/null; then
-  RID=$(jsonget "$TMP/last.json" x "d[0]['id']")
-  check "decidir placement (confirmar)" 201 "$(req "$STAFF" POST "/human-reviews/$RID/decision" '{"decision":"confirmed","reason":"Evidencia consistente con B1; se confirma."}')"
-  req "$DIEGO" GET "/enrollments/$ENR" >/dev/null
-  check "placement ya no provisional" "False" "$(field "d['placement']['provisional']")"
+req "$DIEGO" GET "/enrollments/$ENR" >/dev/null
+DIEGO_PROVISIONAL=$(field "d['placement']['provisional']")
+if [ "$DIEGO_PROVISIONAL" = "True" ]; then
+  req "$STAFF" GET '/human-reviews?status=pending' >/dev/null
+  RID=$(jsonget "$TMP/last.json" x "[r for r in d if r['learner']=='Diego Torres' and r['caseType']=='placement'][0]['id']")
+  check "decidir placement de Diego (confirmar)" 201 "$(req "$STAFF" POST "/human-reviews/$RID/decision" '{"decision":"confirmed","reason":"Evidencia consistente con B1; se confirma."}')"
+else
+  echo "INFO  placement de Diego ya había sido confirmado"
 fi
+req "$DIEGO" GET "/enrollments/$ENR" >/dev/null
+check "placement de Diego ya no provisional" "False" "$(field "d['placement']['provisional']")"
 check "reporte de seguridad (alumno)" 201 "$(req "$DIEGO" POST /safety/report '{"category":"technical","comment":"El audio se cortó"}')"
 SCASE=$(field "d['caseId']")
 check "staff ve casos de safety" 200 "$(req "$STAFF" GET /admin/safety/cases)"

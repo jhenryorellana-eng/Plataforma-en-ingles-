@@ -2,17 +2,21 @@ import { Body, Controller, Get, Logger, Post, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { User } from '@prisma/client';
 import {
+  zChangeInitialPasswordRequest,
   zDevLoginRequest,
   zForgotPasswordRequest,
   zLoginRequest,
   zRegisterGuardianRequest,
   zRegisterLearnerRequest,
+  zResendConfirmationRequest,
   zResetPasswordRequest,
+  type ChangeInitialPasswordResponse,
   type MeResponse,
   type RegisterGuardianResponse,
+  type ResendConfirmationResponse,
   type ResetPasswordResponse,
 } from '@star/contracts';
-import { CurrentUser, Public } from '../../common/decorators';
+import { AllowPasswordChangePending, CurrentUser, Public, Roles } from '../../common/decorators';
 import { AUTH_RATE_LIMITS, LocalRateLimitService } from '../../common/local-rate-limit.service';
 import { parse } from '../../common/validate';
 import { SESSION_COOKIE, SESSION_DURATION_SECONDS, type SessionUser } from '../../common/session';
@@ -40,7 +44,10 @@ export class AuthController {
 
   @Public()
   @Post('dev-login')
-  async devLogin(@Body() body: unknown, @Res({ passthrough: true }) reply: FastifyReply): Promise<MeResponse> {
+  async devLogin(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<MeResponse> {
     const request = parse(zDevLoginRequest, body ?? {});
     const user = await this.authService.devLogin(request);
     return this.openSession(user, reply);
@@ -55,7 +62,12 @@ export class AuthController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<MeResponse> {
     const request = parse(zLoginRequest, body);
-    this.rateLimit.assertAllowed('auth.login', httpRequest.ip, request.email, AUTH_RATE_LIMITS.login);
+    this.rateLimit.assertAllowed(
+      'auth.login',
+      httpRequest.ip,
+      request.identifier ?? request.email ?? '',
+      AUTH_RATE_LIMITS.login,
+    );
     const login = await this.authService.login(request);
     return this.openSession(login.user, reply, login.credentialVersion);
   }
@@ -63,11 +75,36 @@ export class AuthController {
   /** Siempre responde 200 con el mismo cuerpo: no revela si el correo existe. */
   @Public()
   @Post('forgot-password')
-  async forgotPassword(@Body() body: unknown, @Req() httpRequest: FastifyRequest): Promise<{ ok: true }> {
+  async forgotPassword(
+    @Body() body: unknown,
+    @Req() httpRequest: FastifyRequest,
+  ): Promise<{ ok: true }> {
     const request = parse(zForgotPasswordRequest, body);
-    this.rateLimit.assertAllowed('auth.recovery', httpRequest.ip, request.email, AUTH_RATE_LIMITS.recovery);
+    this.rateLimit.assertAllowed(
+      'auth.recovery',
+      httpRequest.ip,
+      request.email,
+      AUTH_RATE_LIMITS.recovery,
+    );
     await this.authService.forgotPassword(request.email);
     return { ok: true };
+  }
+
+  /** Siempre responde igual para no revelar el estado de una dirección. */
+  @Public()
+  @Post('resend-confirmation')
+  async resendConfirmation(
+    @Body() body: unknown,
+    @Req() httpRequest: FastifyRequest,
+  ): Promise<ResendConfirmationResponse> {
+    const request = parse(zResendConfirmationRequest, body);
+    this.rateLimit.assertAllowed(
+      'auth.confirmation-resend',
+      httpRequest.ip,
+      request.email,
+      AUTH_RATE_LIMITS.recovery,
+    );
+    return this.authService.resendGuardianConfirmation(request.email);
   }
 
   @Public()
@@ -121,6 +158,26 @@ export class AuthController {
     return this.authService.registerGuardian(request);
   }
 
+  @Roles('learner')
+  @AllowPasswordChangePending()
+  @Post('change-initial-password')
+  async changeInitialPassword(
+    @CurrentUser() user: SessionUser,
+    @Body() body: unknown,
+    @Req() httpRequest: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<ChangeInitialPasswordResponse> {
+    const request = parse(zChangeInitialPasswordRequest, body);
+    this.rateLimit.assertAllowed(
+      'auth.initial-password-change',
+      httpRequest.ip,
+      user.id,
+      AUTH_RATE_LIMITS.passwordReset,
+    );
+    const updated = await this.authService.changeInitialPassword(user.id, request);
+    return this.openSession(updated, reply, updated.credentialVersion);
+  }
+
   private async openSession(
     user: User,
     reply: FastifyReply,
@@ -148,17 +205,22 @@ export class AuthController {
       role: user.role,
       ageBand: user.ageBand,
       capabilities: await this.sessionService.capabilitiesFor(user.id),
+      mustChangePassword: user.mustChangePassword,
+      nextAction: await this.authService.nextActionFor(user),
     };
   }
 
+  @AllowPasswordChangePending()
   @Get('me')
-  me(@CurrentUser() user: SessionUser): MeResponse {
+  async me(@CurrentUser() user: SessionUser): Promise<MeResponse> {
     return {
       id: user.id,
       displayName: user.displayName,
       role: user.role,
       ageBand: user.ageBand,
       capabilities: user.capabilities,
+      mustChangePassword: user.mustChangePassword,
+      nextAction: await this.authService.nextActionFor(user),
     };
   }
 

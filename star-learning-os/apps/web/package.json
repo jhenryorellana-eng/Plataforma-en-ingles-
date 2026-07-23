@@ -6,6 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "pnpm --filter @star/contracts build && next build",
     "start": "next start -p 3000",
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "cap:add:android": "cap add android",

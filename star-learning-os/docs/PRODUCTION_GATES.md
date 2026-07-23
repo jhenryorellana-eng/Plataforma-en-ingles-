@@ -3,20 +3,28 @@
 Este documento separa lo que la aplicación puede verificar al arrancar de lo que
 requiere una decisión, contrato o responsable externo.
 
-## Estado verificado — 2026-07-20
+## Estado verificado — 2026-07-22
 
-- Supabase: **11/11 migraciones aplicadas** con Prisma; sin learners con `ageBand` nulo,
-  sin consentimientos/asentimientos activos obsoletos y con los índices parciales esperados.
+- Local: **12/12 migraciones aplicadas** desde cero con Prisma. Supabase producción continúa
+  en **11/12** hasta desplegar primero la migración de cuentas gestionadas y después el runtime.
+  No aplicar la migración manualmente fuera del ledger de Prisma.
 - Advisors: seguridad solo informa RLS sin policies (denegación intencional); performance ya
   no reporta foreign keys sin índice. Los índices nuevos figuran sin uso por el tráfico mínimo.
-- Pruebas: dominio 55/55, API 54/54, lint y typecheck completos, builds API/Next y migración
-  desde cero en PostgreSQL local.
+- Pruebas: dominio 55/55, API 75/75 y web 3/3; lint, typecheck y builds API/Next completos,
+  además de la migración y el seed desde cero en PostgreSQL local.
+- Smoke local del flujo completo guardian-first: **117 PASS, 0 FAIL**; incluye cuenta
+  gestionada, clave temporal, cambio obligatorio, asentimiento, recuperación indistinguible,
+  diagnóstico, aprendizaje, voz, economía, seguridad, revisión humana y aislamiento.
 - E2E Auth real: reset 201; cookie previa 401; contraseña anterior 401; nueva 201; replay del
   API 401; `PUT /auth/v1/user` directo 403 después del logout global.
 - E2E familia real: 27 PASS, 0 FAIL con usuarios Admin temporales; invitación, HMAC,
   consentimiento, asentimiento, revocación, unlink, auditoría y outbox comprobados.
-- Alta pública de apoderado: **bloqueada externamente** por `over_email_send_rate_limit` (429)
-  del correo integrado de Supabase. No se considera aprobada hasta configurar SMTP propio.
+- Alta pública de apoderado: `/signup` respondió 200 y Auth registró
+  `user_confirmation_requested` y `mail.send`, pero el remitente sigue siendo
+  `noreply@mail.app.supabase.io`. Esto demuestra la solicitud, no la entrega al buzón. El
+  flujo no se considera aprobado hasta configurar SMTP propio y verificar `delivered`.
+- Producción todavía expone el runtime anterior: `GET /v1/health/version` devuelve 404 en vez
+  de `guardian-first-v1`. Desplegar la API solo después de la migración y antes de la web.
 
 ## Gate automático de arranque
 
@@ -81,14 +89,28 @@ Readiness para Railway: `GET /v1/health/ready`. Liveness: `GET /v1/health/live`.
 - El rate limiting incluido en la API es local y se reinicia con cada proceso. Antes
   de escalar a varias réplicas se requiere una capa distribuida en el edge/gateway
   (o un almacén compartido) para login, registro, recuperación/reset y códigos familiares.
-- El alta de alumnos conserva la decisión vigente `email_confirm: true`. El alta de
-  apoderados usa `/auth/v1/signup` y exige que **Confirm Email** permanezca habilitado;
-  el runtime rechaza el alta si Supabase devuelve una sesión ya confirmada.
+- El alta pública de menores está cerrada. El apoderado confirma primero su correo y crea
+  después una cuenta gestionada con usuario y clave temporal; el email técnico del alumno
+  existe solo dentro del adaptador de Auth y nunca se guarda como contacto local.
+- El alta de apoderados usa `/auth/v1/signup` y exige que **Confirm Email** permanezca
+  habilitado (`mailer_autoconfirm=false`); el runtime rechaza el alta si Supabase devuelve
+  una sesión ya confirmada.
 - Agregar a la allow list de Redirect URLs de Supabase las rutas exactas
   `/es-PE/reset-password` y `/es-PE/login?verified=1` bajo `WEB_ORIGIN`.
-- Configurar SMTP de producción: confirmación de apoderados y recuperación de contraseña
-  no deben depender del servicio de correo de prueba ni de sus límites reducidos. El E2E real
-  ya confirmó este gate con HTTP 429 `over_email_send_rate_limit`.
+- Fijar **Site URL** al origen público exacto de la web. En el despliegue actual es
+  `https://plataforma-en-ingles.vercel.app`; añadir también el dominio propio cuando exista.
+- Configurar SMTP de producción con dominio remitente verificado: host, puerto, usuario,
+  contraseña, `From` y nombre del remitente. Publicar SPF, DKIM y DMARC, desactivar click
+  tracking y ajustar el límite de emails de Auth después de una prueba controlada.
+  Confirmación y recuperación no deben depender de `noreply@mail.app.supabase.io`: el SMTP
+  integrado solo entrega a direcciones preautorizadas del equipo, tiene límites reducidos y
+  el E2E real ya observó `over_email_send_rate_limit`.
+- Conservar `ConfirmationURL`/`RedirectTo` en las plantillas y probar confirmación y recovery
+  de extremo a extremo. **Send Email Hook** es una alternativa al SMTP, no un complemento:
+  si se habilita debe encargarse de todos los correos Auth y del filtrado de destinatarios
+  técnicos `@learners.invalid`.
+- La readiness actual comprueba DB/outbox, no la entrega SMTP. Operaciones debe vigilar
+  `user_confirmation_requested`, `mail.send`, rebotes y quejas en el proveedor de correo.
 - Definir el receptor HTTPS real del outbox y generar su secreto HMAC. Sin ambos, el runtime
   de producción se niega a arrancar (o queda en mantenimiento con readiness 503).
 - ZDR aprobado y verificado antes de voz para 12–13.

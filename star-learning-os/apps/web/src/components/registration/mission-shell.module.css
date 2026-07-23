@@ -90,7 +90,9 @@
   border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 13px 13px 13px 5px;
   background: linear-gradient(145deg, rgba(117, 107, 255, 0.88), rgba(25, 183, 231, 0.72));
-  box-shadow: 0 8px 28px rgba(27, 68, 190, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.44);
+  box-shadow:
+    0 8px 28px rgba(27, 68, 190, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.44);
 }
 
 .storyCopy {
@@ -124,7 +126,9 @@
   height: 7px;
   border-radius: 999px;
   background: var(--mission-gold);
-  box-shadow: 0 0 0 4px rgba(255, 211, 90, 0.15), 0 0 16px rgba(255, 211, 90, 0.8);
+  box-shadow:
+    0 0 0 4px rgba(255, 211, 90, 0.15),
+    0 0 16px rgba(255, 211, 90, 0.8);
 }
 
 .storyCopy h2 {
@@ -161,7 +165,9 @@
   border-radius: 18px;
   padding: 11px 14px;
   background: rgba(4, 15, 34, 0.58);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(16px);
   color: rgba(255, 255, 255, 0.82);
   font-size: 10px;
@@ -208,7 +214,11 @@
     radial-gradient(circle at 84% 22%, rgba(38, 217, 245, 0.55) 0 1px, transparent 1.6px),
     radial-gradient(circle at 72% 76%, rgba(255, 211, 90, 0.42) 0 1px, transparent 1.5px),
     radial-gradient(circle at 20% 82%, rgba(155, 140, 255, 0.5) 0 1px, transparent 1.6px);
-  background-size: 210px 220px, 290px 270px, 330px 310px, 250px 260px;
+  background-size:
+    210px 220px,
+    290px 270px,
+    330px 310px,
+    250px 260px;
   opacity: 0.52;
 }
 
@@ -226,7 +236,9 @@
   width: 400px;
   height: 400px;
   border: 1px solid rgba(38, 217, 245, 0.16);
-  box-shadow: inset 0 0 90px rgba(38, 217, 245, 0.05), 0 0 90px rgba(47, 93, 255, 0.07);
+  box-shadow:
+    inset 0 0 90px rgba(38, 217, 245, 0.05),
+    0 0 90px rgba(47, 93, 255, 0.07);
 }
 
 .ambientOrbB {
@@ -309,7 +321,9 @@
 .progressActive .progressNode {
   border-color: var(--mission-cyan);
   background: linear-gradient(145deg, #245dce, #22b5d5);
-  box-shadow: 0 0 0 5px var(--mission-navy), 0 0 20px rgba(38, 217, 245, 0.35);
+  box-shadow:
+    0 0 0 5px var(--mission-navy),
+    0 0 20px rgba(38, 217, 245, 0.35);
   color: #fff;
 }
 
@@ -332,11 +346,17 @@
   border: 1px solid var(--mission-line);
   border-radius: 26px;
   background: linear-gradient(180deg, rgba(18, 42, 69, 0.96), rgba(9, 26, 46, 0.98));
-  box-shadow: 0 7px 0 #040d18, 0 18px 44px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 7px 0 #040d18,
+    0 18px 44px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: var(--mission-text);
   text-decoration: none;
   transform: translateY(0);
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .roleCard::after {
@@ -350,18 +370,25 @@
 }
 
 .roleCard.learner::after {
-  box-shadow: inset 0 0 0 2px rgba(38, 217, 245, 0.68), inset 0 0 36px rgba(38, 217, 245, 0.08);
+  box-shadow:
+    inset 0 0 0 2px rgba(38, 217, 245, 0.68),
+    inset 0 0 36px rgba(38, 217, 245, 0.08);
 }
 
 .roleCard.guardian::after {
-  box-shadow: inset 0 0 0 2px rgba(255, 113, 128, 0.68), inset 0 0 36px rgba(255, 113, 128, 0.07);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 113, 128, 0.68),
+    inset 0 0 36px rgba(255, 113, 128, 0.07);
 }
 
 .roleCard:hover {
   z-index: 2;
   transform: translateY(-6px);
   border-color: rgba(154, 188, 226, 0.34);
-  box-shadow: 0 11px 0 #040d18, 0 28px 58px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 11px 0 #040d18,
+    0 28px 58px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .roleCard:hover::after,
@@ -371,7 +398,9 @@
 
 .roleCard:active {
   transform: translateY(3px);
-  box-shadow: 0 3px 0 #040d18, 0 12px 30px rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 3px 0 #040d18,
+    0 12px 30px rgba(0, 0, 0, 0.28);
 }
 
 .roleCard:focus-visible {
@@ -494,7 +523,9 @@
   border: 1px solid rgba(121, 170, 225, 0.32);
   border-radius: 27px 27px 27px 10px;
   background: #10243c;
-  box-shadow: 0 7px 0 #040d18, 0 18px 34px rgba(0, 0, 0, 0.22);
+  box-shadow:
+    0 7px 0 #040d18,
+    0 18px 34px rgba(0, 0, 0, 0.22);
 }
 
 .introImage {
@@ -539,9 +570,11 @@
   border-radius: 28px;
   padding: 24px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 38%),
-    rgba(11, 28, 48, 0.92);
-  box-shadow: 0 7px 0 #040d18, 0 22px 46px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 38%), rgba(11, 28, 48, 0.92);
+  box-shadow:
+    0 7px 0 #040d18,
+    0 22px 46px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
 }
 
@@ -564,7 +597,7 @@
 
 .label {
   color: #c5d4e4;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 750;
   letter-spacing: 0.03em;
 }
@@ -578,11 +611,16 @@
   padding: 0 15px;
   outline: none;
   background: #071725;
-  box-shadow: inset 0 2px 0 rgba(1, 7, 16, 0.34), 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 2px 0 rgba(1, 7, 16, 0.34),
+    0 1px 0 rgba(255, 255, 255, 0.04);
   color: #f6f9ff;
   font: inherit;
-  font-size: 15px;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  font-size: 16px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
 }
 
 .input::placeholder {
@@ -598,7 +636,9 @@
 .select:focus {
   border-color: var(--mission-cyan);
   background: #091b2c;
-  box-shadow: 0 0 0 4px rgba(38, 217, 245, 0.11), inset 0 2px 0 rgba(1, 7, 16, 0.32);
+  box-shadow:
+    0 0 0 4px rgba(38, 217, 245, 0.11),
+    inset 0 2px 0 rgba(1, 7, 16, 0.32);
 }
 
 .select {
@@ -655,25 +695,36 @@
   border-radius: 17px;
   padding: 0 20px;
   background: linear-gradient(110deg, #5264f5 0%, #3989ee 48%, #20bad2 100%);
-  box-shadow: 0 6px 0 #173d86, 0 16px 32px rgba(40, 95, 218, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  box-shadow:
+    0 6px 0 #173d86,
+    0 16px 32px rgba(40, 95, 218, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
   color: #fff;
   font: inherit;
   font-size: 15px;
   font-weight: 800;
   letter-spacing: -0.01em;
   cursor: pointer;
-  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    filter 140ms ease;
 }
 
 .primaryButton:hover:not(:disabled) {
   filter: brightness(1.07) saturate(1.06);
   transform: translateY(-2px);
-  box-shadow: 0 8px 0 #173d86, 0 20px 38px rgba(40, 95, 218, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  box-shadow:
+    0 8px 0 #173d86,
+    0 20px 38px rgba(40, 95, 218, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
 }
 
 .primaryButton:active:not(:disabled) {
   transform: translateY(4px);
-  box-shadow: 0 2px 0 #173d86, 0 8px 20px rgba(40, 95, 218, 0.28);
+  box-shadow:
+    0 2px 0 #173d86,
+    0 8px 20px rgba(40, 95, 218, 0.28);
 }
 
 .primaryButton:focus-visible {
@@ -690,7 +741,7 @@
 .formHint {
   margin: 16px 12px 0;
   color: #7890aa;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.5;
   text-align: center;
 }
@@ -733,23 +784,44 @@
   border-radius: 30px;
   padding: 34px;
   background: linear-gradient(145deg, rgba(38, 217, 245, 0.08), rgba(85, 117, 255, 0.1));
-  box-shadow: 0 8px 0 #040d18, 0 26px 60px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 8px 0 #040d18,
+    0 26px 60px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
   text-align: center;
 }
 
 @keyframes story-arrive {
-  from { opacity: 0; transform: scale(1.08); }
-  to { opacity: 1; transform: scale(1.015); }
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.015);
+  }
 }
 
 @keyframes copy-arrive {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes content-arrive {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 1100px) {
@@ -776,13 +848,13 @@
 
   .story {
     position: relative;
-    height: 250px;
+    height: 140px;
     border-right: 0;
     border-bottom: 1px solid rgba(111, 154, 214, 0.2);
   }
 
   .storyImage {
-    object-position: center 73%;
+    object-position: center 68%;
   }
 
   .storyTint {
@@ -803,7 +875,7 @@
 
   .content {
     width: 100%;
-    min-height: calc(100svh - 250px);
+    min-height: calc(100svh - 140px);
     overflow-x: clip;
     overflow-y: visible;
     align-items: flex-start;
@@ -828,7 +900,9 @@
     border-radius: 999px;
     padding: 8px 12px;
     background: #0b1b2d;
-    box-shadow: 0 5px 0 #040d18, 0 12px 30px rgba(0, 0, 0, 0.25);
+    box-shadow:
+      0 5px 0 #040d18,
+      0 12px 30px rgba(0, 0, 0, 0.25);
     color: #ffd873;
     font-size: 9px;
     font-weight: 800;
@@ -844,11 +918,11 @@
 
 @media (max-width: 640px) {
   .story {
-    height: 220px;
+    height: 112px;
   }
 
   .content {
-    min-height: calc(100svh - 220px);
+    min-height: calc(100svh - 112px);
   }
 
   .brandLink {
@@ -861,11 +935,8 @@
   }
 
   .progressLabel {
-    overflow: hidden;
-    max-width: 11ch;
     text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .roleCard {
@@ -937,7 +1008,7 @@
   }
 
   .introCopy p {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .formCard {

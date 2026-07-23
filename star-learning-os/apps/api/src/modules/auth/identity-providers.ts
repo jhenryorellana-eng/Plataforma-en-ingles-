@@ -23,7 +23,9 @@ export interface IdentityProvider {
     email: string,
     password: string,
     redirectTo: string,
-  ): Promise<{ authId: string; pendingVerification: boolean }>;
+  ): Promise<{ authId: string | null; pendingVerification: boolean }>;
+  /** Reenvía la confirmación de alta sin revelar si la cuenta existe. */
+  resendSignup(email: string, redirectTo: string): Promise<void>;
   /** Valida credenciales. Lanza AppError INVALID_CREDENTIALS si no coinciden. */
   signIn(email: string, password: string): Promise<{ authId: string }>;
   /** Envía el correo de recuperación. Nunca revela si la cuenta existe. */
@@ -32,6 +34,8 @@ export interface IdentityProvider {
   getUserId(accessToken: string): Promise<{ authId: string; email: string }>;
   /** Actualiza la contraseña usando exclusivamente el access token de recuperación. */
   updatePassword(accessToken: string, password: string): Promise<{ authId: string }>;
+  /** Actualización administrativa para una cuenta de alumno ya autorizada localmente. */
+  updateUserPassword(authId: string, password: string): Promise<void>;
   /** Revoca globalmente los refresh tokens del usuario en Supabase. */
   signOutAll(accessToken: string): Promise<void>;
   /** Compensación si falla la creación del perfil local tras crear Auth. */
@@ -82,7 +86,7 @@ export class SupabaseIdentityProvider implements IdentityProvider {
     email: string,
     password: string,
     redirectTo: string,
-  ): Promise<{ authId: string; pendingVerification: boolean }> {
+  ): Promise<{ authId: string | null; pendingVerification: boolean }> {
     const response = await this.request(withRedirect('/auth/v1/signup', redirectTo), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: this.publishableKey },
@@ -93,7 +97,8 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       id?: string;
       access_token?: string | null;
       session?: { access_token?: string | null } | null;
-      user?: { id?: string };
+      identities?: unknown[];
+      user?: { id?: string; identities?: unknown[] };
       error_code?: string;
     };
     this.throwForInfrastructureStatus(response);
@@ -103,18 +108,35 @@ export class SupabaseIdentityProvider implements IdentityProvider {
     ) {
       throw new AppError('VALIDATION_FAILED', 409, REGISTRATION_CONFLICT_MESSAGE);
     }
-    const authId = body.user?.id ?? body.id;
-    if (!response.ok || !authId) {
+    const returnedAuthId = body.user?.id ?? body.id;
+    if (!response.ok || !returnedAuthId) {
       throw new AppError(
         'IDENTITY_PROVIDER_ERROR',
         502,
         'No se pudo crear la cuenta. Intenta de nuevo.',
       );
     }
+    // Con confirmación activa, Supabase puede devolver deliberadamente un
+    // usuario falso para un correo ya registrado. Una identidad de email no
+    // vacía es la señal de que esta solicitud creó realmente la identidad.
+    const identities = body.user?.identities ?? body.identities;
+    const authId = Array.isArray(identities) && identities.length > 0 ? returnedAuthId : null;
     return {
       authId,
       pendingVerification: !body.access_token && !body.session?.access_token,
     };
+  }
+
+  async resendSignup(email: string, redirectTo: string): Promise<void> {
+    const response = await this.request(withRedirect('/auth/v1/resend', redirectTo), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: this.publishableKey },
+      body: JSON.stringify({ type: 'signup', email }),
+    });
+    this.throwForInfrastructureStatus(response);
+    if (!response.ok) {
+      throw new AppError('IDENTITY_PROVIDER_ERROR', 502, PROVIDER_UNAVAILABLE_MESSAGE);
+    }
   }
 
   async signIn(email: string, password: string): Promise<{ authId: string }> {
@@ -214,7 +236,7 @@ export class SupabaseIdentityProvider implements IdentityProvider {
         typeof claims.session_id !== 'string' ||
         claims.session_id.length === 0 ||
         !Number.isFinite(issuedAt) ||
-        issuedAt > nowSeconds + JWT_CLOCK_SKEW_SECONDS ||
+        issuedAt >= nowSeconds + JWT_CLOCK_SKEW_SECONDS ||
         issuedAt < nowSeconds - RECOVERY_SESSION_MAX_AGE_SECONDS ||
         !Number.isFinite(expiresAt) ||
         expiresAt <= nowSeconds ||
@@ -260,6 +282,25 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       throw new AppError('IDENTITY_PROVIDER_ERROR', 502, 'No se pudo actualizar la contraseña.');
     }
     return { authId };
+  }
+
+  async updateUserPassword(authId: string, password: string): Promise<void> {
+    const response = await this.request(`/auth/v1/admin/users/${encodeURIComponent(authId)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: this.secretKey,
+        Authorization: `Bearer ${this.secretKey}`,
+      },
+      body: JSON.stringify({ password }),
+    });
+    this.throwForInfrastructureStatus(response);
+    if (response.status === 400 || response.status === 422) {
+      throw new AppError('VALIDATION_FAILED', 400, 'La nueva contraseña no es válida.');
+    }
+    if (!response.ok) {
+      throw new AppError('IDENTITY_PROVIDER_ERROR', 502, PROVIDER_UNAVAILABLE_MESSAGE);
+    }
   }
 
   async signOutAll(accessToken: string): Promise<void> {
@@ -369,7 +410,7 @@ export class MockIdentityProvider implements IdentityProvider {
     email: string,
     password: string,
     _redirectTo: string,
-  ): Promise<{ authId: string; pendingVerification: boolean }> {
+  ): Promise<{ authId: string | null; pendingVerification: boolean }> {
     if (this.accounts.has(email)) {
       throw new AppError('VALIDATION_FAILED', 409, REGISTRATION_CONFLICT_MESSAGE);
     }
@@ -380,6 +421,10 @@ export class MockIdentityProvider implements IdentityProvider {
     };
     this.accounts.set(email, account);
     return { authId: account.authId, pendingVerification: true };
+  }
+
+  async resendSignup(_email: string, _redirectTo: string): Promise<void> {
+    // Sin correo real en modo mock.
   }
 
   async signIn(email: string, password: string): Promise<{ authId: string }> {
@@ -421,6 +466,16 @@ export class MockIdentityProvider implements IdentityProvider {
       401,
       'El enlace de recuperación no es válido o expiró.',
     );
+  }
+
+  async updateUserPassword(authId: string, password: string): Promise<void> {
+    for (const account of this.accounts.values()) {
+      if (account.authId === authId) {
+        account.passwordHash = this.hash(password);
+        return;
+      }
+    }
+    throw new AppError('NOT_FOUND', 404, 'Cuenta de identidad no encontrada.');
   }
 
   async signOutAll(accessToken: string): Promise<void> {

@@ -17,6 +17,27 @@ export class HealthController {
     return { status: 'ok' };
   }
 
+  /** No toca dependencias: sirve para detectar desfases entre Web y API. */
+  @Get('version')
+  version(): {
+    service: 'star-api';
+    buildSha: string;
+    contractVersion: 'guardian-first-v1';
+    capabilities: string[];
+  } {
+    return {
+      service: 'star-api',
+      buildSha: process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? 'development',
+      contractVersion: 'guardian-first-v1',
+      capabilities: [
+        'guardian-signup-email',
+        'guardian-signup-resend',
+        'guardian-creates-learner',
+        'learner-temporary-password',
+      ],
+    };
+  }
+
   @Get('ready')
   async ready(): Promise<{
     status: 'ready';
@@ -27,10 +48,18 @@ export class HealthController {
       await this.prisma.$queryRaw`SELECT 1`;
       outbox = await this.outboxDispatcher.getReadiness();
     } catch {
-      throw new AppError('SERVICE_UNAVAILABLE', 503, 'La base de datos o el outbox no están disponibles');
+      throw new AppError(
+        'SERVICE_UNAVAILABLE',
+        503,
+        'La base de datos o el outbox no están disponibles',
+      );
     }
-    if (!this.outboxDispatcher.isReady(outbox)) {
-      throw new AppError('SERVICE_UNAVAILABLE', 503, 'El publicador de outbox no está listo', { outbox });
+    // Un dead letter histórico exige alerta, pero no debe impedir desplegar
+    // la versión que puede repararlo. El modo preserve sí permanece no-ready.
+    if (outbox === 'pending-preserved') {
+      throw new AppError('SERVICE_UNAVAILABLE', 503, 'El publicador de outbox no está listo', {
+        outbox,
+      });
     }
     return {
       status: 'ready',

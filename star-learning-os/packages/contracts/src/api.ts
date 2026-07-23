@@ -28,10 +28,37 @@ export const zPassword = z
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
   .max(72);
 
-export const zLoginRequest = z.object({
-  email: z.string().email(),
-  password: zPassword,
-});
+export const CONSENT_NOTICE_VERSION = '2026-07' as const;
+
+/** Identificador de acceso del alumno; nunca se expone el email técnico interno. */
+export const zLoginName = z
+  .string()
+  .trim()
+  .min(4)
+  .max(30)
+  .regex(
+    /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/,
+    'Usa 4 a 30 caracteres: letras minúsculas, números, punto, guion o guion bajo',
+  );
+export type LoginName = z.infer<typeof zLoginName>;
+
+export const zLoginRequest = z
+  .object({
+    /** Campo actual: admite el nombre de acceso del alumno o un correo existente. */
+    identifier: z.string().trim().min(4).max(254).optional(),
+    /** Compatibilidad temporal con clientes anteriores. */
+    email: z.string().trim().email().optional(),
+    password: zPassword,
+  })
+  .superRefine((value, context) => {
+    if (!value.identifier && !value.email) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['identifier'],
+        message: 'Escribe tu usuario o correo',
+      });
+    }
+  });
 export type LoginRequest = z.infer<typeof zLoginRequest>;
 
 export const zForgotPasswordRequest = z.object({
@@ -64,6 +91,14 @@ export const zMeResponse = z.object({
   role: zUserRole,
   ageBand: zAgeBand.nullable(),
   capabilities: z.array(zStaffCapability),
+  mustChangePassword: z.boolean(),
+  nextAction: z.enum([
+    'guardian_family',
+    'change_password',
+    'youth_assent',
+    'learner_home',
+    'staff_home',
+  ]),
 });
 export type MeResponse = z.infer<typeof zMeResponse>;
 
@@ -86,6 +121,7 @@ export const zRegisterGuardianRequest = z.object({
   displayName: z.string().min(2).max(60),
   email: z.string().email(),
   password: zPassword,
+  adultGuardianAttestation: z.literal(true),
 });
 export type RegisterGuardianRequest = z.infer<typeof zRegisterGuardianRequest>;
 
@@ -93,6 +129,82 @@ export const zRegisterGuardianResponse = z.object({
   status: z.literal('pendingVerification'),
 });
 export type RegisterGuardianResponse = z.infer<typeof zRegisterGuardianResponse>;
+
+export const zResendConfirmationRequest = z.object({
+  email: z.string().trim().email(),
+});
+export type ResendConfirmationRequest = z.infer<typeof zResendConfirmationRequest>;
+
+export const zResendConfirmationResponse = z.object({ ok: z.literal(true) });
+export type ResendConfirmationResponse = z.infer<typeof zResendConfirmationResponse>;
+
+const zManagedLearnerConsents = z
+  .object({
+    service: z.literal(true),
+    storage: z.literal(true),
+    ai_voice: z.boolean(),
+    international_transfer: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.ai_voice !== value.international_transfer) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ai_voice'],
+        message:
+          'La voz con IA y la transferencia internacional deben aceptarse o rechazarse juntas',
+      });
+    }
+  });
+
+export const zCreateManagedLearnerRequest = z
+  .object({
+    displayName: z.string().trim().min(2).max(60),
+    loginName: zLoginName,
+    password: zPassword,
+    birthYear: z.number().int().min(1940).max(new Date().getUTCFullYear()),
+    legalGuardianAttestation: z.literal(true),
+    consentNoticeVersion: z.literal(CONSENT_NOTICE_VERSION),
+    consents: zManagedLearnerConsents,
+  })
+  .strict();
+export type CreateManagedLearnerRequest = z.infer<typeof zCreateManagedLearnerRequest>;
+
+export const zCreateManagedLearnerResponse = z.object({
+  learner: z.object({
+    id: z.string().uuid(),
+    displayName: z.string(),
+    loginName: zLoginName,
+    ageBand: zAgeBand,
+  }),
+  linkStatus: z.literal('active'),
+  grantedConsents: z.array(zConsentPurpose),
+  consentNoticeVersion: z.literal(CONSENT_NOTICE_VERSION),
+  assentRequired: z.literal(true),
+  nextAction: z.literal('learner_first_login'),
+});
+export type CreateManagedLearnerResponse = z.infer<typeof zCreateManagedLearnerResponse>;
+
+export const zChangeInitialPasswordRequest = z.object({ password: zPassword }).strict();
+export type ChangeInitialPasswordRequest = z.infer<typeof zChangeInitialPasswordRequest>;
+
+export const zChangeInitialPasswordResponse = zMeResponse;
+export type ChangeInitialPasswordResponse = z.infer<typeof zChangeInitialPasswordResponse>;
+
+export const zResetManagedLearnerPasswordRequest = z.object({ password: zPassword }).strict();
+export type ResetManagedLearnerPasswordRequest = z.infer<
+  typeof zResetManagedLearnerPasswordRequest
+>;
+
+export const zResetManagedLearnerPasswordResponse = z.object({
+  ok: z.literal(true),
+  learnerId: z.string().uuid(),
+  loginName: zLoginName,
+  mustChangePassword: z.literal(true),
+});
+export type ResetManagedLearnerPasswordResponse = z.infer<
+  typeof zResetManagedLearnerPasswordResponse
+>;
 
 export const zCreateInvitationRequest = z.object({
   guardianEmail: z.string().email(),

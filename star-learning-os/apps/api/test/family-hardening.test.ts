@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { invitationCode, invitationCodeHash, normalizeGuardianEmail } from '../src/modules/family/family.service';
+import {
+  FamilyService,
+  invitationCode,
+  invitationCodeHash,
+  normalizeGuardianEmail,
+} from '../src/modules/family/family.service';
 import { INVITATION_TTL_MS, REQUIRED_LEARNING_CONSENTS, REQUIRED_VOICE_CONSENTS } from '../src/modules/family/family-policy';
 
 test('los códigos nuevos tienen 8 caracteres no ambiguos y nunca necesitan persistirse', () => {
@@ -27,6 +32,89 @@ test('el email se normaliza y la invitación expira exactamente a las 24 horas',
 test('los gates declaran almacenamiento para aprender y transferencia para voz', () => {
   assert.deepEqual(REQUIRED_LEARNING_CONSENTS, ['service', 'storage']);
   assert.deepEqual(REQUIRED_VOICE_CONSENTS, ['ai_voice', 'international_transfer']);
+});
+
+test('un learner gestionado no puede abrir el flujo heredado de invitación', async () => {
+  let invitationWrites = 0;
+  const tx = {
+    $executeRaw: async () => 1,
+    user: {
+      findUnique: async () => ({
+        role: 'learner',
+        email: null,
+        loginName: 'astro.nova',
+      }),
+    },
+    guardianInvitation: {
+      updateMany: async () => {
+        invitationWrites += 1;
+      },
+      create: async () => {
+        invitationWrites += 1;
+      },
+    },
+  };
+  const service = Object.create(FamilyService.prototype) as FamilyService;
+  Object.assign(service, {
+    prisma: {
+      $transaction: async (callback: (input: typeof tx) => Promise<unknown>) => callback(tx),
+    },
+    auditService: { recordInTx: async () => undefined },
+    outboxService: { emitInTx: async () => undefined },
+  });
+
+  await assert.rejects(
+    () =>
+      service.createInvitation(
+        '22222222-2222-4222-8222-222222222222',
+        'guardian@example.com',
+      ),
+    (error: unknown) =>
+      error instanceof Error && 'code' in error && error.code === 'FORBIDDEN',
+  );
+  assert.equal(invitationWrites, 0);
+});
+
+test('el learner heredado con email conserva el flujo de invitación', async () => {
+  let invitationWrites = 0;
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+  const tx = {
+    $executeRaw: async () => 1,
+    user: {
+      findUnique: async () => ({
+        role: 'learner',
+        email: 'learner@example.com',
+        loginName: null,
+      }),
+    },
+    guardianInvitation: {
+      updateMany: async () => {
+        invitationWrites += 1;
+        return { count: 0 };
+      },
+      create: async ({ data }: { data: { guardianEmail: string } }) => {
+        invitationWrites += 1;
+        return { id: 'invitation-id', guardianEmail: data.guardianEmail, expiresAt };
+      },
+    },
+  };
+  const service = Object.create(FamilyService.prototype) as FamilyService;
+  Object.assign(service, {
+    prisma: {
+      $transaction: async (callback: (input: typeof tx) => Promise<unknown>) => callback(tx),
+    },
+    auditService: { recordInTx: async () => undefined },
+    outboxService: { emitInTx: async () => undefined },
+  });
+
+  const response = await service.createInvitation(
+    '22222222-2222-4222-8222-222222222222',
+    ' Guardian@Example.COM ',
+  );
+
+  assert.equal(invitationWrites, 2);
+  assert.equal(response.guardianEmail, 'guardian@example.com');
+  assert.equal(response.code.length, 8);
 });
 
 test('la migración expira políticas stale y refuerza ageBand/asentimiento antes de confirmar', () => {

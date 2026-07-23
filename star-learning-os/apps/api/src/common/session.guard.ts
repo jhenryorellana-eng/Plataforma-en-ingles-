@@ -1,7 +1,12 @@
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { CAPABILITIES_KEY, IS_PUBLIC_KEY, ROLES_KEY } from './decorators';
-import { forbidden, unauthenticated } from './errors';
+import {
+  ALLOW_PASSWORD_CHANGE_PENDING_KEY,
+  CAPABILITIES_KEY,
+  IS_PUBLIC_KEY,
+  ROLES_KEY,
+} from './decorators';
+import { AppError, forbidden, unauthenticated } from './errors';
 import type { RequestWithUser } from './request';
 import { SESSION_COOKIE } from './session';
 import { SessionService } from './session.service';
@@ -30,6 +35,19 @@ export class SessionGuard implements CanActivate {
     if (!user) throw unauthenticated('Tu sesión expiró. Vuelve a iniciar sesión.');
     request.user = user;
 
+    const allowsPendingPasswordChange = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_PASSWORD_CHANGE_PENDING_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (user.mustChangePassword && !allowsPendingPasswordChange) {
+      throw new AppError(
+        'PASSWORD_CHANGE_REQUIRED',
+        403,
+        'Cambia la contraseña temporal antes de continuar.',
+        { nextAction: 'change_password' },
+      );
+    }
+
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[] | undefined>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -43,7 +61,10 @@ export class SessionGuard implements CanActivate {
     );
     if (requiredCapabilities && requiredCapabilities.length > 0) {
       const granted = new Set(user.capabilities);
-      if (user.role !== 'staff' || !requiredCapabilities.every((capability) => granted.has(capability))) {
+      if (
+        user.role !== 'staff' ||
+        !requiredCapabilities.every((capability) => granted.has(capability))
+      ) {
         throw forbidden('No tienes el permiso operativo requerido');
       }
     }

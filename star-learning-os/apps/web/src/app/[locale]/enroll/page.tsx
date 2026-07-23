@@ -42,6 +42,10 @@ export default function EnrollPage({ params }: { params: Promise<{ locale: strin
         router.push(`/${locale}/onboarding/guardian`);
         return;
       }
+      if (err instanceof ClientApiError && err.code === 'ASSENT_REQUIRED') {
+        router.push(`/${locale}/onboarding/assent`);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'No se pudo crear la inscripción');
       setBusy(false);
     }

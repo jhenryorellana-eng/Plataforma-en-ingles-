@@ -11,8 +11,10 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
   const { locale } = use(params);
   const router = useRouter();
   const [understandsAi, setUnderstandsAi] = useState(false);
+  const [understandsPrivacy, setUnderstandsPrivacy] = useState(false);
   const [understandsControls, setUnderstandsControls] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function assent() {
@@ -24,6 +26,19 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo registrar tu asentimiento');
       setBusy(false);
+    }
+  }
+
+  async function declineForNow() {
+    if (busy || leaving) return;
+    setLeaving(true);
+    setError(null);
+    try {
+      await clientApi('/auth/logout', { method: 'POST' });
+    } catch {
+      // La decisión sigue siendo no continuar. Navegamos aunque la API no responda.
+    } finally {
+      router.replace(`/${locale}/login`);
     }
   }
 
@@ -58,7 +73,8 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
           className="rise rise-1 mt-6 max-w-2xl"
         >
           Soy una inteligencia artificial, no una persona. Puedes detener una sesión o pedir ayuda
-          cuando lo necesites.
+          cuando lo necesites. Puedo equivocarme: no compartas contraseñas, tu dirección ni algo que
+          te haga sentir incómodo/a.
         </NovaGuide>
 
         <section className="rise rise-2 mt-6" aria-labelledby="assent-information-title">
@@ -135,22 +151,45 @@ export default function AssentPage({ params }: { params: Promise<{ locale: strin
                   Sé que puedo pausar, salir y reportar en cualquier momento.
                 </span>
               </label>
+              <label className="mission-choice flex min-h-16 cursor-pointer items-start gap-3 rounded-2xl px-4 py-3.5 sm:px-5">
+                <input
+                  type="checkbox"
+                  name="understands-privacy"
+                  checked={understandsPrivacy}
+                  onChange={(event) => setUnderstandsPrivacy(event.target.checked)}
+                  className="mt-0.5 size-5 shrink-0 accent-[#5e5ce6] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary"
+                />
+                <span className="text-[13.5px] font-semibold leading-relaxed text-ink">
+                  Entiendo qué se guarda y qué información de progreso puede ver mi apoderado.
+                </span>
+              </label>
             </div>
           </fieldset>
 
           <button
             type="submit"
-            disabled={busy || !understandsAi || !understandsControls}
+            disabled={
+              busy || leaving || !understandsAi || !understandsPrivacy || !understandsControls
+            }
             aria-describedby="assent-action-hint"
             className="tactile-button mt-5 min-h-14 w-full rounded-2xl px-5 text-[16px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-45"
           >
             {busy ? 'Registrando tu decisión…' : 'Confirmar mi asentimiento'}
           </button>
+          <button
+            type="button"
+            disabled={busy || leaving}
+            onClick={() => void declineForNow()}
+            className="mt-3 min-h-12 w-full rounded-2xl border border-line bg-surface px-5 text-[14px] font-extrabold text-ink transition-colors hover:bg-mist disabled:cursor-wait disabled:opacity-50"
+          >
+            {leaving ? 'Cerrando sesión…' : 'Ahora no'}
+          </button>
           <p
             id="assent-action-hint"
             className="mt-3 text-center text-[11.5px] leading-relaxed text-dim"
           >
-            El botón se habilita después de marcar las dos confirmaciones.
+            El botón principal se habilita después de marcar las tres confirmaciones. Si eliges
+            &quot;Ahora no&quot;, cerraremos tu sesión y podrás decidir en otro momento.
           </p>
         </form>
 

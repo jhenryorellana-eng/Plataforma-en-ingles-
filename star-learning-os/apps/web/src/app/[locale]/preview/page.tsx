@@ -123,10 +123,10 @@ export default function PreviewPage({ params }: { params: Promise<{ locale: stri
           </div>
           <p className="max-w-[36ch] text-[13px] leading-relaxed text-dim">{result.message}</p>
           <Link
-            href={`/${locale}/register/learner`}
+            href={`/${locale}/register`}
             className="btn-gradient mt-2 w-full rounded-2xl py-3.5 text-center text-[17px] font-semibold text-white"
           >
-            Crear mi cuenta y empezar
+            Crear la cuenta familiar y empezar
           </Link>
         </Card>
       )}

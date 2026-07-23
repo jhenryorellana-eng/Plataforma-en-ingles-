@@ -8,5 +8,6 @@ export interface SessionUser {
   displayName: string;
   role: UserRole;
   ageBand: AgeBand | null;
+  mustChangePassword: boolean;
   capabilities: StaffCapability[];
 }

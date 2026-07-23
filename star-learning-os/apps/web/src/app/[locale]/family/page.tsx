@@ -1,15 +1,22 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { apiFetchOrNull } from '@/lib/api';
 import { AuroraHero, AuroraSurface } from '@/components/aurora/aurora-hero';
 import { NovaGuide } from '@/components/aurora/nova-guide';
 import { Chip, Icon, IconTile, InitialsAvatar, Ring, Wordmark } from '@/components/ui';
-import { AcceptInvitationCard, ConsentToggles } from '@/components/family-manager';
+import {
+  AcceptInvitationCard,
+  ConsentToggles,
+  ManagedLearnerAccess,
+} from '@/components/family-manager';
 
 interface GuardianSummary {
   learners: Array<{
     learnerId: string;
     displayName: string;
+    loginName: string | null;
     ageBand: string | null;
+    mustChangePassword: boolean;
     consents: string[];
     openSafetyCases: number;
     pendingReviews: number;
@@ -67,9 +74,27 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
         />
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-          <div className="rise">
-            <AcceptInvitationCard />
-          </div>
+          <AuroraSurface className="rise overflow-hidden" tone="gold">
+            <div className="p-5 sm:p-6">
+              <IconTile name="route" color="bg-gold" />
+              <p className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.14em] text-gold-deep">
+                Siguiente paso
+              </p>
+              <h2 className="mt-1 text-[22px] font-extrabold tracking-tight text-ink">
+                Crea la cuenta de tu hijo o hija
+              </h2>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-dim">
+                Tú defines su usuario y una contraseña temporal. No pediremos su correo y el
+                estudiante elegirá después su contraseña privada y su propio asentimiento.
+              </p>
+              <Link
+                href={`/${locale}/family/add-child`}
+                className="tactile-button mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-center text-[14px] font-extrabold text-white"
+              >
+                Crear cuenta del estudiante <Icon name="arrow" className="size-4" />
+              </Link>
+            </div>
+          </AuroraSurface>
           <NovaGuide
             state="idle"
             eyebrow="Nova · acompañamiento responsable"
@@ -80,6 +105,17 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
           </NovaGuide>
         </div>
 
+        <details className="rise rise-2 mt-5 max-w-xl rounded-2xl border border-line bg-surface px-4 py-3.5">
+          <summary className="cursor-pointer text-[12.5px] font-bold text-primary">
+            Usar un código de invitación anterior
+          </summary>
+          <p className="mb-3 mt-2 text-[11px] leading-relaxed text-dim">
+            Esta opción se mantiene para estudiantes que iniciaron el proceso con el recorrido
+            anterior.
+          </p>
+          <AcceptInvitationCard />
+        </details>
+
         {summary.learners.length === 0 && (
           <AuroraSurface className="rise rise-2 mt-7 px-5 py-10 text-center" tone="neutral">
             <span className="mx-auto flex size-14 items-center justify-center rounded-[20px_20px_20px_7px] border border-primary/20 bg-primary-soft">
@@ -89,9 +125,15 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
               Tu red familiar aún está vacía
             </h2>
             <p className="mx-auto mt-2 max-w-[46ch] text-[13px] leading-relaxed text-dim">
-              Cuando aceptes un código de invitación, aquí aparecerán el progreso, los permisos y
-              las señales necesarias para acompañar.
+              Crea la cuenta del estudiante para entregarle sus accesos. Aquí aparecerán después su
+              progreso, permisos y las señales necesarias para acompañar.
             </p>
+            <Link
+              href={`/${locale}/family/add-child`}
+              className="tactile-button mx-auto mt-5 inline-flex min-h-12 items-center justify-center rounded-xl px-6 text-[14px] font-extrabold text-white"
+            >
+              Crear su cuenta
+            </Link>
           </AuroraSurface>
         )}
 
@@ -121,6 +163,15 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
                   <Chip tone="ok">Sin alertas</Chip>
                 )}
               </div>
+
+              {learner.loginName && (
+                <ManagedLearnerAccess
+                  learnerId={learner.learnerId}
+                  displayName={learner.displayName}
+                  loginName={learner.loginName}
+                  mustChangePassword={learner.mustChangePassword}
+                />
+              )}
 
               {learner.enrollments.map((enrollment) => {
                 const masteryRatio =
@@ -235,7 +286,8 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
               <ConsentToggles learnerId={learner.learnerId} granted={learner.consents} />
               <p className="mt-3 px-1 text-[11px] leading-relaxed text-dim">
                 Revocar &quot;Voz con IA&quot; impide crear nuevas sesiones de voz al instante. Cada
-                permiso es independiente y puedes cambiarlo por separado.
+                permiso se muestra por separado; la voz solo funciona mientras el procesamiento
+                internacional esté autorizado.
               </p>
             </section>
           ))}

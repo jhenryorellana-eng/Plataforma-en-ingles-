@@ -17,6 +17,7 @@ function toSessionUser(user: UserWithGrants): SessionUser {
     displayName: user.displayName,
     role: user.role,
     ageBand: user.ageBand,
+    mustChangePassword: user.mustChangePassword,
     capabilities: user.staffGrants.map((grant) => grant.capability),
   };
 }
@@ -36,7 +37,9 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     this.cleanupTimer = setInterval(
       () =>
         void this.cleanup().catch((error: unknown) => {
-          this.logger.warn(`No se pudieron depurar sesiones expiradas: ${error instanceof Error ? error.message : String(error)}`);
+          this.logger.warn(
+            `No se pudieron depurar sesiones expiradas: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }),
       CLEANUP_INTERVAL_MS,
     );

@@ -30,9 +30,11 @@ function serviceWith(user: User | null): {
     signIn: async () => ({ authId: 'provider-id' }),
     signUp: async () => ({ authId: 'provider-id' }),
     signUpGuardian: async () => ({ authId: 'provider-id', pendingVerification: true }),
+    resendSignup: async () => undefined,
     sendPasswordRecovery: async () => undefined,
     getUserId: async () => ({ authId: 'provider-id', email: 'user@example.com' }),
     updatePassword: async () => ({ authId: 'provider-id' }),
+    updateUserPassword: async () => undefined,
     signOutAll: async () => undefined,
     deleteUser: async () => undefined,
   } satisfies IdentityProvider;
@@ -148,6 +150,7 @@ test('el conflicto de registro no revela el rol existente', async () => {
         displayName: 'Guardian',
         email: 'user@example.com',
         password: 'password123',
+        adultGuardianAttestation: true,
       }),
     (error: unknown) =>
       error instanceof Error &&
@@ -164,11 +167,13 @@ test('recuperación absorbe fallos del proveedor y conserva la respuesta públic
     signIn: async () => ({ authId: 'provider-id' }),
     signUp: async () => ({ authId: 'provider-id' }),
     signUpGuardian: async () => ({ authId: 'provider-id', pendingVerification: true }),
+    resendSignup: async () => undefined,
     sendPasswordRecovery: async () => {
       throw new Error('network detail that must not propagate');
     },
     getUserId: async () => ({ authId: 'provider-id', email: 'user@example.com' }),
     updatePassword: async () => ({ authId: 'provider-id' }),
+    updateUserPassword: async () => undefined,
     signOutAll: async () => undefined,
     deleteUser: async () => undefined,
   };
@@ -205,6 +210,7 @@ test('controller de login usa la apertura CAS y no la sesión genérica', async 
   const user = { ...baseUser, authId: 'provider-id', credentialVersion: 7 };
   const authService = {
     login: async () => ({ user, credentialVersion: 7 }),
+    nextActionFor: async () => 'guardian_family' as const,
   } as unknown as AuthService;
   const sessionService = {
     create: async () => {
@@ -220,11 +226,7 @@ test('controller de login usa la apertura CAS y no la sesión genérica', async 
   const reply = {
     setCookie: (name: string, value: string) => cookies.push({ name, value }),
   } as unknown as FastifyReply;
-  const controller = new AuthController(
-    authService,
-    sessionService,
-    new LocalRateLimitService(),
-  );
+  const controller = new AuthController(authService, sessionService, new LocalRateLimitService());
 
   await controller.login(
     { email: 'user@example.com', password: 'password123' },
@@ -236,6 +238,56 @@ test('controller de login usa la apertura CAS y no la sesión genérica', async 
   assert.deepEqual(cookies, [{ name: 'star_session', value: 'guarded-token' }]);
 });
 
+test('change-initial-password abre la sesión nueva con CAS para que gane un reset concurrente', async () => {
+  let guardedVersion: number | undefined;
+  const updated = {
+    ...baseUser,
+    role: 'learner' as const,
+    ageBand: 't14_17' as const,
+    loginName: 'astro.nova',
+    birthYear: 2010,
+    mustChangePassword: false,
+    credentialVersion: 11,
+  } as User;
+  const authService = {
+    changeInitialPassword: async () => updated,
+    nextActionFor: async () => 'youth_assent' as const,
+  } as unknown as AuthService;
+  const sessionService = {
+    create: async () => {
+      throw new Error('el cambio inicial no debe abrir una sesión sin CAS');
+    },
+    createAfterCredentialValidation: async (_user: User, expected: number) => {
+      guardedVersion = expected;
+      return 'replacement-token';
+    },
+    capabilitiesFor: async () => [],
+  } as unknown as SessionService;
+  const cookies: Array<{ name: string; value: string }> = [];
+  const reply = {
+    setCookie: (name: string, value: string) => cookies.push({ name, value }),
+  } as unknown as FastifyReply;
+  const controller = new AuthController(authService, sessionService, new LocalRateLimitService());
+
+  const response = await controller.changeInitialPassword(
+    {
+      id: updated.id,
+      displayName: updated.displayName,
+      role: 'learner',
+      ageBand: 't14_17',
+      mustChangePassword: true,
+      capabilities: [],
+    },
+    { password: 'new-password-123' },
+    { ip: '203.0.113.11' } as FastifyRequest,
+    reply,
+  );
+
+  assert.equal(guardedVersion, 11);
+  assert.equal(response.nextAction, 'youth_assent');
+  assert.deepEqual(cookies, [{ name: 'star_session', value: 'replacement-token' }]);
+});
+
 test('forgot-password usa el redirect de reset sin propagar el resultado del proveedor', async () => {
   const { service } = serviceWith(null);
   const redirects: string[] = [];
@@ -244,11 +296,13 @@ test('forgot-password usa el redirect de reset sin propagar el resultado del pro
     signIn: async () => ({ authId: 'provider-id' }),
     signUp: async () => ({ authId: 'provider-id' }),
     signUpGuardian: async () => ({ authId: 'provider-id', pendingVerification: true }),
+    resendSignup: async () => undefined,
     sendPasswordRecovery: async (_email, redirectTo) => {
       redirects.push(redirectTo);
     },
     getUserId: async () => ({ authId: 'provider-id', email: 'user@example.com' }),
     updatePassword: async () => ({ authId: 'provider-id' }),
+    updateUserPassword: async () => undefined,
     signOutAll: async () => undefined,
     deleteUser: async () => undefined,
   };
@@ -543,9 +597,11 @@ test('login validado antes del reset no puede crear sesión después', async () 
     },
     signUp: async () => ({ authId: 'provider-id' }),
     signUpGuardian: async () => ({ authId: 'provider-id', pendingVerification: true }),
+    resendSignup: async () => undefined,
     sendPasswordRecovery: async () => undefined,
     getUserId: async () => ({ authId: 'provider-id', email: 'user@example.com' }),
     updatePassword: async () => ({ authId: 'provider-id' }),
+    updateUserPassword: async () => undefined,
     signOutAll: async () => undefined,
     deleteUser: async () => undefined,
   } satisfies IdentityProvider;
@@ -585,6 +641,7 @@ test('login validado durante el reset es revocado por la barrera final', async (
     signIn: async () => ({ authId: 'provider-id' }),
     signUp: async () => ({ authId: 'provider-id' }),
     signUpGuardian: async () => ({ authId: 'provider-id', pendingVerification: true }),
+    resendSignup: async () => undefined,
     sendPasswordRecovery: async () => undefined,
     getUserId: async () => ({ authId: 'provider-id', email: 'user@example.com' }),
     updatePassword: async () => {
@@ -592,6 +649,7 @@ test('login validado durante el reset es revocado por la barrera final', async (
       await finishPasswordUpdate.promise;
       return { authId: 'provider-id' };
     },
+    updateUserPassword: async () => undefined,
     signOutAll: async () => undefined,
     deleteUser: async () => undefined,
   } satisfies IdentityProvider;
@@ -632,7 +690,12 @@ test('registro de apoderado queda pendiente y el controller no abre sesión STAR
   } as unknown as SessionService;
   const controller = new AuthController(authService, sessionService, new LocalRateLimitService());
   const result = await controller.registerGuardian(
-    { displayName: 'Guardian', email: 'guardian@example.com', password: 'password123' },
+    {
+      displayName: 'Guardian',
+      email: 'guardian@example.com',
+      password: 'password123',
+      adultGuardianAttestation: true,
+    },
     { ip: '203.0.113.20' } as FastifyRequest,
   );
 
@@ -670,6 +733,7 @@ test('servicio de apoderado usa redirect verificado y crea el perfil sin sesión
       displayName: 'Guardian',
       email: 'GUARDIAN@example.com',
       password: 'password123',
+      adultGuardianAttestation: true,
     }),
     { status: 'pendingVerification' },
   );

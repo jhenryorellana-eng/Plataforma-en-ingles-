@@ -22,6 +22,10 @@ interface ErrorBody {
   error?: { code?: string; message?: string; details?: Record<string, unknown> };
 }
 
+interface ResponseSchema<T> {
+  safeParse(value: unknown): { success: true; data: T } | { success: false; error: unknown };
+}
+
 /** Fetch de cliente: la cookie httpOnly viaja con credentials: 'include'. */
 export async function clientApi<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -37,7 +41,11 @@ export async function clientApi<T>(path: string, init?: RequestInit): Promise<T>
     });
   } catch {
     // Fallo de red (API inalcanzable, sin internet): mensaje humano, no "Failed to fetch".
-    throw new ClientApiError(0, 'NETWORK', 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+    throw new ClientApiError(
+      0,
+      'NETWORK',
+      'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ErrorBody;
@@ -49,4 +57,25 @@ export async function clientApi<T>(path: string, init?: RequestInit): Promise<T>
     );
   }
   return (await response.json()) as T;
+}
+
+/**
+ * Variante validada para los flujos críticos. Evita que una web y una API de
+ * despliegues distintos interpreten como válida una respuesta incompatible.
+ */
+export async function clientApiValidated<T>(
+  schema: ResponseSchema<T>,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const value = await clientApi<unknown>(path, init);
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new ClientApiError(
+      502,
+      'API_CONTRACT_MISMATCH',
+      'La plataforma recibió una respuesta incompatible. No repitas la operación; recarga y revisa su estado.',
+    );
+  }
+  return parsed.data;
 }

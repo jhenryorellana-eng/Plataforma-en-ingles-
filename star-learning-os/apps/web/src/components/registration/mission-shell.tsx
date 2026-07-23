@@ -6,7 +6,7 @@ import styles from './mission-shell.module.css';
 
 type MissionStep = 1 | 2 | 3;
 
-const STEPS = ['Elige tu rol', 'Crea tu cuenta', 'Traza tu ruta'];
+const STEPS = ['Tu acceso', 'Su cuenta', 'Permisos'];
 
 export function MissionShell({
   children,
@@ -19,17 +19,21 @@ export function MissionShell({
 }) {
   return (
     <div className={styles.shell}>
-      <aside className={styles.story} aria-label="Expedición Aurora">
+      <aside className={styles.story} aria-label="Acompañamiento familiar">
         <Image
           src="/brand/registration/star-journey-hero.webp"
-          alt="Dos estudiantes exploran una ruta de aprendizaje guiados por Nova"
+          alt="Una familia acompaña una ruta de aprendizaje guiada por Nova"
           fill
           priority
           sizes="(min-width: 901px) 46vw, 100vw"
           className={styles.storyImage}
         />
         <div className={styles.storyTint} aria-hidden />
-        <Link href={`/${locale}`} className={styles.brandLink} aria-label="Ir al inicio de StarbizAcademy">
+        <Link
+          href={`/${locale}`}
+          className={styles.brandLink}
+          aria-label="Ir al inicio de StarbizAcademy"
+        >
           <span className={styles.brandMark}>
             <StarMark className="size-4.5 text-white" />
           </span>
@@ -39,12 +43,11 @@ export function MissionShell({
         <div className={styles.storyCopy}>
           <span className={styles.kicker}>
             <span className={styles.kickerDot} aria-hidden />
-            Expedición Aurora
+            Acompañamiento familiar
           </span>
-          <h2>Tu inglés puede sentirse como una aventura.</h2>
+          <h2>Tú autorizas. Tu hijo aprende en su propio espacio.</h2>
           <p>
-            Nova convierte tu nivel real en una ruta de misiones, práctica y logros que sí puedes
-            ver.
+            Crearás dos accesos separados: el tuyo para permisos y progreso; el suyo para aprender.
           </p>
         </div>
 
@@ -52,11 +55,11 @@ export function MissionShell({
           <span className={styles.proofStar} aria-hidden>
             <StarMark className="size-3.5 text-[#ffd35a]" />
           </span>
-          <span>Tu nivel real</span>
+          <span>Accesos separados</span>
           <span className={styles.proofLine} aria-hidden />
-          <span>Tu propia ruta</span>
+          <span>Permisos revocables</span>
           <span className={styles.proofLine} aria-hidden />
-          <span>Meta B2</span>
+          <span>Privacidad juvenil</span>
         </div>
       </aside>
 
@@ -65,7 +68,7 @@ export function MissionShell({
         <div className={styles.ambientOrbB} aria-hidden />
         <div className={styles.mobileMissionTag} aria-hidden>
           <StarMark className="size-3.5 text-[#ffd35a]" />
-          Expedición Aurora
+          Acompañamiento familiar
         </div>
         <div className={styles.contentInner}>
           <MissionProgress current={step} />

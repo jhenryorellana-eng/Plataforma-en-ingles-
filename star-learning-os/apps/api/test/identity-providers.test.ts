@@ -101,10 +101,16 @@ test('alta de apoderado usa signup público, redirect_to y ninguna metadata de a
   globalThis.fetch = async (input, init) => {
     capturedUrl = String(input);
     capturedInit = init;
-    return new Response(JSON.stringify({ user: { id: 'guardian-auth-id' }, access_token: null }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        user: { id: 'guardian-auth-id', identities: [{ id: 'email-identity' }] },
+        access_token: null,
+      }),
+      {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      },
+    );
   };
   try {
     assert.deepEqual(
@@ -280,7 +286,9 @@ test('acepta AMR exacto recovery u otp y rechaza password u otros metodos', asyn
       headers: { 'content-type': 'application/json' },
     });
   try {
-    await assert.doesNotReject(() => provider().getUserId(unsignedToken('user-auth-id', 'recovery')));
+    await assert.doesNotReject(() =>
+      provider().getUserId(unsignedToken('user-auth-id', 'recovery')),
+    );
     await assert.doesNotReject(() => provider().getUserId(unsignedToken('user-auth-id', 'otp')));
     for (const methods of [
       ['password'],
@@ -342,7 +350,10 @@ test('rechaza alta de apoderado si Supabase la confirma de inmediato', async () 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () =>
     new Response(
-      JSON.stringify({ user: { id: 'guardian-auth-id' }, access_token: 'unexpected-session' }),
+      JSON.stringify({
+        user: { id: 'guardian-auth-id', identities: [{ id: 'email-identity' }] },
+        access_token: 'unexpected-session',
+      }),
       { status: 200, headers: { 'content-type': 'application/json' } },
     );
   try {
@@ -354,6 +365,79 @@ test('rechaza alta de apoderado si Supabase la confirma de inmediato', async () 
       ),
       { authId: 'guardian-auth-id', pendingVerification: false },
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('ignora el authId ofuscado de un signup para correo ya existente', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        user: { id: 'fake-obfuscated-id', identities: [] },
+        access_token: null,
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  try {
+    assert.deepEqual(
+      await provider().signUpGuardian(
+        'guardian@example.com',
+        'password123',
+        'https://app.example/es-PE/login?verified=1',
+      ),
+      { authId: null, pendingVerification: true },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('reenvío de confirmación usa signup y conserva el redirect autorizado', async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = '';
+  let capturedBody: unknown;
+  globalThis.fetch = async (input, init) => {
+    capturedUrl = String(input);
+    capturedBody = JSON.parse(String(init?.body));
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    await provider().resendSignup(
+      'guardian@example.com',
+      'https://app.example/es-PE/login?verified=1',
+    );
+    const url = new URL(capturedUrl);
+    assert.equal(url.pathname, '/auth/v1/resend');
+    assert.equal(url.searchParams.get('redirect_to'), 'https://app.example/es-PE/login?verified=1');
+    assert.deepEqual(capturedBody, { type: 'signup', email: 'guardian@example.com' });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('cambio administrativo de clave usa secret server-side y no el endpoint público', async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = '';
+  let capturedInit: RequestInit | undefined;
+  globalThis.fetch = async (input, init) => {
+    capturedUrl = String(input);
+    capturedInit = init;
+    return new Response(JSON.stringify({ id: 'learner-auth-id' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  try {
+    await provider().updateUserPassword('learner-auth-id', 'new-password-123');
+    const url = new URL(capturedUrl);
+    assert.equal(url.pathname, '/auth/v1/admin/users/learner-auth-id');
+    assert.equal(capturedInit?.method, 'PUT');
+    const headers = new Headers(capturedInit?.headers);
+    assert.equal(headers.get('apikey'), 'secret');
+    assert.equal(headers.get('authorization'), 'Bearer secret');
+    assert.deepEqual(JSON.parse(String(capturedInit?.body)), { password: 'new-password-123' });
   } finally {
     globalThis.fetch = originalFetch;
   }

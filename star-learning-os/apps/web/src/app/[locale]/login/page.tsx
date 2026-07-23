@@ -1,12 +1,13 @@
 'use client';
 
-import { use, useEffect, useRef, useState } from 'react';
+import { use, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { MeResponse } from '@star/contracts';
-import { clientApi } from '@/lib/client-api';
+import { zMeResponse, type MeResponse } from '@star/contracts';
+import { clientApi, clientApiValidated } from '@/lib/client-api';
 import { Icon, InitialsAvatar } from '@/components/ui';
 import { NeonLogo } from '@/components/neon-logo';
 import { SpaceBackground } from '@/components/space-background';
+import { urlWithoutSupabaseAuthFragment } from '@/lib/supabase-auth-fragment';
 
 const PROFILES = [
   { profile: 'learner_teen', name: 'Diego Torres', detail: 'Alumno 14–17 · todo autorizado' },
@@ -20,17 +21,27 @@ const SHOW_DEMO = process.env.NEXT_PUBLIC_DEMO_LOGIN === 'true';
 const GLASS_CARD =
   'rounded-3xl border border-white/12 bg-white/[0.06] shadow-[0_24px_70px_rgba(2,6,23,0.6)] backdrop-blur-2xl';
 
-function routeFor(role: MeResponse['role'], locale: string): string {
-  if (role === 'guardian') return `/${locale}/family`;
-  if (role === 'staff') return `/${locale}/staff`;
-  return `/${locale}/learn`;
+function routeFor(nextAction: MeResponse['nextAction'], locale: string): string {
+  switch (nextAction) {
+    case 'guardian_family':
+      return `/${locale}/family`;
+    case 'change_password':
+      return `/${locale}/onboarding/access`;
+    case 'youth_assent':
+      return `/${locale}/onboarding/assent`;
+    case 'staff_home':
+      return `/${locale}/staff`;
+    case 'learner_home':
+      return `/${locale}/learn`;
+  }
 }
 
 export default function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
   const router = useRouter();
   const [mode, setMode] = useState<'login' | 'forgot' | 'forgot-sent'>('login');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -38,6 +49,15 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const [error, setError] = useState<string | null>(null);
   const [warping, setWarping] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const cleanUrl = urlWithoutSupabaseAuthFragment(
+      window.location.pathname,
+      window.location.search,
+      window.location.hash,
+    );
+    if (cleanUrl) window.history.replaceState(window.history.state, '', cleanUrl);
+  }, []);
 
   /* Parallax sutil: solo puntero fino y sin reduce-motion; todo vía GPU. */
   useEffect(() => {
@@ -50,7 +70,10 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         element.style.setProperty('--px', ((event.clientX / window.innerWidth) * 2 - 1).toFixed(3));
-        element.style.setProperty('--py', ((event.clientY / window.innerHeight) * 2 - 1).toFixed(3));
+        element.style.setProperty(
+          '--py',
+          ((event.clientY / window.innerHeight) * 2 - 1).toFixed(3),
+        );
       });
     };
     window.addEventListener('pointermove', onMove, { passive: true });
@@ -78,11 +101,11 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     setBusy(true);
     setError(null);
     try {
-      const me = await clientApi<MeResponse>('/auth/login', {
+      const me = await clientApiValidated(zMeResponse, '/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
-      navigateWithWarp(routeFor(me.role, locale));
+      navigateWithWarp(routeFor(me.nextAction, locale));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión');
       setBusy(false);
@@ -96,7 +119,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     try {
       await clientApi('/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: recoveryEmail }),
       });
       setMode('forgot-sent');
     } catch (err) {
@@ -110,11 +133,11 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
     setDemoLoading(profile);
     setError(null);
     try {
-      const me = await clientApi<MeResponse>('/auth/dev-login', {
+      const me = await clientApiValidated(zMeResponse, '/auth/dev-login', {
         method: 'POST',
         body: JSON.stringify({ profile }),
       });
-      navigateWithWarp(routeFor(me.role, locale));
+      navigateWithWarp(routeFor(me.nextAction, locale));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión');
       setDemoLoading(null);
@@ -136,7 +159,10 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col items-center justify-center gap-8 px-5 py-10 lg:grid lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:px-12">
         <section className="parallax-hero rise flex flex-col items-center text-center lg:items-start lg:text-left">
           <div className={`lg:hidden ${warping ? 'warp-rocket' : ''}`}>
-            <NeonLogo withWordmark={false} className="w-44 drop-shadow-[0_18px_50px_rgba(124,58,237,0.35)] sm:w-52" />
+            <NeonLogo
+              withWordmark={false}
+              className="w-44 drop-shadow-[0_18px_50px_rgba(124,58,237,0.35)] sm:w-52"
+            />
           </div>
           <div className={`hidden lg:block ${warping ? 'warp-rocket' : ''}`}>
             <NeonLogo className="w-[21rem] drop-shadow-[0_18px_50px_rgba(124,58,237,0.35)]" />
@@ -161,16 +187,23 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
             <form onSubmit={submitLogin} className="flex flex-col gap-3">
               <div className={`${GLASS_CARD} flex flex-col gap-3.5 px-5 py-5`}>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[13px] font-semibold text-white/60">Correo</span>
+                  <span className="text-[13px] font-semibold text-white/60">Correo o usuario</span>
                   <input
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    name="identifier"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     required
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="tu@correo.com"
+                    value={identifier}
+                    onChange={(event) => setIdentifier(event.target.value)}
+                    placeholder="tu@correo.com o nombre.usuario"
                     className={inputClass}
                   />
+                  <span className="text-[11px] leading-relaxed text-white/40">
+                    Los adultos entran con su correo. Los estudiantes usan el nombre de acceso que
+                    les entregó su apoderado.
+                  </span>
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-[13px] font-semibold text-white/60">Contraseña</span>
@@ -206,6 +239,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
                 type="button"
                 onClick={() => {
                   setMode('forgot');
+                  if (identifier.includes('@')) setRecoveryEmail(identifier);
                   setError(null);
                 }}
                 className="text-[14px] font-semibold text-[#7df0ff]"
@@ -226,8 +260,8 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
                   type="email"
                   autoComplete="email"
                   required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  value={recoveryEmail}
+                  onChange={(event) => setRecoveryEmail(event.target.value)}
                   placeholder="tu@correo.com"
                   className={inputClass}
                 />
@@ -259,7 +293,9 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
               </span>
               <p className="text-[17px] font-bold text-white">Revisa tu correo</p>
               <p className="max-w-[32ch] text-[14px] leading-relaxed text-white/55">
-                Si {email} tiene una cuenta, recibirá un enlace para crear una contraseña nueva.
+                Si {recoveryEmail} tiene una cuenta, recibirá un enlace para crear una contraseña
+                nueva. Si eres estudiante, tu apoderado puede regenerar tu acceso desde el panel
+                familiar.
               </p>
               <button
                 type="button"
@@ -273,7 +309,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
 
           <div className="mt-6 flex items-center justify-center gap-5">
             <a href={`/${locale}/register`} className="text-[14px] font-semibold text-[#7df0ff]">
-              Crear cuenta
+              Crear cuenta familiar
             </a>
             <span className="text-white/20">·</span>
             <a href={`/${locale}/preview`} className="text-[14px] font-semibold text-[#7df0ff]">
@@ -297,7 +333,9 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
                   >
                     <InitialsAvatar name={item.name} className="size-10" />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[16px] font-semibold text-white">{item.name}</span>
+                      <span className="block text-[16px] font-semibold text-white">
+                        {item.name}
+                      </span>
                       <span className="block text-[13px] text-white/50">{item.detail}</span>
                     </span>
                     {demoLoading === item.profile ? (

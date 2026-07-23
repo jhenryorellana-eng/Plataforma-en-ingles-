@@ -26,6 +26,11 @@ export async function createConfiguredApp(): Promise<NestFastifyApplication> {
   app.setGlobalPrefix('v1');
   const fastify = app.getHttpAdapter().getInstance() as FastifyInstance;
   fastify.addHook('onSend', async (_request, reply, payload) => {
+    reply.header('X-Star-Contract-Version', 'guardian-first-v1');
+    reply.header(
+      'X-Star-Build-Sha',
+      process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? 'development',
+    );
     reply.header('Cache-Control', 'no-store');
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
