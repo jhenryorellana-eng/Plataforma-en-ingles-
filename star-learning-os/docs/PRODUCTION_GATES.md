@@ -111,8 +111,12 @@ Readiness para Railway: `GET /v1/health/ready`. Liveness: `GET /v1/health/live`.
   técnicos `@learners.invalid`.
 - La readiness actual comprueba DB/outbox, no la entrega SMTP. Operaciones debe vigilar
   `user_confirmation_requested`, `mail.send`, rebotes y quejas en el proveedor de correo.
-- Definir el receptor HTTPS real del outbox y generar su secreto HMAC. Sin ambos, el runtime
-  de producción se niega a arrancar (o queda en mantenimiento con readiness 503).
+- Desplegar `supabase/functions/outbox-receiver`, configurar el mismo
+  `OUTBOX_WEBHOOK_SECRET` en Supabase y Railway, y apuntar
+  `OUTBOX_WEBHOOK_URL` a `/functions/v1/outbox-receiver`. El receptor verifica HMAC y
+  timestamp, deduplica por `eventId` y conserva el recibo durable en
+  `audit.outbox_webhook_receipts`. Sin receptor y secreto, el runtime de producción se niega
+  a arrancar (o queda en mantenimiento con readiness 503).
 - ZDR aprobado y verificado antes de voz para 12–13.
 - Proveedor/proceso A2 para verificar al apoderado.
 - Responsable nominal y cobertura humana de safeguarding P0–P3.
