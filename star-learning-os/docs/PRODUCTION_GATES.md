@@ -76,6 +76,10 @@ Readiness para Railway: `GET /v1/health/ready`. Liveness: `GET /v1/health/live`.
 ## Gate de datos y Supabase
 
 - Aplicar todas las migraciones antes de desplegar el nuevo runtime.
+- Railway no ejecuta migraciones automáticamente: el paso administrativo controlado
+  debe completar `prisma migrate deploy` antes de promover el runtime. Así el arranque
+  de una versión nueva no compite por conexiones con la versión activa ni deja una
+  publicación bloqueada por el límite del Session Pooler.
 - Mantener `identity.auth_sessions` e `identity.staff_grants` fuera del Data API.
 - Como la web nunca consulta tablas con `supabase-js`, desactivar Data API/GraphQL
   para estos esquemas o, como mínimo, conservar RLS sin policies y sin grants a

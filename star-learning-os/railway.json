@@ -4,7 +4,6 @@
     "buildCommand": "pnpm --filter @star/api... build"
   },
   "deploy": {
-    "preDeployCommand": ["pnpm --filter @star/api db:migrate"],
     "startCommand": "pnpm --filter @star/api start",
     "healthcheckPath": "/v1/health/ready",
     "healthcheckTimeout": 300,
