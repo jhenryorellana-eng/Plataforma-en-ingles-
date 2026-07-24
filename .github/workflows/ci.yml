@@ -51,6 +51,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pnpm install --frozen-lockfile
+      # pnpm 10 bloquea postinstalls: el cliente Prisma debe generarse explícito
+      # ANTES de db:seed (tsx importa @prisma/client; migrate deploy no genera).
+      - run: pnpm --filter @star/api db:generate
       - run: pnpm db:migrate
       - run: pnpm db:seed
       - run: pnpm lint
