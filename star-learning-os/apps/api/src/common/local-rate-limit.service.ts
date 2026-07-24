@@ -16,6 +16,11 @@ export const AUTH_RATE_LIMITS = {
   familyCode: { windowMs: 15 * 60 * 1000, maxPerIp: 20, maxPerIdentifier: 8 },
 } as const satisfies Record<string, LocalRateLimitPolicy>;
 
+export const PUBLIC_RATE_LIMITS = {
+  /** Máximo tres muestras por IP al día; en producción se complementa en el gateway. */
+  voiceDemo: { windowMs: 24 * 60 * 60 * 1000, maxPerIp: 3, maxPerIdentifier: 3 },
+} as const satisfies Record<string, LocalRateLimitPolicy>;
+
 interface Bucket {
   count: number;
   resetAt: number;

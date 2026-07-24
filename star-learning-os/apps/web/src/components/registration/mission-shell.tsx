@@ -20,14 +20,16 @@ export function MissionShell({
   return (
     <div className={styles.shell}>
       <aside className={styles.story} aria-label="Acompañamiento familiar">
-        <Image
-          src="/brand/registration/star-journey-hero.webp"
-          alt="Una familia acompaña una ruta de aprendizaje guiada por Nova"
-          fill
-          priority
-          sizes="(min-width: 901px) 46vw, 100vw"
-          className={styles.storyImage}
-        />
+        <div className={styles.storyMedia}>
+          <Image
+            src="/brand/registration/star-journey-hero.webp"
+            alt="Una familia acompaña una ruta de aprendizaje guiada por Nova"
+            fill
+            priority
+            sizes="(min-width: 901px) 46vw, 100vw"
+            className={styles.storyImage}
+          />
+        </div>
         <div className={styles.storyTint} aria-hidden />
         <Link
           href={`/${locale}`}

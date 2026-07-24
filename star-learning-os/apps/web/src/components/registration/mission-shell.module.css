@@ -29,8 +29,14 @@
   isolation: isolate;
 }
 
-.storyImage {
+.storyMedia {
+  position: absolute;
+  inset: 0;
   z-index: 0;
+  overflow: hidden;
+}
+
+.storyImage {
   object-fit: cover;
   object-position: center center;
   transform: scale(1.015);
@@ -840,6 +846,8 @@
 
 @media (max-width: 900px) {
   .shell {
+    --mobile-story-height: clamp(180px, 50vw, 230px);
+
     min-height: 100svh;
     overflow-x: clip;
     overflow-y: visible;
@@ -848,13 +856,13 @@
 
   .story {
     position: relative;
-    height: 140px;
+    height: var(--mobile-story-height);
     border-right: 0;
     border-bottom: 1px solid rgba(111, 154, 214, 0.2);
   }
 
   .storyImage {
-    object-position: center 68%;
+    object-position: center 52%;
   }
 
   .storyTint {
@@ -875,7 +883,7 @@
 
   .content {
     width: 100%;
-    min-height: calc(100svh - 140px);
+    min-height: calc(100svh - var(--mobile-story-height));
     overflow-x: clip;
     overflow-y: visible;
     align-items: flex-start;
@@ -886,6 +894,10 @@
     width: min(100%, 720px);
     margin-inline: auto;
     padding-block: 0;
+  }
+
+  .ambientOrbB {
+    bottom: 0;
   }
 
   .mobileMissionTag {
@@ -917,14 +929,6 @@
 }
 
 @media (max-width: 640px) {
-  .story {
-    height: 112px;
-  }
-
-  .content {
-    min-height: calc(100svh - 112px);
-  }
-
   .brandLink {
     font-size: 14px;
   }

@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { CompanionModule } from './modules/companion/companion.module';
 import { DiagnosticModule } from './modules/diagnostic/diagnostic.module';
 import { EconomyModule } from './modules/economy/economy.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
@@ -23,6 +24,7 @@ import { VoiceModule } from './modules/voice/voice.module';
     AuditModule,
     AuthModule,
     CatalogModule,
+    CompanionModule,
     FamilyModule,
     HealthModule,
     EnrollmentModule,
