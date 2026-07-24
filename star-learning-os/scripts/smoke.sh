@@ -29,6 +29,10 @@ field() { jsonget "$TMP/last.json" x "$1"; }
 
 check "health live" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/health/live")"
 check "health ready" 200 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" "$API/health/ready")"
+# Contrato web↔API: la ruta pública de la demo de voz debe existir en el MISMO commit
+# que la web que la consume. Cuerpo inválido → 400 (la validación corre antes del rate
+# limit, así el check es repetible); un 404 aquí = API desplegada sin la ruta.
+check "voice-demo ruta registrada (nunca 404)" 400 "$(curl -s -o "$TMP/last.json" -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"sdp":"x"}' "$API/voice-demo/call")"
 
 echo "=== 0. Onboarding completo: apoderado → cuenta gestionada → clave privada → asentimiento ==="
 TS=$(date +%s)

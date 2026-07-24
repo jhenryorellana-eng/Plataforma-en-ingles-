@@ -7,6 +7,7 @@ import { clientApi, clientApiValidated } from '@/lib/client-api';
 import { Icon, InitialsAvatar } from '@/components/ui';
 import { NeonLogo } from '@/components/neon-logo';
 import { SpaceBackground } from '@/components/space-background';
+import { VoiceDemo } from '@/components/voice-demo';
 import { urlWithoutSupabaseAuthFragment } from '@/lib/supabase-auth-fragment';
 
 const PROFILES = [
@@ -235,6 +236,7 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
               >
                 {busy ? 'Entrando…' : 'Iniciar sesión'}
               </button>
+              <VoiceDemo locale={locale} />
               <button
                 type="button"
                 onClick={() => {

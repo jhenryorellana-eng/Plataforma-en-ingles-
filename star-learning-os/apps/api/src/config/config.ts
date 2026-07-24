@@ -23,6 +23,8 @@ const configSchema = z.object({
   /** Alias lógico del modelo de texto para autoría (ADR-M009); vacío = plantillas. */
   OPENAI_TEXT_MODEL: z.string().optional().default(''),
   REALTIME_MODEL_TUTOR_PRIMARY: z.string().default('gpt-realtime'),
+  /** Demo pública de un minuto: modelo Realtime completo para máxima fluidez de voz. */
+  REALTIME_MODEL_PUBLIC_DEMO: z.string().default('gpt-realtime-2.1'),
   REALTIME_VOICE: z.string().default('marin'),
   ZDR_VERIFIED: z
     .string()
@@ -111,6 +113,7 @@ export interface AppConfig {
   openaiApiKey: string;
   openaiTextModel: string;
   realtimeModelTutorPrimary: string;
+  realtimeModelPublicDemo: string;
   realtimeVoice: string;
   zdrVerified: boolean;
   supabaseUrl: string;
@@ -140,6 +143,7 @@ export function loadConfig(): AppConfig {
     openaiApiKey: parsed.OPENAI_API_KEY,
     openaiTextModel: parsed.OPENAI_TEXT_MODEL,
     realtimeModelTutorPrimary: parsed.REALTIME_MODEL_TUTOR_PRIMARY,
+    realtimeModelPublicDemo: parsed.REALTIME_MODEL_PUBLIC_DEMO,
     realtimeVoice: parsed.REALTIME_VOICE,
     zdrVerified: parsed.ZDR_VERIFIED,
     supabaseUrl: parsed.SUPABASE_URL,
