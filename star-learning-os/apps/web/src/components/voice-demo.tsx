@@ -285,6 +285,11 @@ export function VoiceDemo({ locale }: { locale: string }) {
         failDemo('Ya se usaron las 3 demos disponibles hoy desde esta conexión.');
         return;
       }
+      // 404/405 = web y API desplegadas en versiones distintas: jamás mostrar "Cannot POST /v1/...".
+      if (caught instanceof ClientApiError && (caught.status === 404 || caught.status === 405)) {
+        failDemo('La demostración de voz no está disponible por el momento. Inténtalo más tarde.');
+        return;
+      }
       failDemo(
         caught instanceof Error
           ? caught.message
