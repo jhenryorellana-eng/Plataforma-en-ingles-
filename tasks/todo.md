@@ -1,6 +1,22 @@
 # STAR Learning OS — Estado y plan (XL)
 
-**Última actualización:** 2026-07-20 (hardening lógico verificado; Supabase 11/11 migraciones; dominio 55/55 + API 54/54; E2E real auth/familia)
+**Última actualización:** 2026-07-24 (demo pública de voz desplegada; CI verde por primera vez)
+
+## 2026-07-24 — Demo de voz en producción + CI reparado ✅
+
+- [x] **Fix "Cannot POST /v1/voice-demo/call"**: la web (Vercel) tenía la demo pero la API
+  (Railway) seguía en un `main` sin la ruta — desfase de despliegue, NO la API key.
+  Merge `144cccf` a main → Railway desplegó y la ruta responde (400 a cuerpo inválido).
+- [x] Robustez anti-desfase: `voice-demo.tsx` muestra mensaje humano ante 404/405
+  (nunca más "Cannot POST /v1/..."); smoke con check de contrato (la ruta debe existir
+  en el mismo commit que la web); `.env.example` restaurado (borrado por accidente).
+- [x] **CI de GitHub Actions reparado (`a99ff8b`)**: NUNCA había pasado (5/5 fallos desde
+  su creación el 2026-07-21) — moría en db:seed porque pnpm 10 bloquea postinstalls y
+  nadie generaba el cliente Prisma. Fix: `pnpm --filter @star/api db:generate` tras el
+  install. Pipeline completo verde: migrate+seed+lint+typecheck+tests+build+smoke E2E.
+- [ ] **ACCIÓN HENRY para que la demo suene**: cargar saldo en platform.openai.com →
+  Billing y poner `OPENAI_API_KEY` (la clave nueva rotada) en Railway → Variables.
+  Hoy la ruta devuelve 503 con mensaje humano porque Railway no tiene la clave.
 **Mandato:** construir la plataforma definida en los 5 documentos raíz, con corte vertical funcional local primero (Fase 0/1 de Stack v1.0 §19), esquema multi-programa desde el día 1 (Arquitectura Multilingüe, nota de arranque en verde §24).
 
 ## Decisiones de construcción adoptadas (derivadas de los documentos)
