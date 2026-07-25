@@ -48,10 +48,16 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const [busy, setBusy] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [verifiedNotice, setVerifiedNotice] = useState(false);
   const [warping, setWarping] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
+    // El enlace de confirmación de Supabase aterriza aquí con ?verified=1;
+    // sin este aviso el usuario no sabe que la verificación funcionó.
+    if (new URLSearchParams(window.location.search).get('verified') === '1') {
+      setVerifiedNotice(true);
+    }
     const cleanUrl = urlWithoutSupabaseAuthFragment(
       window.location.pathname,
       window.location.search,
@@ -184,6 +190,18 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
         </section>
 
         <section className="rise rise-2 w-full max-w-md">
+          {verifiedNotice && mode === 'login' && (
+            <div
+              role="status"
+              className="mb-3 flex items-start gap-2.5 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-[13px] leading-relaxed text-emerald-200"
+            >
+              <Icon name="check" className="mt-0.5 size-4 shrink-0" />
+              <span>
+                <strong className="text-emerald-100">Tu correo quedó confirmado.</strong> Inicia
+                sesión con tu contraseña para continuar.
+              </span>
+            </div>
+          )}
           {mode === 'login' && (
             <form onSubmit={submitLogin} className="flex flex-col gap-3">
               <div className={`${GLASS_CARD} flex flex-col gap-3.5 px-5 py-5`}>
