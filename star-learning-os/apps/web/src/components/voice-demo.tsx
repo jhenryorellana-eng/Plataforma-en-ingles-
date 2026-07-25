@@ -277,8 +277,29 @@ export function VoiceDemo({ locale }: { locale: string }) {
       await peer.setRemoteDescription({ type: 'answer', sdp: call.answerSdp });
     } catch (caught) {
       if (attemptRef.current !== attempt) return;
-      if (caught instanceof DOMException && caught.name === 'NotAllowedError') {
+      if (
+        caught instanceof DOMException &&
+        (caught.name === 'NotAllowedError' || caught.name === 'SecurityError')
+      ) {
         failDemo('Necesitamos permiso para usar tu micrófono durante este minuto.');
+        return;
+      }
+      if (
+        caught instanceof DOMException &&
+        (caught.name === 'NotFoundError' || caught.name === 'OverconstrainedError')
+      ) {
+        failDemo(
+          'No encontramos un micrófono en este dispositivo. Conecta o activa uno e inténtalo de nuevo, o prueba desde tu celular.',
+        );
+        return;
+      }
+      if (
+        caught instanceof DOMException &&
+        (caught.name === 'NotReadableError' || caught.name === 'AbortError')
+      ) {
+        failDemo(
+          'Tu micrófono está ocupado por otra aplicación. Ciérrala e inténtalo de nuevo.',
+        );
         return;
       }
       if (caught instanceof ClientApiError && caught.status === 429) {
@@ -290,8 +311,9 @@ export function VoiceDemo({ locale }: { locale: string }) {
         failDemo('La demostración de voz no está disponible por el momento. Inténtalo más tarde.');
         return;
       }
+      // Los DOMException restantes traen mensajes técnicos en inglés del navegador.
       failDemo(
-        caught instanceof Error
+        caught instanceof Error && !(caught instanceof DOMException)
           ? caught.message
           : 'No pudimos iniciar la demostración. Inténtalo nuevamente.',
       );
