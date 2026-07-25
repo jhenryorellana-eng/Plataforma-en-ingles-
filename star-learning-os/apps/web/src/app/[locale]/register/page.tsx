@@ -114,6 +114,10 @@ export default function RegisterPage({ params }: { params: Promise<{ locale: str
                   {showPassword ? 'Ocultar' : 'Mostrar'}
                 </button>
               </span>
+              <span className={missionStyles.hint}>
+                Evita contraseñas comunes: por seguridad rechazamos las que aparecen en
+                filtraciones de datos conocidas.
+              </span>
             </label>
           </div>
 

@@ -608,6 +608,12 @@
   letter-spacing: 0.03em;
 }
 
+.hint {
+  color: #8fa3ba;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .input,
 .select {
   width: 100%;

@@ -42,6 +42,27 @@ export interface IdentityProvider {
   deleteUser(authId: string): Promise<void>;
 }
 
+interface WeakPasswordBody {
+  error_code?: string;
+  weak_password?: { reasons?: string[] } | null;
+}
+
+/**
+ * Supabase valida contraseñas contra filtraciones conocidas (HaveIBeenPwned)
+ * además de la longitud. Sin esta traducción el usuario recibía un genérico
+ * "No se pudo crear la cuenta" sin forma de saber qué corregir.
+ */
+function throwIfWeakPassword(status: number, body: WeakPasswordBody): void {
+  if ((status !== 400 && status !== 422) || body.error_code !== 'weak_password') return;
+  const reasons = body.weak_password?.reasons ?? [];
+  const message = reasons.includes('pwned')
+    ? 'Esa contraseña es muy común y aparece en filtraciones de datos. Crea una más única: combina varias palabras con números y símbolos.'
+    : reasons.includes('length')
+      ? 'La contraseña es demasiado corta. Usa al menos 8 caracteres.'
+      : 'La contraseña necesita combinar mayúsculas, minúsculas y números.';
+  throw new AppError('VALIDATION_FAILED', 400, message);
+}
+
 /** Supabase Auth vía Admin API (server-side; la Secret key jamás sale del servidor). */
 export class SupabaseIdentityProvider implements IdentityProvider {
   readonly name = 'supabase-auth';
@@ -67,10 +88,12 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       id?: string;
       error_code?: string;
       msg?: string;
+      weak_password?: { reasons?: string[] } | null;
     };
     if (response.status === 422 && body.error_code === 'email_exists') {
       throw new AppError('VALIDATION_FAILED', 409, REGISTRATION_CONFLICT_MESSAGE);
     }
+    throwIfWeakPassword(response.status, body);
     this.throwForInfrastructureStatus(response);
     if (!response.ok || !body.id) {
       throw new AppError(
@@ -100,6 +123,7 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       identities?: unknown[];
       user?: { id?: string; identities?: unknown[] };
       error_code?: string;
+      weak_password?: { reasons?: string[] } | null;
     };
     this.throwForInfrastructureStatus(response);
     if (
@@ -108,6 +132,7 @@ export class SupabaseIdentityProvider implements IdentityProvider {
     ) {
       throw new AppError('VALIDATION_FAILED', 409, REGISTRATION_CONFLICT_MESSAGE);
     }
+    throwIfWeakPassword(response.status, body);
     const returnedAuthId = body.user?.id ?? body.id;
     if (!response.ok || !returnedAuthId) {
       throw new AppError(
@@ -268,6 +293,8 @@ export class SupabaseIdentityProvider implements IdentityProvider {
     const body = (await response.json().catch(() => ({}))) as {
       id?: string;
       user?: { id?: string };
+      error_code?: string;
+      weak_password?: { reasons?: string[] } | null;
     };
     if (response.status === 401 || response.status === 403) {
       throw new AppError(
@@ -276,6 +303,7 @@ export class SupabaseIdentityProvider implements IdentityProvider {
         'El enlace de recuperación no es válido o expiró.',
       );
     }
+    throwIfWeakPassword(response.status, body);
     this.throwForInfrastructureStatus(response);
     const authId = body.user?.id ?? body.id;
     if (!response.ok || !authId) {
@@ -294,7 +322,9 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       },
       body: JSON.stringify({ password }),
     });
+    const body = (await response.json().catch(() => ({}))) as WeakPasswordBody;
     this.throwForInfrastructureStatus(response);
+    throwIfWeakPassword(response.status, body);
     if (response.status === 400 || response.status === 422) {
       throw new AppError('VALIDATION_FAILED', 400, 'La nueva contraseña no es válida.');
     }
