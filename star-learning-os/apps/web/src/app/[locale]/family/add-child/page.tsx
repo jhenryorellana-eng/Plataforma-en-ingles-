@@ -157,7 +157,7 @@ export default function AddChildPage({ params }: { params: Promise<{ locale: str
               </p>
             </div>
 
-            <dl className="grid gap-3 px-5 py-5 sm:grid-cols-2 sm:px-8 sm:py-7">
+            <dl className="grid gap-3 px-5 pt-5 sm:grid-cols-2 sm:px-8 sm:pt-7">
               <div className="rounded-2xl border border-line bg-mist px-4 py-3.5">
                 <dt className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-dim">
                   Usuario
@@ -175,6 +175,31 @@ export default function AddChildPage({ params }: { params: Promise<{ locale: str
                 </dd>
               </div>
             </dl>
+
+            {/* Quién sigue y qué le espera: el siguiente turno es SIEMPRE del estudiante. */}
+            <div className="px-5 py-5 sm:px-8 sm:py-6">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-teal">
+                Qué sigue para {credentials.displayName}
+              </p>
+              <ol className="mt-2.5 space-y-2">
+                {[
+                  'Entra con este usuario y la contraseña temporal (tú no vuelves a usar su cuenta).',
+                  'Crea su contraseña privada: tú dejarás de conocerla, por diseño.',
+                  'Da su propio asentimiento y comienza su diagnóstico StarMap.',
+                ].map((step, index) => (
+                  <li key={step} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-extrabold text-primary">
+                      {index + 1}
+                    </span>
+                    <span className="text-[12.5px] leading-relaxed text-dim">{step}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3 text-[11px] leading-relaxed text-dim">
+                Si olvida su contraseña, tú generas una temporal nueva desde tu panel con
+                «Regenerar acceso».
+              </p>
+            </div>
 
             <div className="border-t border-line px-5 py-5 sm:px-8">
               <button
