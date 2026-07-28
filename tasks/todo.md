@@ -238,7 +238,7 @@ usuarios frescos por corrida). Hallazgos clave y su estado:
 | 1 | Respuestas D01–D25 | Decisiones_para_concretar_STAR_v1.md | Pendiente Henry |
 | 2 | ZDR aprobado por OpenAI (gate 12–13) | Stack §1.1 | Sin iniciar |
 | 3 | Cuenta GCP + proyectos (star-minors-prod separado) | Stack §17.1 | Sin iniciar |
-| 4 | OPENAI_API_KEY (voz real; sin ella corre modo demo) | Stack §8 | Clave recibida y VÁLIDA (2026-07-16): acceso a gpt-5, gpt-4.1 y gpt-realtime. PERO la cuenta OpenAI **no tiene créditos** (insufficient_quota) → quedó comentada en .env para no romper voz demo/plantillas. Integración verificada: con clave activa el Studio usa `openai-authoring` (gpt-5-mini configurado). ACCIÓN HENRY: cargar saldo en platform.openai.com → Billing; luego descomentar OPENAI_API_KEY en .env y reiniciar API. Rotar esta clave pre-lanzamiento (expuesta en chat). |
+| 4 | OPENAI_API_KEY (voz real; sin ella corre modo demo) | Stack §8 | ✅ **RESUELTO (2026-07-28)**: Henry cargó saldo y puso la clave nueva en Railway → Variables. Verificado E2E contra producción: `/v1/voice-demo/call` crea la sesión Realtime con OpenAI (gpt-realtime-2.1). Falta solo la prueba con micrófono real (celular). `OPENAI_TEXT_MODEL` sigue sin configurar (Studio usa plantillas locales; opcional). |
 | 5 | Proveedor de pagos Perú (D25) | Stack §21 | Sin elegir |
 | 6 | Proveedor de verificación de apoderado (A2) | Stack §5.4 | Sin elegir |
 | 7 | Revisión legal peruana + evaluación de impacto | Stack §23 | Sin iniciar |
