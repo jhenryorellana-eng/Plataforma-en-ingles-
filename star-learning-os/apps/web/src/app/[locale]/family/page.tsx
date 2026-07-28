@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import type { MeResponse } from '@star/contracts';
 import { apiFetchOrNull } from '@/lib/api';
-import { AuroraHero, AuroraSurface } from '@/components/aurora/aurora-hero';
-import { NovaGuide } from '@/components/aurora/nova-guide';
 import { Chip, Icon, IconTile, InitialsAvatar, Ring, Wordmark } from '@/components/ui';
 import {
   AcceptInvitationCard,
@@ -39,18 +38,42 @@ const AGE_LABELS: Record<string, string> = {
   a18_plus: 'Adulto',
 };
 
+const PACE_LABELS: Record<string, string> = {
+  flex: 'Flex',
+  accelerated: 'Acelerado',
+  sprint: 'Sprint',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending_diagnostic: 'Diagnóstico pendiente',
+  active: 'Activa',
+  paused: 'En pausa',
+  completed: 'Completada',
+  cancelled: 'Cancelada',
+};
+
+/** Tarjeta blanca del sistema de la consola (sombra suave sin override oscuro). */
+const CARD =
+  'overflow-hidden rounded-3xl bg-surface shadow-[0_1px_2px_rgba(16,33,54,0.05),0_10px_30px_-12px_rgba(16,33,54,0.14)]';
+
 export default async function FamilyPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const summary = await apiFetchOrNull<GuardianSummary>('/guardian/learners');
+  const [summary, me] = await Promise.all([
+    apiFetchOrNull<GuardianSummary>('/guardian/learners'),
+    apiFetchOrNull<MeResponse>('/auth/me'),
+  ]);
   if (!summary) redirect(`/${locale}/login`);
 
+  const firstName = me?.displayName.trim().split(/\s+/)[0] ?? '';
+  const learnerCount = summary.learners.length;
+
   return (
-    <div className="mission-shell min-h-dvh">
-      <header className="material-bar sticky top-0 z-40 border-b border-line/80">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <div className="force-light min-h-dvh bg-paper text-ink">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <Wordmark />
           <div className="flex items-center gap-2.5">
-            <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary">
+            <span className="hidden rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary sm:inline">
               Control familiar
             </span>
             <LogoutButton locale={locale} />
@@ -58,106 +81,54 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-3.5 pb-16 pt-4 sm:px-6 sm:pt-7">
-        <AuroraHero
-          asset="family"
-          eyebrow="Centro de acompañamiento"
-          title="Acompaña su avance sin invadir su espacio."
-          body="Aquí ves progreso, permisos y alertas necesarias. Nunca mostramos transcripciones de sus conversaciones: esa privacidad es parte del diseño."
-          tone="gold"
-          priority
-          imageAlt="Apoderado acompañando la ruta educativa desde un centro de misión"
-          compact
-          badge={
-            <span className="rounded-full border border-white/20 bg-[#071525]/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-md">
-              {summary.learners.length === 1
-                ? '1 estudiante vinculado'
-                : `${summary.learners.length} estudiantes vinculados`}
-            </span>
-          }
-        />
+      <main className="mx-auto max-w-5xl px-4 pb-16 pt-7 sm:px-6 sm:pt-9">
+        <h1 className="text-[clamp(1.8rem,5vw,2.4rem)] font-extrabold leading-tight tracking-[-0.03em]">
+          {firstName ? `Hola, ${firstName}` : 'Hola'}
+        </h1>
+        <p className="mt-1.5 max-w-[58ch] text-[13.5px] leading-relaxed text-dim">
+          {learnerCount === 0
+            ? 'Crea el acceso de tu hijo o hija para empezar a acompañar su avance.'
+            : `${learnerCount === 1 ? '1 estudiante a tu cargo' : `${learnerCount} estudiantes a tu cargo`} · progreso, permisos y alertas, sin invadir su espacio. Nunca mostramos transcripciones de sus conversaciones.`}
+        </p>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-          <AuroraSurface className="rise overflow-hidden" tone="gold">
-            <div className="p-5 sm:p-6">
-              <IconTile name="route" color="bg-gold" />
-              <p className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.14em] text-gold-deep">
-                Siguiente paso
-              </p>
-              <h2 className="mt-1 text-[22px] font-extrabold tracking-tight text-ink">
-                Crea la cuenta de tu hijo o hija
-              </h2>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-dim">
-                Tú defines su usuario y una contraseña temporal. No pediremos su correo y el
-                estudiante elegirá después su contraseña privada y su propio asentimiento.
-              </p>
-              <Link
-                href={`/${locale}/family/add-child`}
-                className="tactile-button mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-center text-[14px] font-extrabold text-white"
-              >
-                Crear cuenta del estudiante <Icon name="arrow" className="size-4" />
-              </Link>
-            </div>
-          </AuroraSurface>
-          <NovaGuide
-            state="idle"
-            eyebrow="Nova · acompañamiento responsable"
-            className="rise rise-1"
-          >
-            El progreso ayuda a conversar y acompañar. Las prácticas y conversaciones siguen
-            perteneciendo al espacio del estudiante.
-          </NovaGuide>
-        </div>
-
-        <details className="rise rise-2 mt-5 max-w-xl rounded-2xl border border-line bg-surface px-4 py-3.5">
-          <summary className="cursor-pointer text-[12.5px] font-bold text-primary">
-            Usar un código de invitación anterior
-          </summary>
-          <p className="mb-3 mt-2 text-[11px] leading-relaxed text-dim">
-            Esta opción se mantiene para estudiantes que iniciaron el proceso con el recorrido
-            anterior.
-          </p>
-          <AcceptInvitationCard />
-        </details>
-
-        {summary.learners.length === 0 && (
-          <AuroraSurface className="rise rise-2 mt-7 px-5 py-10 text-center" tone="neutral">
-            <span className="mx-auto flex size-14 items-center justify-center rounded-[20px_20px_20px_7px] border border-primary/20 bg-primary-soft">
+        {learnerCount === 0 && (
+          <div className={`${CARD} mt-7 px-5 py-10 text-center`}>
+            <span className="mx-auto flex size-14 items-center justify-center rounded-[20px_20px_20px_7px] bg-primary-soft">
               <Icon name="route" className="size-6 text-primary" />
             </span>
-            <h2 className="mt-5 text-[22px] font-extrabold tracking-tight text-ink">
+            <h2 className="mt-5 text-[21px] font-extrabold tracking-tight">
               Tu red familiar aún está vacía
             </h2>
             <p className="mx-auto mt-2 max-w-[46ch] text-[13px] leading-relaxed text-dim">
-              Crea la cuenta del estudiante para entregarle sus accesos. Aquí aparecerán después su
-              progreso, permisos y las señales necesarias para acompañar.
+              Tú defines su usuario y una contraseña temporal — sin pedirle un correo. Después,
+              el estudiante crea su contraseña privada y decide su propio asentimiento.
             </p>
             <Link
               href={`/${locale}/family/add-child`}
-              className="tactile-button mx-auto mt-5 inline-flex min-h-12 items-center justify-center rounded-xl px-6 text-[14px] font-extrabold text-white"
+              className="tactile-button mx-auto mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-[14px] font-extrabold text-white"
             >
-              Crear su cuenta
+              Crear cuenta del estudiante <Icon name="arrow" className="size-4" />
             </Link>
-          </AuroraSurface>
+          </div>
         )}
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:items-start">
-          {summary.learners.map((learner, index) => (
+        <div className={`mt-7 grid gap-x-8 gap-y-9 ${learnerCount > 1 ? 'lg:grid-cols-2' : ''}`}>
+          {summary.learners.map((learner) => (
             <section
               key={learner.learnerId}
-              className={`rise rise-${Math.min(index + 1, 3)} min-w-0`}
+              className="min-w-0"
               aria-labelledby={`learner-${learner.learnerId}`}
             >
-              <div className="mb-4 flex items-start gap-3 px-1">
-                <InitialsAvatar name={learner.displayName} className="size-12" />
+              <div className="mb-3.5 flex items-center gap-3 px-1">
+                <InitialsAvatar name={learner.displayName} className="size-11" />
                 <div className="min-w-0 flex-1">
                   <h2
                     id={`learner-${learner.learnerId}`}
-                    className="truncate text-[20px] font-extrabold tracking-tight text-ink"
+                    className="truncate text-[19px] font-extrabold tracking-tight"
                   >
                     {learner.displayName}
                   </h2>
-                  <p className="mt-0.5 text-[12px] text-dim">
+                  <p className="text-[12px] text-dim">
                     {AGE_LABELS[learner.ageBand ?? ''] ?? 'Edad no disponible'}
                   </p>
                 </div>
@@ -187,31 +158,28 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
                     ? 0
                     : enrollment.voice.usedMinutes / enrollment.voice.includedMinutes;
                 return (
-                  <AuroraSurface
-                    key={enrollment.enrollmentId}
-                    className="mb-4 overflow-hidden"
-                    tone="blue"
-                  >
-                    <div className="flex items-center gap-3.5 border-b border-line px-4 py-4 sm:px-5">
+                  <div key={enrollment.enrollmentId} className={`${CARD} mb-4`}>
+                    <div className="flex items-center gap-3.5 px-4 py-4 sm:px-5">
                       <span aria-hidden>
                         <Ring
                           value={masteryRatio}
-                          size={48}
+                          size={46}
                           strokeWidth={6}
-                          color="#8292ff"
-                          colorTo="#4ce4f4"
+                          color="#596cff"
+                          colorTo="#0ebfc4"
                         />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[16px] font-extrabold text-ink">
+                        <p className="truncate text-[15.5px] font-extrabold">
                           {enrollment.program}
                         </p>
                         <p className="mt-0.5 text-[11.5px] text-dim">
-                          Plan {enrollment.paceCode} · {enrollment.status}
+                          Plan {PACE_LABELS[enrollment.paceCode] ?? enrollment.paceCode} ·{' '}
+                          {STATUS_LABELS[enrollment.status] ?? enrollment.status}
                         </p>
                       </div>
                       <span className="shrink-0 text-right">
-                        <span className="block text-[15px] font-extrabold tabular-nums text-ink">
+                        <span className="block text-[15px] font-extrabold tabular-nums">
                           {enrollment.masteredCount}/{enrollment.totalCount}
                         </span>
                         <span className="block text-[9px] font-bold uppercase tracking-wide text-dim">
@@ -219,12 +187,12 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
                         </span>
                       </span>
                     </div>
-                    <div className="flex items-start gap-3.5 px-4 py-4 sm:px-5">
+                    <div className="flex items-start gap-3.5 border-t border-line px-4 py-4 sm:px-5">
                       <IconTile name="mic" color="bg-teal" className="mt-0.5" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-col gap-0.5 min-[390px]:flex-row min-[390px]:items-baseline min-[390px]:justify-between">
-                          <p className="text-[14px] font-bold text-ink">Voz de la semana</p>
-                          <p className="text-[12px] font-extrabold tabular-nums text-ink">
+                          <p className="text-[13.5px] font-bold">Voz de la semana</p>
+                          <p className="text-[12px] font-extrabold tabular-nums">
                             {enrollment.voice.usedMinutes}
                             <span className="font-medium text-dim">
                               {' '}
@@ -251,51 +219,85 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
                       </div>
                     </div>
                     {learner.pendingReviews > 0 && (
-                      <div className="flex items-start gap-3 border-t border-line bg-primary-soft/40 px-4 py-3.5 sm:px-5">
-                        <IconTile name="shield" color="bg-primary" className="mt-0.5" />
+                      <div className="flex items-center gap-3 border-t border-line bg-primary-soft/50 px-4 py-3.5 sm:px-5">
+                        <IconTile name="shield" color="bg-primary" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-bold text-ink">
-                            Revisión académica humana
-                          </p>
+                          <p className="text-[13px] font-bold">Revisión académica humana</p>
                           <p className="mt-0.5 text-[11px] leading-relaxed text-dim">
-                            Hay decisiones significativas pendientes de una persona del equipo.
+                            Decisiones significativas esperando a una persona del equipo.
                           </p>
                         </div>
                         <Chip tone="primary">{learner.pendingReviews}</Chip>
                       </div>
                     )}
-                  </AuroraSurface>
+                  </div>
                 );
               })}
               {learner.enrollments.length === 0 && (
-                <AuroraSurface className="mb-4 flex items-center gap-3 px-4 py-4" tone="neutral">
+                <div className={`${CARD} mb-4 flex items-center gap-3 px-4 py-4`}>
                   <IconTile name="route" color="bg-fill" />
                   <div>
-                    <p className="text-[13px] font-bold text-ink">Aún sin inscripciones activas</p>
+                    <p className="text-[13px] font-bold">Aún sin inscripciones activas</p>
                     <p className="mt-0.5 text-[11px] leading-relaxed text-dim">
                       El progreso aparecerá aquí cuando inicie una ruta.
                     </p>
                   </div>
-                </AuroraSurface>
+                </div>
               )}
 
-              <div className="mb-3 mt-5 px-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-teal">
-                  Privacidad y funciones
-                </p>
-                <h3 className="mt-1 text-[17px] font-extrabold tracking-tight text-ink">
-                  Permisos por finalidad
-                </h3>
-              </div>
+              <p className="mb-2 mt-5 px-1 text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-dim">
+                Permisos por finalidad
+              </p>
               <ConsentToggles learnerId={learner.learnerId} granted={learner.consents} />
-              <p className="mt-3 px-1 text-[11px] leading-relaxed text-dim">
-                Revocar &quot;Voz con IA&quot; impide crear nuevas sesiones de voz al instante. Cada
-                permiso se muestra por separado; la voz solo funciona mientras el procesamiento
-                internacional esté autorizado.
+              <p className="mt-2.5 px-1 text-[10.5px] leading-relaxed text-dim">
+                Revocar &quot;Voz con IA&quot; impide nuevas sesiones de voz al instante. La voz
+                solo funciona mientras el procesamiento internacional esté autorizado.
               </p>
             </section>
           ))}
         </div>
+
+        {learnerCount > 0 && (
+          <>
+            <p className="mb-2 mt-10 px-1 text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-dim">
+              Más opciones
+            </p>
+            <div className={`${CARD} max-w-2xl`}>
+              <Link
+                href={`/${locale}/family/add-child`}
+                className="flex items-center gap-3.5 px-4 py-4 transition hover:bg-mist/50 sm:px-5"
+              >
+                <IconTile name="route" color="bg-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-bold">
+                    Crear otra cuenta de estudiante
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] leading-relaxed text-dim">
+                    Usuario y contraseña temporal, sin pedir el correo del menor.
+                  </span>
+                </span>
+                <Icon name="chevron" className="size-4 shrink-0 text-dim" />
+              </Link>
+              <details className="border-t border-line">
+                <summary className="flex cursor-pointer items-center gap-3.5 px-4 py-4 transition hover:bg-mist/50 sm:px-5">
+                  <IconTile name="lock" color="bg-fill" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-bold">
+                      Usar un código de invitación anterior
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] leading-relaxed text-dim">
+                      Solo para estudiantes que empezaron con el recorrido antiguo.
+                    </span>
+                  </span>
+                  <Icon name="chevron" className="size-4 shrink-0 text-dim" />
+                </summary>
+                <div className="border-t border-line px-4 py-4 sm:px-5">
+                  <AcceptInvitationCard />
+                </div>
+              </details>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
