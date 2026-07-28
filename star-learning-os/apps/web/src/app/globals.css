@@ -58,36 +58,6 @@
   --color-risk-soft: rgba(255, 113, 128, 0.15);
 }
 
-/* Consola del apoderado: SIEMPRE clara (referente Apple, decisión Henry 2026-07-28).
-   Redefine los tokens del subárbol aunque <html> esté en data-theme="dark"; por eso
-   dentro de .force-light no deben usarse clases con override oscuro keyed a html
-   (.card-shadow, .material-bar, .glass-dock). */
-.force-light {
-  color-scheme: light;
-  --color-paper: #eef4f8;
-  --color-surface: #ffffff;
-  --color-mist: #e6eef4;
-  --color-fill: #d7e3eb;
-  --color-line: rgba(18, 47, 72, 0.12);
-  --color-ink: #102136;
-  --color-dim: #64788d;
-  --color-primary: #596cff;
-  --color-primary-deep: #3f50dc;
-  --color-primary-soft: rgba(89, 108, 255, 0.11);
-  --color-blue: #1689f8;
-  --color-teal: #0ebfc4;
-  --color-gold: #ffbf3f;
-  --color-gold-deep: #9b6500;
-  --color-gold-soft: rgba(255, 191, 63, 0.17);
-  --color-ok: #68c941;
-  --color-ok-deep: #37831c;
-  --color-ok-soft: rgba(104, 201, 65, 0.15);
-  --color-warn: #ffad32;
-  --color-warn-soft: rgba(255, 173, 50, 0.16);
-  --color-risk: #f65362;
-  --color-risk-soft: rgba(246, 83, 98, 0.12);
-}
-
 @theme inline {
   --font-display: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
