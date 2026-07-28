@@ -9,6 +9,7 @@ import {
   ConsentToggles,
   ManagedLearnerAccess,
 } from '@/components/family-manager';
+import { LogoutButton } from '@/components/logout-button';
 
 interface GuardianSummary {
   learners: Array<{
@@ -48,9 +49,12 @@ export default async function FamilyPage({ params }: { params: Promise<{ locale:
       <header className="material-bar sticky top-0 z-40 border-b border-line/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Wordmark />
-          <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary">
-            Control familiar
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary">
+              Control familiar
+            </span>
+            <LogoutButton locale={locale} />
+          </div>
         </div>
       </header>
 

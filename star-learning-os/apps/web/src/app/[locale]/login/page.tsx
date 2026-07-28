@@ -49,14 +49,22 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [verifiedNotice, setVerifiedNotice] = useState(false);
+  const [studentHandoff, setStudentHandoff] = useState(false);
   const [warping, setWarping] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
     // El enlace de confirmación de Supabase aterriza aquí con ?verified=1;
     // sin este aviso el usuario no sabe que la verificación funcionó.
-    if (new URLSearchParams(window.location.search).get('verified') === '1') {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('verified') === '1') {
       setVerifiedNotice(true);
+    }
+    // Traspaso de dispositivo apoderado → estudiante: usuario listo, falta su clave.
+    const student = searchParams.get('student');
+    if (student && student.length <= 30 && /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/.test(student)) {
+      setIdentifier(student);
+      setStudentHandoff(true);
     }
     const cleanUrl = urlWithoutSupabaseAuthFragment(
       window.location.pathname,
@@ -199,6 +207,19 @@ export default function LoginPage({ params }: { params: Promise<{ locale: string
               <span>
                 <strong className="text-emerald-100">Tu correo quedó confirmado.</strong> Inicia
                 sesión con tu contraseña para continuar.
+              </span>
+            </div>
+          )}
+          {studentHandoff && mode === 'login' && (
+            <div
+              role="status"
+              className="mb-3 flex items-start gap-2.5 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-[13px] leading-relaxed text-cyan-100"
+            >
+              <Icon name="flame" className="mt-0.5 size-4 shrink-0" />
+              <span>
+                <strong className="text-cyan-50">¡Te toca a ti!</strong> Tu usuario ya está
+                escrito. Ingresa la contraseña temporal que te entregó tu apoderado; después
+                crearás una privada solo tuya.
               </span>
             </div>
           )}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CONSENT_NOTICE_VERSION, zCreateManagedLearnerResponse } from '@star/contracts';
-import { clientApiValidated } from '@/lib/client-api';
+import { clientApi, clientApiValidated } from '@/lib/client-api';
 import { AuroraHero, AuroraSurface } from '@/components/aurora/aurora-hero';
 import { Icon, Wordmark } from '@/components/ui';
 
@@ -34,6 +34,7 @@ export default function AddChildPage({ params }: { params: Promise<{ locale: str
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [handoffBusy, setHandoffBusy] = useState(false);
   const [credentials, setCredentials] = useState<OneTimeCredentials | null>(null);
 
   const parsedBirthYear = Number(birthYear);
@@ -112,6 +113,21 @@ export default function AddChildPage({ params }: { params: Promise<{ locale: str
     }
   }
 
+  /** Traspaso en el mismo dispositivo: cierra la sesión del apoderado y deja
+   *  el login listo con el usuario del estudiante (la contraseña temporal
+   *  jamás viaja en la URL; el estudiante la escribe él mismo). */
+  async function handDeviceToStudent() {
+    if (!credentials || handoffBusy) return;
+    setHandoffBusy(true);
+    try {
+      await clientApi('/auth/logout', { method: 'POST' });
+    } catch {
+      // La cookie local queda inválida igualmente; el login la reemplaza.
+    } finally {
+      router.replace(`/${locale}/login?student=${encodeURIComponent(credentials.loginName)}`);
+    }
+  }
+
   if (credentials) {
     return (
       <div className="mission-shell min-h-dvh overflow-x-clip">
@@ -176,12 +192,32 @@ export default function AddChildPage({ params }: { params: Promise<{ locale: str
                   {copyMessage}
                 </p>
               )}
+
+              <div className="mt-5 rounded-2xl border border-primary/25 bg-primary-soft/40 p-4">
+                <p className="text-[13px] font-extrabold text-ink">
+                  ¿{credentials.displayName} estudiará en este mismo dispositivo?
+                </p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-dim">
+                  Cerramos tu sesión de apoderado y dejamos el inicio de sesión listo con su
+                  usuario. Solo tendrá que escribir la contraseña temporal.
+                </p>
+                <button
+                  type="button"
+                  disabled={handoffBusy}
+                  onClick={() => void handDeviceToStudent()}
+                  className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-primary/35 bg-surface px-5 text-[14px] font-extrabold text-primary transition hover:bg-primary-soft disabled:opacity-60"
+                >
+                  <Icon name="logout" className="size-4" />
+                  {handoffBusy ? 'Cerrando tu sesión…' : 'Entregarle el dispositivo ahora'}
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => router.replace(`/${locale}/family`)}
                 className="mt-3 min-h-12 w-full rounded-xl border border-line bg-surface px-5 text-[14px] font-extrabold text-ink hover:bg-mist"
               >
-                Ya guardé los accesos
+                Ya guardé los accesos · volver a mi panel
               </button>
             </div>
           </AuroraSurface>
