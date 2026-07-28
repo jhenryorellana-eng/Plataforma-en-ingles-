@@ -125,6 +125,16 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       error_code?: string;
       weak_password?: { reasons?: string[] } | null;
     };
+    // El emisor integrado de Supabase tiene cupo mínimo de correos por hora;
+    // "Demasiados intentos" culparía al usuario por un límite de la plataforma.
+    if (response.status === 429 && body.error_code === 'over_email_send_rate_limit') {
+      throw new AppError(
+        'RATE_LIMITED',
+        429,
+        'No pudimos enviar el correo de confirmación en este momento. Espera unos minutos y vuelve a intentarlo.',
+        { retryAfterSeconds: retryAfterSeconds(response.headers.get('retry-after')) },
+      );
+    }
     this.throwForInfrastructureStatus(response);
     if (
       (response.status === 400 || response.status === 422) &&
@@ -176,6 +186,15 @@ export class SupabaseIdentityProvider implements IdentityProvider {
       error_code?: string;
     };
     if (response.status === 400) {
+      // Sin esta distinción, quien aún no confirmó su correo cree que escribió
+      // mal la contraseña y entra en un bucle de reintentos sin salida.
+      if (body.error_code === 'email_not_confirmed') {
+        throw new AppError(
+          'INVALID_CREDENTIALS',
+          401,
+          'Tu correo aún no está confirmado. Busca el enlace de StarbizAcademy en tu bandeja (o en spam) y ábrelo antes de iniciar sesión.',
+        );
+      }
       throw new AppError('INVALID_CREDENTIALS', 401, 'Correo o contraseña incorrectos');
     }
     this.throwForInfrastructureStatus(response);
