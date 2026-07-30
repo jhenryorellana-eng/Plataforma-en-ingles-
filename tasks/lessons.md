@@ -54,3 +54,8 @@
 **Error**: Henry marcó "Apple claro" entre mockups ASCII para el panel del apoderado; implementado y desplegado, lo rechazó: quería los colores, la atmósfera y la imagen de siempre — "mejorar" significaba REORGANIZAR el contenido, no cambiar el lenguaje visual.
 **Root cause**: Una pregunta de opción múltiple con previews de texto no transmite el apego a la identidad visual existente; "no me gusta cómo se ve" apuntaba a jerarquía/orden, y la opción recomendada lo ancló hacia un rediseño total.
 **Regla**: Ante feedback de diseño sobre una vista existente, la primera iteración SIEMPRE conserva el lenguaje visual (tokens, atmósfera, ilustraciones) y solo mueve estructura/jerarquía; un cambio de lenguaje visual se enseña en el dev server y se aprueba VIÉNDOLO antes de desplegarlo. Complementa la lección 2026-07-15 del referente.
+
+## 2026-07-29: El stack local heredó el Supabase de PRODUCCIÓN desde .env
+**Error**: Las demos locales de cuentas gestionadas (luna/rocio/mati.demo) crearon usuarios reales en auth.users de producción: la API local corría con DATABASE_URL local pero config.ts carga el .env de la raíz, que apunta SUPABASE_URL/keys al proyecto real.
+**Root cause**: El override de entorno al lanzar la API local solo cubrió DATABASE_URL/WEB_ORIGIN; el proveedor de identidad siguió siendo SupabaseIdentityProvider contra producción.
+**Regla**: Para el stack local SIEMPRE vaciar las tres variables de Supabase (`SUPABASE_URL= SUPABASE_PUBLISHABLE_KEY= SUPABASE_SECRET_KEY=`) en el comando de arranque para forzar MockIdentityProvider, o usar un .env.local dedicado. Verificable: el login demo funciona y ningún registro aparece en auth.users remoto.
